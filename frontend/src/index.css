@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary: #a82e42;
+    --color-primary-container: #c94759;
+    --color-on-primary: #ffffff;
+    --color-surface: #fcf9f4;
+    --color-surface-container: #f0ede9;
+    --color-surface-container-low: #f6f3ee;
+    --color-surface-container-high: #ebe8e3;
+    --color-surface-variant: #e5e2dd;
+    --color-outline-variant: #debfc0;
+    --color-on-surface: #1c1c19;
+    --color-on-surface-variant: #574142;
+    --color-outline: #8b7172;
+    --color-dashboard-bg: #f7f4ef;
+    --color-hero-filter: #f9f7f4;
+    --color-room-available: #059669;
+    --color-room-pending: #c9a66b;
+    --color-room-booked: #64748b;
+    --font-family-headline: 'Be Vietnam Pro', sans-serif;
+    --font-family-body: 'Manrope', sans-serif;
+  }
+  
+  @layer base {
+    body {
+      @apply bg-surface text-on-surface antialiased;
+      font-family: var(--font-family-body);
+    }
+    h1,
+    h2,
+    h3,
+    .font-headline {
+      font-family: var(--font-family-headline);
+    }
+  }
+  
+  .material-symbols-outlined {
+    font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24;
+  }
+  
+  input:focus,
+  select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+
+  /** Stitch export – hero vignette over photography */
+  .hero-home-gradient {
+    background: linear-gradient(
+      to bottom,
+      rgba(28, 28, 25, 0.4),
+      rgba(28, 28, 25, 0.7)
+    );
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }

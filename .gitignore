@@ -1,0 +1,53 @@
+# Dependencies (mọi thư mục con)
+node_modules/
+
+# Biến môi trường / bí mật
+.env
+.env.*
+!.env.example
+
+# Frontend (Vite)
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# SPA build được phục vụ bởi backend (vite outDir)
+backend/client/
+
+# Prisma Client generate trong repo
+backend/src/generated/prisma/
+
+# Log
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage / cache
+coverage/
+.cache/
+.temp/
+.tmp/
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Cursor — MCP có thể chứa API key; bản thật chỉ giữ cục bộ
+.cursor/mcp.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# my custom
+.cursor/

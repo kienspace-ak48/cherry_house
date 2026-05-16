@@ -1,0 +1,158 @@
+import { useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
+import { DEFAULT_HEADER_NAV_LINKS } from '../constants/headerNavLinks';
+
+const linkClass = (isActive) =>
+  [
+    'font-headline block rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wide transition-colors lg:inline lg:p-0',
+    isActive
+      ? 'bg-primary/10 text-primary lg:border-b-2 lg:border-primary lg:bg-transparent lg:pb-1'
+      : 'text-on-surface-variant hover:bg-black/5 hover:text-primary lg:hover:bg-transparent',
+  ].join(' ');
+
+/**
+ * @param {{ pathname: string; hash: string }} location
+ * @param {{ to: string; end?: boolean }} item
+ */
+function isNavItemActive(location, item) {
+  const { pathname, hash } = location;
+  const { to } = item;
+
+  if (to === '/') {
+    return pathname === '/' && hash !== '#phong-noi-bat';
+  }
+
+  if (to.startsWith('/#')) {
+    const expected = '#' + to.split('#').slice(1).join('#');
+    return pathname === '/' && hash === expected;
+  }
+
+  const pathOnly = to.split('#')[0];
+  if (!pathOnly || pathOnly === '/') return false;
+
+  return pathname === pathOnly || pathname.startsWith(`${pathOnly}/`);
+}
+
+function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const closeMenu = () => setMenuOpen(false);
+
+  return (
+    <>
+      <header
+        className={[
+          'fixed top-0 z-[101] w-full border-b border-black/5 transition-colors',
+          menuOpen ? 'bg-white shadow-sm' : 'bg-white/80 backdrop-blur-xl',
+        ].join(' ')}
+      >
+        <nav
+          className={[
+            LAYOUT_CONTAINER,
+            'flex items-center justify-between gap-3 py-3 md:py-4',
+          ].join(' ')}
+        >
+          <Link
+            to="/"
+            className="font-headline min-w-0 truncate text-lg font-bold italic text-primary sm:text-xl md:text-2xl"
+            onClick={closeMenu}
+          >
+            Cherry House
+          </Link>
+
+          <div className="hidden flex-1 flex-wrap items-center justify-center gap-x-5 gap-y-2 lg:flex xl:gap-x-8">
+            {navLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end ?? false}
+                className={() => linkClass(isNavItemActive(location, item))}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <Link
+              to="/profile"
+              className="hidden rounded-lg px-4 py-2 font-bold text-primary transition-all hover:bg-primary/5 lg:block"
+              onClick={closeMenu}
+            >
+              Thành viên
+            </Link>
+            <Link
+              to="/booking"
+              className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm"
+              onClick={closeMenu}
+            >
+              Đặt phòng
+            </Link>
+            <button
+              type="button"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface hover:bg-black/5 lg:hidden"
+              aria-expanded={menuOpen}
+              aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              <span className="material-symbols-outlined text-2xl">
+                {menuOpen ? 'close' : 'menu'}
+              </span>
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {menuOpen && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[99] bg-black/40 lg:hidden"
+            aria-label="Đóng menu"
+            onClick={closeMenu}
+          />
+          <div
+            className="fixed top-14 right-0 left-0 z-[100] max-h-[min(calc(100dvh-3.5rem),calc(100svh-3.5rem))] overflow-y-auto rounded-b-2xl border-x border-b border-black/10 bg-white shadow-lg lg:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu điều hướng"
+          >
+            <div className={[LAYOUT_CONTAINER, 'py-4'].join(' ')}>
+              <ul className="flex flex-col gap-1 border-b border-black/5 pb-3">
+                {navLinks.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end ?? false}
+                      className={() =>
+                        linkClass(isNavItemActive(location, item))
+                      }
+                      onClick={closeMenu}
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+                <li>
+                  <NavLink
+                    to="/profile"
+                    className={() =>
+                      linkClass(isNavItemActive(location, { to: '/profile' }))
+                    }
+                    onClick={closeMenu}
+                  >
+                    Tài khoản
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+export default Header;

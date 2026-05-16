@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cherry House - Tuyệt tác nghỉ dưỡng</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,700;0,800;1,700&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#002110",
+                      "on-surface-variant": "#574142",
+                      "inverse-on-surface": "#f3f0eb",
+                      "tertiary-fixed-dim": "#6cdc9c",
+                      "tertiary-container": "#008650",
+                      "inverse-primary": "#ffb2b7",
+                      "surface-dim": "#dcdad5",
+                      "primary": "#a82e42",
+                      "on-primary-container": "#fffbff",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed": "#281804",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#8b7172",
+                      "surface-container-high": "#ebe8e3",
+                      "on-tertiary": "#ffffff",
+                      "surface-bright": "#fcf9f4",
+                      "secondary-fixed-dim": "#e0c1a0",
+                      "error-container": "#ffdad6",
+                      "background": "#fcf9f4",
+                      "surface": "#fcf9f4",
+                      "primary-container": "#c94759",
+                      "secondary-fixed": "#fdddbb",
+                      "outline-variant": "#debfc0",
+                      "on-error": "#ffffff",
+                      "inverse-surface": "#31302d",
+                      "on-tertiary-container": "#f6fff5",
+                      "error": "#ba1a1a",
+                      "surface-tint": "#ab3145",
+                      "on-surface": "#1c1c19",
+                      "secondary": "#715a3f",
+                      "primary-fixed": "#ffdadb",
+                      "tertiary": "#006a3f",
+                      "surface-container-highest": "#e5e2dd",
+                      "on-secondary-fixed-variant": "#58432a",
+                      "secondary-container": "#fadab8",
+                      "on-primary-fixed-variant": "#8a172f",
+                      "on-background": "#1c1c19",
+                      "surface-container": "#f0ede9",
+                      "on-primary": "#ffffff",
+                      "tertiary-fixed": "#89f9b6",
+                      "surface-variant": "#e5e2dd",
+                      "on-secondary-container": "#765e43",
+                      "on-primary-fixed": "#40000e",
+                      "on-secondary": "#ffffff",
+                      "primary-fixed-dim": "#ffb2b7",
+                      "on-tertiary-fixed-variant": "#00522f",
+                      "surface-container-low": "#f6f3ee"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Be Vietnam Pro"],
+                      "display": ["Be Vietnam Pro"],
+                      "body": ["Manrope"],
+                      "label": ["Manrope"]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; background-color: #fcf9f4; color: #1c1c19; }
+        .font-display { font-family: 'Be Vietnam Pro', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-nav { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .hero-gradient { background: linear-gradient(to bottom, rgba(28, 28, 25, 0.4), rgba(28, 28, 25, 0.7)); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 glass-nav">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="font-display text-2xl font-bold italic text-primary">Cherry House</div>
+<div class="hidden md:flex gap-8 font-display font-medium text-sm tracking-wide uppercase">
+<a class="text-primary border-b-2 border-primary pb-1" href="#">Home</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">Phòng</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">Dịch vụ</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">Liên hệ</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden md:block font-display font-medium text-sm tracking-wide uppercase text-on-surface-variant hover:text-primary transition-colors duration-300">Thành viên</button>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-display font-medium text-sm tracking-wide uppercase active:scale-95 transition-transform">Đặt phòng</button>
+</div>
+</div>
+</nav>
+<main>
+<!-- Hero Section -->
+<section class="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover" data-alt="A grand luxury hotel exterior at dusk with warm golden lighting spilling from tall windows onto lush gardens and a circular driveway. The scene is captured in a cinematic, high-end editorial style with a soft, atmospheric glow. The color palette features rich cherry wood tones, creamy architectural stones, and a deep twilight sky, evoking a sense of exclusive sanctuary and sophisticated hospitality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB46N4gVdqMtHJt5y5SfzRJ7LGlY14me9PiNAgF3Chaet_LX03hK5BdX1GUFDyspTd1Vh69BeDxCF1J_-Z8fNcyKqv-PPeuVSISenigGRv76VonFLP5i9lzkQ2Nw7Gr0TE2UhGXKNjZ9lwaroGdk-xko0snVoPidEyg16Cr2mKoML6WVyc_qwTLdug0M8NYVZIXicCvZPa0KLeATfwcDXbggz26e4dXmjEMxclfT9kEPX_OSM7P-_A2hF9YJjdGtgIyW-1jwo6T3Q"/>
+<div class="absolute inset-0 hero-gradient"></div>
+</div>
+<div class="relative z-10 text-center px-6 max-w-4xl">
+<h1 class="font-display text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
+                    Nơi Di Sản Gặp Gỡ <br/><span class="italic font-normal">Sự Sang Trọng</span>
+</h1>
+<p class="font-body text-white/90 text-lg md:text-xl max-w-2xl mx-auto mb-12">
+                    Trải nghiệm kỳ nghỉ tinh tế trong không gian kiến trúc đương đại, nơi mọi giác quan được vỗ về bởi sự tĩnh lặng và đẳng cấp.
+                </p>
+<!-- Quick Search Bar -->
+<div class="bg-surface-container-lowest p-2 rounded-xl md:rounded-full shadow-2xl flex flex-col md:flex-row items-stretch md:items-center gap-2 max-w-5xl mx-auto border border-outline-variant/15">
+<div class="flex-1 px-6 py-3 flex flex-col items-start text-left group">
+<label class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Địa điểm</label>
+<div class="flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-primary text-xl">location_on</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-on-surface font-medium placeholder:text-on-surface-variant/50 w-full" placeholder="Bạn muốn đi đâu?" type="text"/>
+</div>
+</div>
+<div class="hidden md:block w-px h-10 bg-surface-variant"></div>
+<div class="flex-1 px-6 py-3 flex flex-col items-start text-left">
+<label class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Ngày nhận phòng</label>
+<div class="flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-primary text-xl">calendar_today</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-on-surface font-medium w-full" type="date"/>
+</div>
+</div>
+<div class="hidden md:block w-px h-10 bg-surface-variant"></div>
+<div class="flex-1 px-6 py-3 flex flex-col items-start text-left">
+<label class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Ngày trả phòng</label>
+<div class="flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-primary text-xl">event_busy</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 text-on-surface font-medium w-full" type="date"/>
+</div>
+</div>
+<button class="bg-primary text-on-primary px-10 py-4 rounded-xl md:rounded-full font-display font-bold text-sm tracking-widest uppercase hover:bg-primary-container transition-all active:scale-95">
+                        Tìm Kiếm
+                    </button>
+</div>
+</div>
+</section>
+<!-- Asymmetric Intro Section -->
+<section class="py-24 px-8 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+<div class="md:col-span-5 space-y-6">
+<span class="text-primary font-display font-bold tracking-[0.2em] uppercase text-sm">Về Cherry House</span>
+<h2 class="font-display text-4xl font-bold text-on-surface leading-tight">Tuyệt tác kiến trúc giữa lòng thành phố</h2>
+<p class="text-on-surface-variant leading-relaxed text-lg">
+                    Cherry House không chỉ là một khách sạn, mà là một không gian nghệ thuật sống động. Chúng tôi kết hợp tinh hoa văn hóa địa phương với tiêu chuẩn dịch vụ quốc tế để tạo ra những khoảnh khắc đáng nhớ nhất cho mỗi vị khách.
+                </p>
+<div class="pt-4">
+<a class="inline-flex items-center gap-2 text-primary font-display font-bold uppercase text-xs tracking-widest group" href="#">
+                        Khám phá câu chuyện của chúng tôi
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+</a>
+</div>
+</div>
+<div class="md:col-span-7 grid grid-cols-2 gap-4">
+<div class="pt-12">
+<img class="rounded-2xl w-full h-[400px] object-cover shadow-xl" data-alt="A vertical, editorial photograph of a luxury hotel lobby featuring tall minimalist pillars, white marble floors, and contemporary art installations. The lighting is soft and diffused, highlighting the clean lines and high ceilings. A palette of soft neutrals and deep cherry red accents creates a sophisticated, welcoming atmosphere. The composition is balanced and spacious, reflecting premium architectural design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBw4flQn7skFzyHN1U6KCo2l2iyc1cR_umVcmDdnhUl8ye2f_Uu9VFmOfdz_-tIse-mEcnYOW_X9xgDKqtuRWkQXh3BDGexBj3v78143FCtYkZu_eUOnw_pBFSO_tDuKu9YDkk9aUdpNYWxCwTLPmg1BKN8Q7IDXqILsbvm9fgdqCAdp9q4YRmAtoj41rvnGXLNPU-T50Z449Khgk3OTh4v6kOc8Bhu7n8suVVm8k7Dmb4AHzWujIkCFdMPUWdruYhO8uGX4T3bYA"/>
+</div>
+<div>
+<img class="rounded-2xl w-full h-[400px] object-cover shadow-xl" data-alt="A close-up high-end interior shot of a luxury hotel suite at Cherry House. The scene focuses on a plush king-sized bed with crisp white linens and a silk cherry-colored throw. Modern bedside lamps cast a warm, inviting glow against a textured wood paneled wall. The aesthetic is calm, professional, and richly detailed, emphasizing comfort and high-style editorial decor." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlpDLaZDcEZ7VyiI4DibkzDdvLBXzE5IeFbbsc6zpTaKLDq1Nhb3lydjeXTYIwW35YctrsTOA-AT4LzGIP3CH2-Sb1NI5iNWeopBhz1kPC-yCMYCo5mZBQq8x6-cLQ3o79uR10ngCUXE5tgofTPH8ap07J7vb-yh7MOfDDySRy_rJseOJqz3bHSBe8sr8SJErSEXh6wF77c1dXbGUxKMCy18lGh2N99aJ14vFuK-6czMoMtFsc3ugUNHe5v74pra37viEcgEwrEg"/>
+</div>
+</div>
+</section>
+<!-- Featured Services: Bento Style -->
+<section class="py-24 bg-surface-container-low">
+<div class="max-w-7xl mx-auto px-8">
+<div class="text-center mb-16 space-y-4">
+<h2 class="font-display text-4xl font-extrabold text-on-surface">Dịch Vụ Đặc Quyền</h2>
+<p class="text-on-surface-variant max-w-xl mx-auto font-body">Nâng tầm trải nghiệm nghỉ dưỡng với những dịch vụ được thiết kế riêng cho phong cách sống thượng lưu.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[600px]">
+<!-- Sakura Spa -->
+<div class="md:col-span-1 md:row-span-2 group relative overflow-hidden rounded-3xl bg-white shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="A serene and luxurious spa treatment room illuminated by soft candlelight and warm, indirect lighting. The design features natural stone walls, a minimalist massage table with plush towels, and cherry blossom arrangements. The atmosphere is quiet, meditative, and premium, using a color palette of soft creams, earthy browns, and delicate pinks to signify ultimate relaxation and wellness." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVaEMmMYOyjNCbjdnIqrHcnNT0z5YA68KtEHqWqype60udt1oWJZDmgzpeRemBrSph_paZBl6B9FXQeQyPDPNdZDATfW7aV9yR703GdQh8fBhc0SmpcE4ZcgCH0nqFzbHAn-gLlUZ6mGXt8kfr5Umd2Zipj05-Cly-HSPU-W80Lkp40Zoh105_3A64Iatz47eUSrOLd2FBZcxMixkNPSUxvfNqDzK8L6cuutQpVtch9uuMG_qR_bhikvmfFMF1QSn-fUNKirtzQg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex flex-col justify-end p-8">
+<h3 class="font-display text-2xl font-bold text-white mb-2">Sakura Spa</h3>
+<p class="text-white/80 text-sm mb-4">Liệu pháp thư giãn thuần khiết từ thảo mộc thiên nhiên.</p>
+<span class="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2">Tìm hiểu thêm <span class="material-symbols-outlined text-sm">north_east</span></span>
+</div>
+</div>
+<!-- Infinity Pool -->
+<div class="md:col-span-2 group relative overflow-hidden rounded-3xl bg-white shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="An expansive outdoor infinity pool at a luxury resort, overlooking a scenic city skyline or a lush natural landscape. The crystal-clear blue water reflects the bright sky. Modern lounge chairs with white cushions are neatly arranged on a high-end wooden deck. The lighting is bright and airy, capturing a high-key luxury lifestyle aesthetic with clean lines and a sense of infinite space." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQTv5UjvwrtlNX_wQPdd3CceVQs403txncElXbHUy2wY8lXlqmqbgqbP3oanoe00wQCBv-OlPOQEztW1STcQ7okFnTJ8e1mfK1XmRcJYSomjgacyhkyWuOSEJry93fq6rXg11WYy74jAXzVm8sQiZ0X9OHR55GoI5CGQSZSbXamJgKZc_4k3B0krJZwutsjFrrep-h15BN5GbFAPlgSa92HEav9rmBs9sIA-nixBc0VnSCrS6E7C9qU9R10f7Lj71Simz_cv2EAQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-surface/60 to-transparent flex flex-col justify-end p-8">
+<h3 class="font-display text-2xl font-bold text-white mb-2">Infinity Pool</h3>
+<p class="text-white/80 text-sm mb-4">Hồ bơi vô cực ngắm nhìn toàn cảnh thành phố từ trên cao.</p>
+</div>
+</div>
+<!-- Ruby Restaurant -->
+<div class="group relative overflow-hidden rounded-3xl bg-white shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="An elegant fine-dining restaurant interior with a sophisticated 'Velvet Cerise' theme. Table settings feature polished crystal glassware, white linen, and deep red velvet chairs. The lighting is moody and intimate, with decorative pendant lights creating soft highlights. The overall style is modern-editorial luxury, focusing on culinary excellence and an atmosphere of exclusive celebration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBJkaevA4a1HaoQBI0cohEcj4RBt-rkhVIvQd5W2wJYT2I8oiKYQQQod_v2dAS7ZePQ-tbKdwZNDAiFP9_viD8eBBF8yV_QlWi3YAf-h-seLujS_gSMULObwDc5BKy7EBGLiYISiJViFNjkJO6uVhcRi6CtdsMWDV2NdShkO_y_aCn47DmzqrHK2Pn04GT-abT4M2QQTkm_it4BnX6ahQR9ekSR4LRm9g_n-BYOjdn0tqxL3qCLhQiWzSUPct96g4_1w8sz6nnow"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex flex-col justify-end p-8">
+<h3 class="font-display text-xl font-bold text-white mb-2">Ruby Restaurant</h3>
+<p class="text-white/80 text-xs mb-2">Ẩm thực Fusion tinh tế.</p>
+</div>
+</div>
+<!-- Executive Lounge -->
+<div class="group relative overflow-hidden rounded-3xl bg-white shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="A modern executive lounge with floor-to-ceiling windows, featuring sleek designer furniture and a quiet professional atmosphere. The space is filled with natural daylight, creating a bright and productive environment. The color scheme is a mix of cool grays, warm wood tones, and subtle cherry red accents, perfectly suited for high-end business meetings or quiet relaxation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKAwarNRDhtwOVbDxaYzt5M4gSvt2RTsncBjRfnI862zObSgIm4Uc8StKGt32RJga4p_BeD2q5Gv7loQ3hAlMUNSWi_L4XN4LX51pkwbV3yaPybTW7JtgnIe-pxGXR4vaCoi9TrJyTDRtQSYgkP4Nq8S2IhbBtFHe5d53V5nyNEx4zqLLn9Y69RQUXNoZfVwqMstkLQfcOOv6sW9Dk_8Ayzbx72yOf3Bhij2cAbyIxo7umF-IDYYK7susjahD5ovwc5UOIsdPepg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-surface/60 to-transparent flex flex-col justify-end p-8">
+<h3 class="font-display text-xl font-bold text-white mb-2">Executive Lounge</h3>
+<p class="text-white/80 text-xs mb-2">Không gian làm việc riêng tư.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Signature Rooms Display -->
+<section class="py-24 bg-surface overflow-hidden">
+<div class="max-w-7xl mx-auto px-8 mb-12 flex justify-between items-end">
+<div class="space-y-4">
+<span class="text-primary font-display font-bold tracking-[0.2em] uppercase text-sm">Phòng &amp; Suites</span>
+<h2 class="font-display text-4xl font-extrabold text-on-surface">Không Gian Nghỉ Dưỡng</h2>
+</div>
+<div class="hidden md:flex gap-4">
+<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center text-on-surface hover:bg-primary hover:text-white hover:border-primary transition-all">
+<span class="material-symbols-outlined">west</span>
+</button>
+<button class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center text-on-surface hover:bg-primary hover:text-white hover:border-primary transition-all">
+<span class="material-symbols-outlined">east</span>
+</button>
+</div>
+</div>
+<div class="flex gap-8 px-8 overflow-x-auto pb-12 no-scrollbar">
+<!-- Room Card 1 -->
+<div class="min-w-[320px] md:min-w-[450px] flex-shrink-0 group">
+<div class="relative overflow-hidden rounded-2xl mb-6">
+<img class="w-full aspect-[4/5] object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A luxury hotel suite interior designed with a modern editorial aesthetic. The room features a large glass balcony door with a view of a lush garden. The bed is adorned with high-thread-count white linens and silk cherry-colored accents. The lighting is soft and golden, highlighting the sophisticated mix of materials like wood, velvet, and marble. The mood is serene, private, and exceptionally high-end." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkJB8lH490-8fPyvIMbnE5oJLbI0cWD6effb7TssYOHXif_nzvDeF1KfhiKJRGeh3PY93ufHacAxSzHpqmnp5v5uHD5vIeR07P2Xjwwjl4pTBs3GsQq6r9cmthS9fdhy4YoQgxAOPxDBDm_ebJ-VtDA5yTLF-89jowMr49D4RFE5tGBhb61eX8kzRZmAQk4P3JuY_ddGoBxBzF6asfhIgLOkz05eX1QucMAn5bQGgRZIUY9gYd8YWe3HHS9Dl4r8Wy-s5_HpGLAw"/>
+<div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-primary">Phổ biến nhất</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-display text-xl font-bold text-on-surface mb-1">Deluxe King Room</h3>
+<p class="text-on-surface-variant text-sm">Diện tích: 45m² • Hướng thành phố</p>
+</div>
+<div class="text-right">
+<span class="font-display text-xl font-extrabold text-primary">3.500k</span>
+<span class="text-xs text-on-surface-variant block uppercase font-bold">/ Đêm</span>
+</div>
+</div>
+</div>
+<!-- Room Card 2 -->
+<div class="min-w-[320px] md:min-w-[450px] flex-shrink-0 group">
+<div class="relative overflow-hidden rounded-2xl mb-6">
+<img class="w-full aspect-[4/5] object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A bright and airy executive suite with a separate living area and master bedroom. The design uses light oak wood flooring, creamy white walls, and elegant minimalist furniture. Tall floor-to-ceiling windows allow natural light to flood the room. The color palette is clean and professional with delicate red accents. The overall look is one of spacious luxury and elite comfort." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC64gQmhwzdUSkPXHbKabI7BvGpDR813Jw_6gn1_5QXQ0t0_zPpopTC_GJuHlLUlJ1YHpCt2EXhd3hAu4JwlrcyqYCImjngFxWDIL4BrZmnO5VoQ6p7TJ_ARlAZbZRvl326bltGLnrsUQ66dXMjB5qabasvw_8mZRjq2yFJS-t8fzQ-RW0sKnRgxLZZOm7nES4mRhGUa3xksWNL_z86SkWHqFL6yl6bNuyrJJb4-T_5tPPfkgR0pHTfFDuE_dbiJeq0xrNxWCI8AA"/>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-display text-xl font-bold text-on-surface mb-1">Executive Suite</h3>
+<p class="text-on-surface-variant text-sm">Diện tích: 75m² • Hướng hồ bơi</p>
+</div>
+<div class="text-right">
+<span class="font-display text-xl font-extrabold text-primary">5.200k</span>
+<span class="text-xs text-on-surface-variant block uppercase font-bold">/ Đêm</span>
+</div>
+</div>
+</div>
+<!-- Room Card 3 -->
+<div class="min-w-[320px] md:min-w-[450px] flex-shrink-0 group">
+<div class="relative overflow-hidden rounded-2xl mb-6">
+<img class="w-full aspect-[4/5] object-cover transition-transform duration-700 group-hover:scale-105" data-alt="The grand penthouse suite at Cherry House, featuring a private terrace and panoramic views. The interior is a masterpiece of modern luxury, with bespoke furniture, a marble fireplace, and high-end lighting fixtures. The theme is rich and editorial, using deep cherry tones and sophisticated textures to create a unique, sanctuary-like environment. The mood is opulent yet tastefully restrained." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANsD8XDA6qYE7OrEoJntoADSCAFFVx5liI2F4uk1NideegT92mjQPAXk_cMQAUMCLL8mbf3LkJ5SWiLWn4sDjuFiC8CHWYCx1ugyDwspaqoJadFGvhzOMT5Yul8_znQ89reEU4joF4PLgcVCxsbHW_oj_2CLw6gALRX9l8Ijuwm5qjMJJ_tgt47cjDASHpCfbyHRmIAfDRGWkCW10KfO2qDlCTgRqtqaD323NXqOqN7WhoZQ_i2dOeSe_5rQeKoSKzrAbSo0asAA"/>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-display text-xl font-bold text-on-surface mb-1">Cherry Signature Penthouse</h3>
+<p class="text-on-surface-variant text-sm">Diện tích: 120m² • Toàn cảnh thành phố</p>
+</div>
+<div class="text-right">
+<span class="font-display text-xl font-extrabold text-primary">12.000k</span>
+<span class="text-xs text-on-surface-variant block uppercase font-bold">/ Đêm</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Newsletter / CTA -->
+<section class="py-24 px-8">
+<div class="max-w-5xl mx-auto bg-surface-container-high rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden">
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="relative z-10 space-y-8">
+<h2 class="font-display text-3xl md:text-5xl font-extrabold text-on-surface leading-tight">Gia nhập cộng đồng <br/>thành viên của chúng tôi</h2>
+<p class="text-on-surface-variant max-w-lg mx-auto">Đăng ký để nhận thông tin về các chương trình ưu đãi đặc quyền và những câu chuyện thú vị từ Cherry House.</p>
+<form class="flex flex-col md:flex-row gap-4 max-w-md mx-auto">
+<input class="flex-1 bg-white border border-outline-variant/30 px-6 py-4 rounded-full focus:ring-2 focus:ring-primary focus:border-transparent outline-none" placeholder="Email của bạn" type="email"/>
+<button class="bg-primary text-on-primary px-10 py-4 rounded-full font-display font-bold text-sm tracking-widest uppercase hover:bg-primary-container transition-all shadow-lg">Đăng ký</button>
+</form>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container text-on-surface py-20 px-8 border-t border-transparent">
+<div class="max-w-7xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+<div class="col-span-1 md:col-span-1 space-y-6">
+<div class="font-display text-2xl font-bold text-primary">Cherry House</div>
+<p class="text-on-surface-variant text-sm leading-relaxed">
+                        Nơi mỗi chi tiết đều được chăm chút để mang lại sự hoàn hảo trong kỳ nghỉ của bạn.
+                    </p>
+<div class="flex gap-4">
+<a class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center text-on-surface hover:bg-primary hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-lg">share</span>
+</a>
+<a class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center text-on-surface hover:bg-primary hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-lg">public</span>
+</a>
+</div>
+</div>
+<div class="space-y-6">
+<h4 class="font-display font-bold uppercase text-xs tracking-widest text-primary">Liên kết nhanh</h4>
+<ul class="space-y-4 text-sm font-body">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Về chúng tôi</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Hệ thống phòng</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Dịch vụ Spa &amp; Dining</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Tin tức &amp; Sự kiện</a></li>
+</ul>
+</div>
+<div class="space-y-6">
+<h4 class="font-display font-bold uppercase text-xs tracking-widest text-primary">Hỗ trợ khách hàng</h4>
+<ul class="space-y-4 text-sm font-body">
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Hướng dẫn đặt phòng</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Chính sách bảo mật</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Điều khoản dịch vụ</a></li>
+<li><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Câu hỏi thường gặp</a></li>
+</ul>
+</div>
+<div class="space-y-6">
+<h4 class="font-display font-bold uppercase text-xs tracking-widest text-primary">Thông tin liên hệ</h4>
+<ul class="space-y-4 text-sm font-body">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm">location_on</span>
+<span class="text-on-surface-variant">123 Đường Tố Hữu, Quận 1, TP. Hồ Chí Minh</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm">call</span>
+<span class="text-on-surface-variant">+84 (0) 28 3848 9999</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm">mail</span>
+<span class="text-on-surface-variant">hello@cherryhouse.vn</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="pt-8 border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-body text-on-surface-variant/80">
+<p>© 2024 Cherry House Hotel. Crafted for Sanctuary.</p>
+<div class="flex gap-8">
+<span>VN</span>
+<span>EN</span>
+<span>JP</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

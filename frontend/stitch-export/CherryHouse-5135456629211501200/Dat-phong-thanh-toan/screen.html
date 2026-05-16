@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,700;0,800;1,700&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#a82e42",
+                    "surface-bright": "#fcf9f4",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed": "#281804",
+                    "on-surface-variant": "#574142",
+                    "outline": "#8b7172",
+                    "surface": "#fcf9f4",
+                    "outline-variant": "#debfc0",
+                    "surface-container": "#f0ede9",
+                    "on-tertiary-fixed-variant": "#00522f",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed": "#002110",
+                    "on-primary-fixed-variant": "#8a172f",
+                    "surface-container-low": "#f6f3ee",
+                    "surface-container-high": "#ebe8e3",
+                    "surface-tint": "#ab3145",
+                    "on-tertiary-container": "#f6fff5",
+                    "inverse-on-surface": "#f3f0eb",
+                    "on-surface": "#1c1c19",
+                    "surface-dim": "#dcdad5",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#89f9b6",
+                    "secondary-fixed": "#fdddbb",
+                    "on-secondary-container": "#765e43",
+                    "secondary": "#715a3f",
+                    "primary-fixed-dim": "#ffb2b7",
+                    "primary-container": "#c94759",
+                    "surface-container-highest": "#e5e2dd",
+                    "on-secondary-fixed-variant": "#58432a",
+                    "tertiary": "#006a3f",
+                    "background": "#fcf9f4",
+                    "tertiary-container": "#008650",
+                    "on-secondary": "#ffffff",
+                    "on-background": "#1c1c19",
+                    "secondary-fixed-dim": "#e0c1a0",
+                    "inverse-primary": "#ffb2b7",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed": "#40000e",
+                    "primary-fixed": "#ffdadb",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#6cdc9c",
+                    "on-primary-container": "#fffbff",
+                    "error": "#ba1a1a",
+                    "secondary-container": "#fadab8",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#31302d",
+                    "surface-variant": "#e5e2dd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Be Vietnam Pro"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-nav {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 glass-nav">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="font-['Be_Vietnam_Pro'] text-2xl font-bold italic text-[#a82e42]">Cherry House</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="font-['Be_Vietnam_Pro'] font-medium text-sm tracking-wide uppercase text-on-surface-variant hover:text-[#a82e42] transition-colors duration-300" href="#">Home</a>
+<a class="font-['Be_Vietnam_Pro'] font-medium text-sm tracking-wide uppercase text-[#a82e42] border-b-2 border-[#a82e42] pb-1" href="#">Phòng</a>
+<a class="font-['Be_Vietnam_Pro'] font-medium text-sm tracking-wide uppercase text-on-surface-variant hover:text-[#a82e42] transition-colors duration-300" href="#">Dịch vụ</a>
+<a class="font-['Be_Vietnam_Pro'] font-medium text-sm tracking-wide uppercase text-on-surface-variant hover:text-[#a82e42] transition-colors duration-300" href="#">Liên hệ</a>
+</div>
+<div class="flex gap-4 items-center">
+<button class="font-['Be_Vietnam_Pro'] font-medium text-sm tracking-wide uppercase text-on-surface-variant hover:text-[#a82e42] transition-colors duration-300">Thành viên</button>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-['Be_Vietnam_Pro'] font-medium text-sm tracking-wide uppercase active:scale-95 transition-transform">Đặt phòng</button>
+</div>
+</div>
+</nav>
+<main class="pt-24 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
+<!-- Editorial Header -->
+<header class="mb-12">
+<h1 class="font-headline text-4xl md:text-5xl font-extrabold text-primary mb-4 tracking-tight">Hoàn tất đặt phòng</h1>
+<p class="text-on-surface-variant max-w-2xl text-lg">Chỉ một bước nữa để bắt đầu kỳ nghỉ dưỡng tuyệt vời tại Cherry House. Vui lòng kiểm tra lại thông tin bên dưới.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+<!-- Left Column: Checkout Forms -->
+<div class="lg:col-span-7 space-y-12">
+<!-- Customer Information -->
+<section>
+<div class="flex items-center gap-4 mb-8">
+<span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline font-bold">1</span>
+<h2 class="font-headline text-2xl font-bold text-on-surface">Thông tin khách hàng</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="font-label text-sm font-semibold text-on-surface-variant px-1">Họ và tên</label>
+<input class="w-full bg-surface-container-high border-none rounded-xl p-4 focus:ring-1 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all" placeholder="Nguyễn Văn A" type="text"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label text-sm font-semibold text-on-surface-variant px-1">Số điện thoại</label>
+<input class="w-full bg-surface-container-high border-none rounded-xl p-4 focus:ring-1 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all" placeholder="090 123 4567" type="tel"/>
+</div>
+<div class="md:col-span-2 flex flex-col gap-2">
+<label class="font-label text-sm font-semibold text-on-surface-variant px-1">Địa chỉ Email</label>
+<input class="w-full bg-surface-container-high border-none rounded-xl p-4 focus:ring-1 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all" placeholder="example@cherryhouse.com" type="email"/>
+</div>
+<div class="md:col-span-2 flex flex-col gap-2">
+<label class="font-label text-sm font-semibold text-on-surface-variant px-1">Yêu cầu đặc biệt (Không bắt buộc)</label>
+<textarea class="w-full bg-surface-container-high border-none rounded-xl p-4 focus:ring-1 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all" placeholder="Ví dụ: Phòng tầng cao, nôi cho em bé..." rows="3"></textarea>
+</div>
+</div>
+</section>
+<!-- Payment Methods -->
+<section>
+<div class="flex items-center gap-4 mb-8">
+<span class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline font-bold">2</span>
+<h2 class="font-headline text-2xl font-bold text-on-surface">Phương thức thanh toán</h2>
+</div>
+<div class="space-y-4">
+<label class="relative flex items-center p-6 rounded-xl bg-surface-container-lowest cursor-pointer transition-all hover:bg-surface-container-low border border-transparent has-[:checked]:border-primary/20 has-[:checked]:bg-surface-container-low">
+<input checked="" class="hidden peer" name="payment" type="radio"/>
+<div class="flex flex-1 items-center gap-4">
+<span class="material-symbols-outlined text-primary scale-110" data-icon="credit_card">credit_card</span>
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Thẻ tín dụng / Ghi nợ</span>
+<span class="text-sm text-on-surface-variant">Visa, Mastercard, JCB, American Express</span>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="w-2 h-2 rounded-full bg-white"></div>
+</div>
+</label>
+<label class="relative flex items-center p-6 rounded-xl bg-surface-container-lowest cursor-pointer transition-all hover:bg-surface-container-low border border-transparent has-[:checked]:border-primary/20 has-[:checked]:bg-surface-container-low">
+<input class="hidden peer" name="payment" type="radio"/>
+<div class="flex flex-1 items-center gap-4">
+<span class="material-symbols-outlined text-primary scale-110" data-icon="account_balance">account_balance</span>
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Chuyển khoản ngân hàng</span>
+<span class="text-sm text-on-surface-variant">Xác nhận nhanh trong vòng 15 phút</span>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="w-2 h-2 rounded-full bg-white"></div>
+</div>
+</label>
+<label class="relative flex items-center p-6 rounded-xl bg-surface-container-lowest cursor-pointer transition-all hover:bg-surface-container-low border border-transparent has-[:checked]:border-primary/20 has-[:checked]:bg-surface-container-low">
+<input class="hidden peer" name="payment" type="radio"/>
+<div class="flex flex-1 items-center gap-4">
+<span class="material-symbols-outlined text-primary scale-110" data-icon="qr_code_2">qr_code_2</span>
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Ví điện tử (Momo/ZaloPay)</span>
+<span class="text-sm text-on-surface-variant">Thanh toán một chạm cực kỳ tiện lợi</span>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="w-2 h-2 rounded-full bg-white"></div>
+</div>
+</label>
+</div>
+</section>
+</div>
+<!-- Right Column: Booking Summary Card -->
+<aside class="lg:col-span-5 sticky top-28">
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_32px_64px_-12px_rgba(28,28,25,0.06)]">
+<div class="h-48 w-full bg-surface-container-high relative">
+<img alt="Luxury Suite" class="w-full h-full object-cover" data-alt="luxurious master hotel suite with cherry wood furniture, king-size bed with white linen, and large windows overlooking a garden at dusk" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDy3m4ptyC_xyUyp4H6boEBChQnElB9YhJJ5NEP1pDW0qw-iUTYJEQ135povcucoXpkLh9VaLQbAGLLudIfooN-c_GX6QEgrXSW5qkSdfEnrgHNE0hKhQ6lX-fbkMruiBkB7eFl_vE0Yb7HHrX2ui7FG2I44V7tAYpcTMT1jiC64wZvMwOwbLfQMYR1vdD1njqOWE0vG2CN4kZ9xLinNmYyM-RunbBjSZNiHhU9KuqWDWN5ZA093T-qErkbSlo_RPRZJaEnOOm0z_M"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+<h3 class="text-white font-headline text-xl font-bold">Phòng Deluxe Garden View</h3>
+</div>
+</div>
+<div class="p-8 space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant opacity-60">Ngày đến</span>
+<p class="font-headline font-bold text-on-surface">24 Th10, 2024</p>
+</div>
+<div class="space-y-1 text-right">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant opacity-60">Ngày đi</span>
+<p class="font-headline font-bold text-on-surface">26 Th10, 2024</p>
+</div>
+</div>
+<div class="flex items-center gap-3 py-4 border-y border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="person">person</span>
+</div>
+<span class="font-medium">2 Người lớn, 1 Trẻ em</span>
+</div><div class="py-6 flex flex-col gap-3">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant opacity-60 px-1">Mã ưu đãi</label>
+<div class="flex gap-2">
+<input class="flex-1 bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all font-body" placeholder="Nhập mã ưu đãi..." type="text"/>
+<button class="bg-primary-container text-on-primary-container px-6 py-3 rounded-xl font-headline font-bold text-sm hover:bg-primary hover:text-on-primary transition-colors active:scale-95">Áp dụng</button>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-on-surface-variant">
+<span>Giá phòng (2 đêm)</span>
+<span>4.200.000đ</span>
+</div>
+<div class="flex justify-between text-on-surface-variant">
+<span>Phí dịch vụ &amp; Thuế</span>
+<span>420.000đ</span>
+</div>
+<div class="flex justify-between text-tertiary font-medium">
+<span>Ưu đãi thành viên</span>
+<span>-210.000đ</span>
+</div>
+</div>
+<div class="pt-6 border-t border-outline-variant/10 flex justify-between items-end">
+<div class="flex flex-col">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant opacity-60">Tổng cộng</span>
+<span class="text-sm text-on-surface-variant italic">(Đã bao gồm thuế)</span>
+</div>
+<div class="text-3xl font-headline font-extrabold text-primary">
+                                4.410.000đ
+                            </div>
+</div>
+<button class="w-full bg-primary text-on-primary py-5 rounded-full font-headline font-bold text-lg shadow-[0_32px_64px_-4px_rgba(168,46,66,0.2)] active:scale-95 transition-transform">
+                            XÁC NHẬN ĐẶT PHÒNG
+                        </button>
+<p class="text-center text-xs text-on-surface-variant px-4">
+                            Bằng cách nhấn nút, bạn đồng ý với <a class="underline" href="#">Điều khoản &amp; Điều kiện</a> và <a class="underline" href="#">Chính sách bảo mật</a> của Cherry House.
+                        </p>
+</div>
+</div>
+<!-- Trust Badges -->
+<div class="mt-6 flex justify-center gap-6 opacity-40">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span class="material-symbols-outlined" data-icon="shield">shield</span>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-[#f0ede9] dark:bg-slate-950 w-full mt-auto py-12 px-8 flex flex-col items-center gap-6">
+<div class="font-['Be_Vietnam_Pro'] text-xl font-bold text-[#a82e42]">Cherry House</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-['Manrope'] text-sm leading-relaxed text-on-surface-variant/80 hover:text-[#a82e42] underline decoration-from-font" href="#">Về chúng tôi</a>
+<a class="font-['Manrope'] text-sm leading-relaxed text-on-surface-variant/80 hover:text-[#a82e42] underline decoration-from-font" href="#">Chính sách bảo mật</a>
+<a class="font-['Manrope'] text-sm leading-relaxed text-on-surface-variant/80 hover:text-[#a82e42] underline decoration-from-font" href="#">Điều khoản dịch vụ</a>
+<a class="font-['Manrope'] text-sm leading-relaxed text-on-surface-variant/80 hover:text-[#a82e42] underline decoration-from-font" href="#">Hướng dẫn đặt phòng</a>
+</div>
+<div class="w-full max-w-7xl border-t border-outline-variant/10 my-4"></div>
+<div class="text-on-surface-variant/60 font-['Manrope'] text-xs text-center">
+            © 2024 Cherry House Hotel. Crafted for Sanctuary.
+        </div>
+</footer>
+</body></html>
