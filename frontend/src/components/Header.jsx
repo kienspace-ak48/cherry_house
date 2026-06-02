@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
 import { DEFAULT_HEADER_NAV_LINKS } from '../constants/headerNavLinks';
+import { getHeaderBookingHref } from '../lib/bookingContext';
 
 const linkClass = (isActive) =>
   [
@@ -39,6 +40,7 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
   const location = useLocation();
 
   const closeMenu = () => setMenuOpen(false);
+  const bookingHref = getHeaderBookingHref();
 
   return (
     <>
@@ -63,16 +65,19 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
           </Link>
 
           <div className="hidden flex-1 flex-wrap items-center justify-center gap-x-5 gap-y-2 lg:flex xl:gap-x-8">
-            {navLinks.map((item) => (
+            {navLinks.map((item) => {
+              const to = item.to === '/booking' ? bookingHref : item.to;
+              return (
               <NavLink
                 key={item.to}
-                to={item.to}
+                to={to}
                 end={item.end ?? false}
-                className={() => linkClass(isNavItemActive(location, item))}
+                className={() => linkClass(isNavItemActive(location, { ...item, to }))}
               >
                 {item.label}
               </NavLink>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -82,13 +87,6 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
               onClick={closeMenu}
             >
               Thành viên
-            </Link>
-            <Link
-              to="/booking"
-              className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-110 active:scale-95 sm:px-6 sm:py-2.5 sm:text-sm"
-              onClick={closeMenu}
-            >
-              Đặt phòng
             </Link>
             <button
               type="button"
@@ -121,20 +119,23 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
           >
             <div className={[LAYOUT_CONTAINER, 'py-4'].join(' ')}>
               <ul className="flex flex-col gap-1 border-b border-black/5 pb-3">
-                {navLinks.map((item) => (
+                {navLinks.map((item) => {
+                  const to = item.to === '/booking' ? bookingHref : item.to;
+                  return (
                   <li key={item.to}>
                     <NavLink
-                      to={item.to}
+                      to={to}
                       end={item.end ?? false}
                       className={() =>
-                        linkClass(isNavItemActive(location, item))
+                        linkClass(isNavItemActive(location, { ...item, to }))
                       }
                       onClick={closeMenu}
                     >
                       {item.label}
                     </NavLink>
                   </li>
-                ))}
+                  );
+                })}
                 <li>
                   <NavLink
                     to="/profile"

@@ -1,0 +1,64 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Đặt phòng</h2>
+    <p class="text-body-secondary mb-0 small">Nguồn dữ liệu: <code>GET /api/bookings</code></p>
+  </div>
+  <button type="button" class="btn btn-primary btn-sm" id="btn-reload"><i class="fa-solid fa-rotate-right me-1"></i> Tải lại</button>
+</div>
+<div id="page-error" class="alert alert-danger d-none"></div>
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách</strong>
+    <span class="badge text-bg-secondary" id="row-count">—</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Mã</th>
+            <th>Khách</th>
+            <th>Cơ sở / CN</th>
+            <th>Phòng</th>
+            <th>Nhận → Trả</th>
+            <th>Tổng</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('vi-VN');
+  }
+  async function loadTable() {
+    const tbody = document.getElementById('table-body');
+    const errEl = document.getElementById('page-error');
+    errEl.classList.add('d-none');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Đang tải…</td></tr>';
+    try {
+      const rows = await AdminApi.get('/bookings');
+      document.getElementById('row-count').textContent = rows.length + ' mục';
+      tbody.innerHTML = rows.length ? rows.map((b) => `
+        <tr>
+          <td><code>${b.bookingCode}</code></td>
+          <td><strong>${b.guestName}</strong><br><small>${b.guestEmail}</small></td>
+          <td>${b.propertyName}<br><small class="text-body-secondary">${b.branchName}</small></td>
+          <td>${b.roomCode}</td>
+          <td>${fmtDate(b.checkIn)} → ${fmtDate(b.checkOut)}<br><small>${b.nights} đêm</small></td>
+          <td>${AdminApi.formatVnd(b.totalVnd)}</td>
+          <td><span class="badge bg-${AdminApi.statusBadge(b.status)}">${b.status}</span></td>
+        </tr>`).join('') : '<tr><td colspan="7" class="text-center py-4">Chưa có booking trong DB</td></tr>';
+    } catch (err) {
+      tbody.innerHTML = '';
+      AdminApi.showError(errEl, err);
+    }
+  }
+  document.getElementById('btn-reload').addEventListener('click', loadTable);
+  loadTable();
+</script>

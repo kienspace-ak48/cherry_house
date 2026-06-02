@@ -2,7 +2,6 @@
 export const DEFAULT_HEADER_NAV_LINKS = [
   { to: '/', label: 'Trang chủ', end: true },
   { to: '/booking', label: 'Đặt phòng' },
-  // { to: '/rooms', label: 'Room' },
-  { to: '/about', label: 'About' },
+  { to: '/about', label: 'Về chúng tôi' },
   { to: '/contact', label: 'Liên hệ' },
 ];

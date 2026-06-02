@@ -1,0 +1,12 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= mode === 'edit' ? 'Sửa cơ sở' : 'Thêm cơ sở' %></h2>
+    <p class="text-body-secondary mb-0 small">Form chuẩn CRUD · bảng properties</p>
+  </div>
+  <a href="/admin/properties" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+</div>
+
+<%- include('../../partials/admin/propertyForm', {
+  formAction: mode === 'edit' ? '/admin/properties/' + property.id : '/admin/properties',
+  submitLabel: mode === 'edit' ? 'Cập nhật' : 'Tạo mới',
+}) %>

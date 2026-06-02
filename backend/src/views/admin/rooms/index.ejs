@@ -1,0 +1,125 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Phòng (inventory)</h2>
+    <p class="text-body-secondary mb-0 small">Quản lý bảng <code>rooms</code> — phòng vật lý theo chi nhánh &amp; loại phòng</p>
+  </div>
+  <a href="/admin/rooms/new" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-plus me-1"></i> Thêm phòng
+  </a>
+</div>
+
+<% if (flash === 'created') { %>
+<div class="alert alert-success">Đã tạo phòng mới.</div>
+<% } else if (flash === 'updated') { %>
+<div class="alert alert-success">Đã cập nhật phòng.</div>
+<% } else if (flash === 'deleted') { %>
+<div class="alert alert-success">Đã xóa phòng.</div>
+<% } else if (flash === 'notfound') { %>
+<div class="alert alert-warning">Không tìm thấy phòng.</div>
+<% } else if (flash === 'error') { %>
+<div class="alert alert-danger"><%= typeof msg !== 'undefined' ? msg : 'Có lỗi xảy ra' %></div>
+<% } %>
+<% if (typeof formError !== 'undefined' && formError) { %>
+<div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/rooms" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small mb-1" for="filterBranchId">Chi nhánh</label>
+        <select class="form-select form-select-sm" id="filterBranchId" name="branchId">
+          <option value="">— Tất cả —</option>
+          <% branches.forEach(function(br) { %>
+          <option value="<%= br.id %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %> (<%= br.code %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small mb-1" for="filterRoomTypeId">Loại phòng</label>
+        <select class="form-select form-select-sm" id="filterRoomTypeId" name="roomTypeId">
+          <option value="">— Tất cả —</option>
+          <% roomTypes.forEach(function(rt) { %>
+          <option value="<%= rt.id %>" <%= filterRoomTypeId === String(rt.id) ? 'selected' : '' %>><%= rt.title %> · <%= rt.category %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="filterStatus">Trạng thái</label>
+        <select class="form-select form-select-sm" id="filterStatus" name="status">
+          <option value="">— Tất cả —</option>
+          <% roomStatuses.forEach(function(s) { %>
+          <option value="<%= s.value %>" <%= filterStatus === s.value ? 'selected' : '' %>><%= s.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Lọc</button>
+        <% if (filterBranchId || filterRoomTypeId || filterStatus) { %>
+        <a href="/admin/rooms" class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
+        <% } %>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách</strong>
+    <span class="badge text-bg-secondary"><%= rooms.length %> mục</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Ảnh</th>
+            <th>Mã</th>
+            <th>Chi nhánh</th>
+            <th>Loại phòng</th>
+            <th>Giá/đêm</th>
+            <th>Trạng thái</th>
+            <th>Hiển thị</th>
+            <th class="text-end">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!rooms.length) { %>
+          <tr><td colspan="9" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
+          <% } %>
+          <% rooms.forEach(function(r) { %>
+          <tr>
+            <td><%= r.id %></td>
+            <td>
+              <% if (r.imageUrl) { %>
+              <img src="<%= r.imageUrl %>" alt="<%= r.altText || '' %>" class="admin-table-thumb">
+              <% } else { %>—<% } %>
+            </td>
+            <td><code><%= r.code %></code></td>
+            <td>
+              <%= r.branch?.name ?? r.branchId %><br>
+              <small class="text-body-secondary"><%= r.branch?.code ?? '' %></small>
+            </td>
+            <td>
+              <%= r.roomType?.title ?? r.roomTypeId %><br>
+              <small class="text-body-secondary"><%= r.roomType?.category ?? '' %></small>
+            </td>
+            <td><%= formatPriceVnd(r.priceVnd) %> ₫</td>
+            <td><span class="badge bg-<%= statusBadgeClass(r.status) %>"><%= statusLabel(r.status) %></span></td>
+            <td>
+              <% if (r.isActive) { %><span class="badge bg-success">On</span><% } else { %><span class="badge bg-secondary">Off</span><% } %>
+            </td>
+            <td class="text-end text-nowrap">
+              <a href="/admin/rooms/<%= r.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <form method="POST" action="/admin/rooms/<%= r.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa phòng <%= r.code %>?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+              </form>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

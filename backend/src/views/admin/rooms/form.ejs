@@ -1,0 +1,12 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= mode === 'edit' ? 'Sửa phòng' : 'Thêm phòng' %></h2>
+    <p class="text-body-secondary mb-0 small">Form CRUD · bảng <code>rooms</code> (inventory)</p>
+  </div>
+  <a href="/admin/rooms" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+</div>
+
+<%- include('../../partials/admin/roomForm', {
+  formAction: mode === 'edit' ? '/admin/rooms/' + room.id : '/admin/rooms',
+  submitLabel: mode === 'edit' ? 'Cập nhật' : 'Tạo mới',
+}) %>

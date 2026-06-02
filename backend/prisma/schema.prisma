@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -12,10 +7,353 @@ datasource db {
   provider = "mysql"
 }
 
-model Room {
-  id Int @id @default(autoincrement())
-  name String @db.VarChar(255)
-  description String @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Enum 
+enum PropertyKind {
+  homestay
+  mini_hotel
+  villa
+  serviced_apartment
+}
+
+enum RoomCategory {
+  Standard
+  Deluxe
+  Suite
+  Penthouse
+}
+
+enum InventoryRoomStatus {
+  available
+  pending
+  booked
+}
+
+enum BookingStatus {
+  draft
+  pending_payment
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+enum PaymentMethod {
+  card
+  bank
+  wallet
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum MembershipTier {
+  standard
+  gold
+  diamond
+}
+
+enum UserRole {
+  user
+  admin
+  super_admin
+}
+
+// 1. properties
+model Property {
+  id           Int               @id @default(autoincrement())
+  slug         String            @unique @db.VarChar(120)
+  name         String            @db.VarChar(255)
+  city         String            @db.VarChar(120)
+  region       String            @db.VarChar(120)
+  kind         PropertyKind
+  tagline      String?           @db.VarChar(500)
+  description  String            @db.Text
+  address      String            @db.VarChar(500)
+  priceFromVnd Int               @map("price_from_vnd")
+  roomCount    Int               @default(0) @map("room_count")
+  branchCount  Int               @default(0) @map("branch_count")
+  rating       Decimal           @default(0) @db.Decimal(2, 1)
+  reviewCount  Int               @default(0) @map("review_count")
+  heroImageUrl String?           @map("hero_image_url") @db.VarChar(500)
+  highlights   Json?
+  isActive     Boolean           @default(true) @map("is_active")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  branches     Branch[]
+  gallery      PropertyGallery[]
+  amenities    PropertyAmenity[]
+  bookings     Booking[]
+
+  @@map("properties")
+}
+
+// 2. property_gallery
+model PropertyGallery {
+  id         Int      @id @default(autoincrement())
+  propertyId Int      @map("property_id")
+  imageUrl   String   @map("image_url") @db.VarChar(500)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@map("property_gallery")
+}
+
+// 3. branches
+model Branch {
+  id         Int            @id @default(autoincrement())
+  propertyId Int            @map("property_id")
+  code       String         @db.VarChar(100)
+  name       String         @db.VarChar(100)
+  address    String         @db.VarChar(200)
+  tagline    String?        @db.VarChar(200)
+  price      Decimal        @db.Decimal(10, 2)
+  roomCount  Int            @default(0) @map("room_count")
+  imgUrl     String?        @map("img_url") @db.VarChar(500)
+  isActive   Boolean        @default(true) @map("is_active")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  mapPin     BranchMapPin?
+  rooms      InventoryRoom[]
+  bookings   Booking[]
+
+  @@unique([propertyId, code])
+  @@map("branches")
+}
+
+// 4. branch_map_pins
+model BranchMapPin {
+  id             Int     @id @default(autoincrement())
+  branchId       Int     @unique @map("branch_id")
+  lat            Decimal @db.Decimal(10, 7)
+  lng            Decimal @db.Decimal(10, 7)
+  zoom           Int     @default(15)
+  label          String? @db.VarChar(120)
+  pinBadge       String? @map("pin_badge") @db.VarChar(50)
+  pinInfo        String? @map("pin_info") @db.VarChar(200)
+  googleMapsUrl  String  @map("google_maps_url") @db.VarChar(500)
+  embedUrl       String? @map("embed_url") @db.VarChar(500)
+  branch         Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("branch_map_pins")
+}
+
+// 5. room_types
+model RoomType {
+  id            Int                @id @default(autoincrement())
+  slug          String             @unique @db.VarChar(120)
+  badge         String             @db.VarChar(120)
+  title         String             @db.VarChar(255)
+  category      RoomCategory
+  areaSqm       Int                @map("area_sqm")
+  bedLabel      String             @map("bed_label") @db.VarChar(120)
+  capacityLabel String             @map("capacity_label") @db.VarChar(120)
+  basePriceVnd  Int                @map("base_price_vnd")
+  checkInTime   String             @default("14:00") @map("check_in_time") @db.VarChar(10)
+  checkOutTime  String             @default("12:00") @map("check_out_time") @db.VarChar(10)
+  paragraphs    Json?
+  policyBullets Json?              @map("policy_bullets")
+  isActive      Boolean            @default(true) @map("is_active")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  gallery       RoomTypeGallery[]
+  amenities     RoomTypeAmenity[]
+  rooms         InventoryRoom[]
+
+  @@map("room_types")
+}
+
+// 6. room_type_gallery
+model RoomTypeGallery {
+  id         Int      @id @default(autoincrement())
+  roomTypeId Int      @map("room_type_id")
+  imageUrl   String   @map("image_url") @db.VarChar(500)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+
+  @@index([roomTypeId])
+  @@map("room_type_gallery")
+}
+
+// 7. amenities
+model Amenity {
+  id         Int               @id @default(autoincrement())
+  icon       String            @db.VarChar(80)
+  label      String            @db.VarChar(200)
+  createdAt  DateTime          @default(now()) @map("created_at")
+  properties PropertyAmenity[]
+  roomTypes  RoomTypeAmenity[]
+
+  @@map("amenities")
+}
+
+// 8. property_amenities
+model PropertyAmenity {
+  propertyId Int      @map("property_id")
+  amenityId  Int      @map("amenity_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, amenityId])
+  @@map("property_amenities")
+}
+
+// 9. room_type_amenities
+model RoomTypeAmenity {
+  roomTypeId Int      @map("room_type_id")
+  amenityId  Int      @map("amenity_id")
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([roomTypeId, amenityId])
+  @@map("room_type_amenities")
+}
+
+// 10. rooms (phòng vật lý)
+model InventoryRoom {
+  id          Int                 @id @default(autoincrement())
+  branchId    Int                 @map("branch_id")
+  roomTypeId  Int                 @map("room_type_id")
+  code        String              @db.VarChar(50)
+  priceVnd    Int                 @map("price_vnd")
+  description String              @db.Text
+  imageUrl    String?             @map("image_url") @db.VarChar(500)
+  altText     String?             @map("alt_text") @db.VarChar(255)
+  maxAdults   Int                 @default(2) @map("max_adults")
+  maxChildren Int                 @default(0) @map("max_children")
+  status      InventoryRoomStatus @default(available)
+  isActive    Boolean             @default(true) @map("is_active")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  branch      Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  roomType    RoomType            @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  bookings    Booking[]
+
+  @@unique([branchId, code])
+  @@map("rooms")
+}
+
+// 11. users
+model User {
+  id             Int            @id @default(autoincrement())
+  role           UserRole       @default(user)
+  email          String         @unique @db.VarChar(255)
+  passwordHash   String?        @map("password_hash") @db.VarChar(255)
+  fullName       String         @map("full_name") @db.VarChar(255)
+  phone          String?        @db.VarChar(30)
+  membershipTier MembershipTier @default(standard) @map("membership_tier")
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  bookings       Booking[]
+
+  @@map("users")
+}
+
+// 12. bookings
+model Booking {
+  id              Int           @id @default(autoincrement())
+  bookingCode     String        @unique @map("booking_code") @db.VarChar(40)
+  userId          Int?          @map("user_id")
+  roomId          Int           @map("room_id")
+  propertyId      Int           @map("property_id")
+  branchId        Int           @map("branch_id")
+  roomTypeId      Int           @map("room_type_id")
+  roomCode        String        @map("room_code") @db.VarChar(50)
+  propertyName    String        @map("property_name") @db.VarChar(255)
+  branchName      String        @map("branch_name") @db.VarChar(255)
+  checkIn         DateTime      @map("check_in") @db.Date
+  checkOut        DateTime      @map("check_out") @db.Date
+  nights          Int
+  adults          Int           @default(2)
+  children        Int           @default(0)
+  guestName       String        @map("guest_name") @db.VarChar(255)
+  guestPhone      String        @map("guest_phone") @db.VarChar(30)
+  guestEmail      String        @map("guest_email") @db.VarChar(255)
+  specialNote     String?       @map("special_note") @db.Text
+  pricePerNightVnd Int          @map("price_per_night_vnd")
+  subtotalVnd     Int           @map("subtotal_vnd")
+  serviceFeeVnd   Int           @default(0) @map("service_fee_vnd")
+  discountVnd     Int           @default(0) @map("discount_vnd")
+  totalVnd        Int           @map("total_vnd")
+  promoCode       String?       @map("promo_code") @db.VarChar(40)
+  status          BookingStatus @default(pending_payment)
+  holdExpiresAt   DateTime?     @map("hold_expires_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  room            InventoryRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  property        Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  branch          Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  payment         Payment?
+
+  @@index([userId])
+  @@index([roomId])
+  @@index([status])
+  @@map("bookings")
+}
+
+// 13. payments
+model Payment {
+  id          Int           @id @default(autoincrement())
+  bookingId   Int           @unique @map("booking_id")
+  method      PaymentMethod
+  amountVnd   Int           @map("amount_vnd")
+  status      PaymentStatus @default(pending)
+  providerRef String?       @map("provider_ref") @db.VarChar(255)
+  paidAt      DateTime?     @map("paid_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// 14. media_folders (admin media library)
+model MediaFolder {
+  id        Int          @id @default(autoincrement())
+  name      String       @unique @db.VarChar(120)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  images    MediaImage[]
+
+  @@map("media_folders")
+}
+
+// 15. media_images (admin media library)
+model MediaImage {
+  id        Int          @id @default(autoincrement())
+  folderId  Int?         @map("folder_id")
+  name      String       @db.VarChar(255)
+  path      String       @unique @db.VarChar(500)
+  mimeType  String?      @map("mime_type") @db.VarChar(100)
+  sizeBytes Int?         @map("size_bytes")
+  createdAt DateTime     @default(now()) @map("created_at")
+  folder    MediaFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@map("media_images")
+}
+
+// 16. promo_codes (bonus — thường đi kèm booking)
+model PromoCode {
+  id              Int      @id @default(autoincrement())
+  code            String   @unique @db.VarChar(40)
+  discountPercent Int      @map("discount_percent")
+  validFrom       DateTime @map("valid_from") @db.Date
+  validTo         DateTime @map("valid_to") @db.Date
+  maxUses         Int?     @map("max_uses")
+  usedCount       Int      @default(0) @map("used_count")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("promo_codes")
 }

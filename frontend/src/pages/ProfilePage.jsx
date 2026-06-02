@@ -86,8 +86,9 @@ function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword 
           </h2>
           <p className="mt-1.5 max-w-lg text-xs leading-relaxed text-on-surface-variant">
             Xem nhanh thông tin bên dưới hoặc mở mục <span className="font-semibold text-on-surface">Thông tin tài khoản</span> khi muốn
-            chỉnh sửa chi tiết. Đặt phòng của bạn gắn với&nbsp;
-            <span className="font-semibold text-on-surface">Bảng phòng</span>.
+            chỉnh sửa chi tiết. Đặt phòng qua&nbsp;
+            <Link to="/booking" className="font-semibold text-primary hover:underline">cơ sở lưu trú</Link>
+            {' '}rồi chọn phòng trống.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -151,7 +152,7 @@ function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword 
             Bạn là thành viên{' '}
             <strong className="text-on-surface">Kim cương</strong>. Ưu đãi thành viên được tính tự động khi vào&nbsp;
             <Link className="font-bold text-primary hover:underline" to="/booking">
-              bước thanh toán
+              cơ sở &amp; phòng
             </Link>
             .
           </p>
@@ -159,8 +160,8 @@ function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword 
             to="/booking"
             className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
           >
-            <span className="material-symbols-outlined text-[16px]">hotel</span>
-            Xem danh sách phòng
+            <span className="material-symbols-outlined text-[16px]">domain</span>
+            Xem cơ sở lưu trú
           </Link>
         </section>
       </div>
@@ -532,7 +533,7 @@ function ProfilePlaceholderCard({ title }) {
         to="/booking"
         className="mt-5 inline-flex rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-primary/20 hover:brightness-110"
       >
-        Đặt phòng của tôi
+        Khám phá cơ sở & đặt phòng
       </Link>
     </section>
   );

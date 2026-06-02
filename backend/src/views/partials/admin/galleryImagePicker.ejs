@@ -1,0 +1,46 @@
+<%#
+  Gallery image picker field
+  locals: fieldId, fieldName, value, label (optional)
+%>
+<% const fid = typeof fieldId !== 'undefined' ? fieldId : 'heroImageUrl'; %>
+<% const fname = typeof fieldName !== 'undefined' ? fieldName : fid; %>
+<% const fval = typeof value !== 'undefined' ? value : ''; %>
+<% const flabel = typeof label !== 'undefined' ? label : 'Ảnh đại diện'; %>
+
+<div class="gallery-image-picker" data-gallery-picker>
+  <label class="form-label" for="<%= fid %>"><%= flabel %></label>
+
+  <div class="gallery-image-picker-preview mb-2 <%= fval ? '' : 'd-none' %>" data-gallery-picker-preview>
+    <img
+      src="<%= fval %>"
+      alt=""
+      class="gallery-image-picker-thumb rounded border"
+      data-gallery-picker-preview-img
+    >
+  </div>
+
+  <input
+    type="hidden"
+    class="gallery-image-picker-input"
+    id="<%= fid %>"
+    name="<%= fname %>"
+    value="<%= fval %>"
+    data-gallery-picker-input
+  >
+
+  <div class="d-flex flex-wrap gap-2">
+    <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>
+      <i class="fa-solid fa-images me-1"></i>Chọn từ gallery
+    </button>
+    <button type="button" class="btn btn-outline-secondary btn-sm <%= fval ? '' : 'd-none' %>" data-gallery-picker-clear>
+      <i class="fa-solid fa-xmark me-1"></i>Xóa ảnh
+    </button>
+    <a href="/admin/gallery" class="btn btn-link btn-sm text-body-secondary" target="_blank" rel="noopener">
+      Quản lý thư viện
+    </a>
+  </div>
+
+  <div class="form-text" data-gallery-picker-path-text>
+    <%= fval ? fval : 'Chưa chọn ảnh — mở gallery để chọn.' %>
+  </div>
+</div>

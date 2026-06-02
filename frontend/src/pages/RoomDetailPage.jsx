@@ -1,13 +1,200 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import BookingProgress from '../components/booking/BookingProgress';
+import BookingSearchBar from '../components/booking/BookingSearchBar';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
+import { resolveBranch } from '../data/properties';
 import { resolveRoomDetail } from '../data/roomDetails';
-import { formatPriceVnd } from './booking/bookingData';
+import {
+  CTA,
+  buildUrl,
+  formatContextSummary,
+  getBranchStepHref,
+  getDiscoveryHref,
+  parseBookingContext,
+} from '../lib/bookingContext';
+import {
+  countStayNights,
+  findRoomByDetailSlug,
+  formatPriceVnd,
+} from './booking/bookingData';
+
+const STATUS_LABEL = {
+  available: 'Sẵn sàng đặt',
+  pending: 'Đang được giữ',
+  booked: 'Đã kín phòng',
+};
+
+/**
+ * @param {{
+ *   detail: import('../data/roomDetails').RoomDetailRecord;
+ *   context: import('../lib/bookingContext').BookingContext;
+ *   listingRoom: ReturnType<typeof findRoomByDetailSlug>;
+ *   checkoutHref: string;
+ *   bookingBackHref: string;
+ *   guests: string;
+ *   setGuests: (v: string) => void;
+ *   compact?: boolean;
+ * }} props
+ */
+function RoomBookingPanel({
+  detail,
+  context,
+  listingRoom,
+  checkoutHref,
+  bookingBackHref,
+  guests,
+  setGuests,
+  compact = false,
+}) {
+  const nights = countStayNights(context.checkIn, context.checkOut);
+  const canBook = !listingRoom || listingRoom.status === 'available';
+  const total = nights ? detail.priceVnd * nights : null;
+  const status = listingRoom?.status ?? 'available';
+  const branchCtx = resolveBranch(context.property, context.branch);
+
+  return (
+    <div
+      className={[
+        'rounded-2xl border border-black/5 bg-white shadow-xl shadow-black/5',
+        compact ? 'p-4' : 'p-6',
+      ].join(' ')}
+    >
+      {canBook ? (
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-room-available/10 px-3 py-1 text-xs font-bold text-room-available">
+          <span className="h-2 w-2 rounded-full bg-room-available" aria-hidden />
+          {STATUS_LABEL.available}
+        </p>
+      ) : (
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-3 py-1 text-xs font-bold text-on-surface-variant">
+          {STATUS_LABEL[status] ?? STATUS_LABEL.booked}
+        </p>
+      )}
+
+      <p className="mt-4 font-headline text-lg font-bold text-primary">
+        {formatPriceVnd(detail.priceVnd)}
+        <span className="text-sm font-semibold text-on-surface-variant"> / đêm</span>
+      </p>
+
+      {nights && total && (
+        <div className="mt-3 rounded-xl bg-primary/5 px-4 py-3">
+          <p className="text-xs font-semibold text-on-surface-variant">
+            {nights} đêm · {formatContextSummary(context)}
+          </p>
+          <p className="mt-1 font-headline text-xl font-extrabold text-on-surface">
+            Tổng {formatPriceVnd(total)}
+          </p>
+          <p className="mt-1 text-[11px] text-on-surface-variant">Chưa gồm thuế & phí dịch vụ</p>
+        </div>
+      )}
+
+      {branchCtx && (
+        <p className="mt-4 text-xs leading-relaxed text-on-surface-variant">
+          <span className="font-semibold text-on-surface">{branchCtx.branch.name}</span>
+          {branchCtx.property.city ? ` · ${branchCtx.property.city}` : ''}
+        </p>
+      )}
+
+      <form className="mt-5 space-y-3" onSubmit={(e) => e.preventDefault()}>
+        <div>
+          <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+            Ngày nhận phòng
+          </label>
+          <div className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-3">
+            <span className="material-symbols-outlined text-primary">calendar_today</span>
+            <input
+              type="date"
+              readOnly
+              value={context.checkIn ?? ''}
+              className="w-full bg-transparent text-sm font-medium"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+            Ngày trả phòng
+          </label>
+          <div className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-3">
+            <span className="material-symbols-outlined text-primary">event</span>
+            <input
+              type="date"
+              readOnly
+              value={context.checkOut ?? ''}
+              className="w-full bg-transparent text-sm font-medium"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+            Khách
+          </label>
+          <div className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-3">
+            <span className="material-symbols-outlined text-primary">group</span>
+            <select
+              value={guests}
+              onChange={(e) => setGuests(e.target.value)}
+              className="w-full bg-transparent text-sm font-medium"
+            >
+              <option value="2-adults-0-children">2 người lớn, 0 trẻ em</option>
+              <option value="2-adults-1-child">2 người lớn, 1 trẻ em</option>
+              <option value="1-adult-0-children">1 người lớn</option>
+            </select>
+          </div>
+        </div>
+
+        {canBook ? (
+          <Link
+            to={checkoutHref}
+            className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-center text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:brightness-110 active:scale-[0.98]"
+          >
+            {CTA.bookRoom}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="w-full cursor-not-allowed rounded-xl bg-surface-container py-4 text-sm font-bold text-on-surface-variant"
+          >
+            {STATUS_LABEL[status] ?? 'Không thể đặt'}
+          </button>
+        )}
+
+        <Link
+          to={bookingBackHref}
+          className="block text-center text-xs font-semibold text-primary hover:underline"
+        >
+          Quay lại danh sách phòng
+        </Link>
+      </form>
+
+      <ul className="mt-5 space-y-2 border-t border-black/5 pt-4 text-xs text-on-surface-variant">
+        <li className="flex items-start gap-2">
+          <span className="material-symbols-outlined mt-0.5 text-base text-primary">verified</span>
+          Giá tốt nhất khi đặt trực tiếp với Cherry House
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="material-symbols-outlined mt-0.5 text-base text-primary">event_available</span>
+          {detail.policyBullets[0]}
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="material-symbols-outlined mt-0.5 text-base text-primary">support_agent</span>
+          Host hỗ trợ 24/7 qua hotline & chat
+        </li>
+      </ul>
+    </div>
+  );
+}
 
 function RoomDetailPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
   const detail = slug ? resolveRoomDetail(slug) : null;
+  const listingRoom = slug ? findRoomByDetailSlug(slug) : null;
   const [guests, setGuests] = useState('2-adults-0-children');
+
+  const inBookingFlow = Boolean(context.property && context.branch);
+  const branchCtx = resolveBranch(context.property, context.branch);
 
   if (!detail) {
     return (
@@ -16,10 +203,10 @@ function RoomDetailPage() {
           <h1 className="font-headline text-2xl font-bold text-on-surface">Không tìm thấy phòng</h1>
           <p className="mt-4 text-on-surface-variant">Slug không hợp lệ hoặc phòng đã gỡ.</p>
           <Link
-            to="/booking"
+            to={getDiscoveryHref()}
             className="mt-8 inline-block rounded-full bg-primary px-8 py-3 font-bold text-white hover:brightness-110"
           >
-            Xem bảng phòng
+            Chọn cơ sở lưu trú
           </Link>
         </div>
       </div>
@@ -29,15 +216,48 @@ function RoomDetailPage() {
   const [main, ...rest] = detail.gallery;
   const [a, b, c] = [rest[0], rest[1], rest[2]].map((u) => u || main);
 
-  const checkoutHref = `/checkout?${new URLSearchParams({
+  const checkoutHref = buildUrl('/checkout', context, {
     slug: detail.slug,
     guests,
-  }).toString()}`;
+  });
+  const bookingBackHref = inBookingFlow
+    ? buildUrl('/booking', context)
+    : getDiscoveryHref(context, { focus: 'search' });
+  const nights = countStayNights(context.checkIn, context.checkOut);
+  const canBook = !listingRoom || listingRoom.status === 'available';
+  const total = nights ? detail.priceVnd * nights : null;
 
   return (
-    <div className="pb-24 lg:pb-16">
+    <div className="pb-28 lg:pb-16">
       <div className={[LAYOUT_CONTAINER, 'pt-24'].join(' ')}>
-        {/* Gallery — mobile: stack + snap row; desktop: asymmetric grid */}
+        {inBookingFlow && <BookingProgress current="rooms" />}
+
+        {inBookingFlow && branchCtx && (
+          <nav className="mb-4 text-sm text-on-surface-variant">
+            <Link to={getDiscoveryHref(context)} className="hover:text-primary">
+              Cơ sở
+            </Link>
+            <span className="mx-2">/</span>
+            <Link to={getBranchStepHref(context)} className="hover:text-primary">
+              {branchCtx.property.name}
+            </Link>
+            <span className="mx-2">/</span>
+            <Link to={bookingBackHref} className="hover:text-primary">
+              Phòng
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="font-semibold text-on-surface">
+              {listingRoom?.code ?? detail.title}
+            </span>
+          </nav>
+        )}
+
+        {inBookingFlow && (
+          <div className="mb-6">
+            <BookingSearchBar variant="summary" initialContext={context} />
+          </div>
+        )}
+
         <div className="mb-10 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:gap-3 md:overflow-visible md:pb-0 lg:grid-cols-[1.15fr_1fr] lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="min-w-[85vw] shrink-0 snap-center md:min-w-0 lg:row-span-2">
             <img
@@ -54,7 +274,7 @@ function RoomDetailPage() {
             <img src={c} alt="" className="h-36 w-full rounded-2xl object-cover lg:h-44" />
           </div>
         </div>
-        {/* Mobile secondary thumbs */}
+
         <div className="-mt-4 mb-10 flex snap-x gap-2 overflow-x-auto pb-2 md:hidden">
           {[a, b, c].map((src, i) => (
             <img
@@ -97,9 +317,7 @@ function RoomDetailPage() {
               ))}
             </div>
 
-            <h2 className="font-headline mt-12 text-xl font-bold text-on-surface">
-              Tiện nghi phòng
-            </h2>
+            <h2 className="font-headline mt-12 text-xl font-bold text-on-surface">Tiện nghi phòng</h2>
             <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {detail.amenities.map((am) => (
                 <li
@@ -113,9 +331,7 @@ function RoomDetailPage() {
             </ul>
 
             <div className="mt-12 rounded-2xl bg-surface-container/80 p-6 md:p-8">
-              <h2 className="font-headline text-lg font-bold text-on-surface">
-                Chính sách hủy phòng
-              </h2>
+              <h2 className="font-headline text-lg font-bold text-on-surface">Chính sách hủy phòng</h2>
               <ul className="mt-4 list-inside list-disc space-y-2 text-sm leading-relaxed text-on-surface-variant">
                 {detail.policyBullets.map((line, i) => (
                   <li key={i}>{line}</li>
@@ -127,78 +343,53 @@ function RoomDetailPage() {
             </div>
           </article>
 
-          {/* Sidebar — desktop sticky */}
           <aside className="hidden lg:block">
-            <div className="sticky top-28 rounded-2xl border border-black/5 bg-white p-6 shadow-xl shadow-black/5">
-              <p className="font-headline text-lg font-bold text-primary">
-                Giá chỉ từ {formatPriceVnd(detail.priceVnd)}
-              </p>
-              <form className="mt-6 space-y-4" onSubmit={(e) => e.preventDefault()}>
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
-                    Ngày nhận phòng
-                  </label>
-                  <div className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-3">
-                    <span className="material-symbols-outlined text-primary">calendar_today</span>
-                    <input type="date" className="w-full bg-transparent text-sm font-medium" />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
-                    Ngày trả phòng
-                  </label>
-                  <div className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-3">
-                    <span className="material-symbols-outlined text-primary">event</span>
-                    <input type="date" className="w-full bg-transparent text-sm font-medium" />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
-                    Khách hàng
-                  </label>
-                  <div className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-3">
-                    <span className="material-symbols-outlined text-primary">group</span>
-                    <select
-                      value={guests}
-                      onChange={(e) => setGuests(e.target.value)}
-                      className="w-full bg-transparent text-sm font-medium"
-                    >
-                      <option value="2-adults-0-children">2 Người lớn, 0 Trẻ em</option>
-                      <option value="2-adults-1-child">2 Người lớn, 1 Trẻ em</option>
-                      <option value="1-adult-0-children">1 Người lớn</option>
-                    </select>
-                  </div>
-                </div>
-                <Link
-                  to={checkoutHref}
-                  className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-center text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:brightness-110"
-                >
-                  Đặt phòng ngay
-                </Link>
-              </form>
-              <p className="mt-4 text-center text-xs text-on-surface-variant">
-                Đảm bảo giá tốt nhất khi đặt trực tiếp với Cherry House.
-              </p>
+            <div className="sticky top-28">
+              <RoomBookingPanel
+                detail={detail}
+                context={context}
+                listingRoom={listingRoom}
+                checkoutHref={checkoutHref}
+                bookingBackHref={bookingBackHref}
+                guests={guests}
+                setGuests={setGuests}
+              />
             </div>
           </aside>
         </div>
       </div>
 
-      {/* Mobile sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
         <div className={[LAYOUT_CONTAINER, 'flex items-center justify-between gap-3'].join(' ')}>
-          <div>
-            <p className="text-xs text-on-surface-variant">Từ</p>
-            <p className="font-headline text-sm font-bold text-primary">
-              {formatPriceVnd(detail.priceVnd)}
-            </p>
+          <div className="min-w-0">
+            {total ? (
+              <>
+                <p className="text-xs text-on-surface-variant">
+                  {nights} đêm · {formatPriceVnd(detail.priceVnd)}/đêm
+                </p>
+                <p className="font-headline text-sm font-bold text-primary">{formatPriceVnd(total)}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-on-surface-variant">Từ</p>
+                <p className="font-headline text-sm font-bold text-primary">
+                  {formatPriceVnd(detail.priceVnd)}/đêm
+                </p>
+              </>
+            )}
           </div>
-          <Link
-            to={checkoutHref}
-            className="shrink-0 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-md hover:brightness-110"
-          >
-            Đặt phòng ngay
-          </Link>
+          {canBook ? (
+            <Link
+              to={checkoutHref}
+              className="shrink-0 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-md hover:brightness-110 active:scale-[0.98]"
+            >
+              {CTA.bookRoom}
+            </Link>
+          ) : (
+            <span className="shrink-0 rounded-xl bg-surface-container px-4 py-3 text-xs font-bold text-on-surface-variant">
+              {STATUS_LABEL[listingRoom?.status ?? 'booked']}
+            </span>
+          )}
         </div>
       </div>
     </div>

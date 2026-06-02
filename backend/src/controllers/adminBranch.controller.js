@@ -1,0 +1,289 @@
+const branchService = require('../services/branch.service');
+const branchMapPinService = require('../services/branchMapPin.service');
+const branchMapPinRepository = require('../repositories/branchMapPin.repository');
+const propertyService = require('../services/property.service');
+const { renderAdminPage } = require('../utils/adminRender');
+
+function parseBranchFormBody(body) {
+  const propertyId = Number.parseInt(body.propertyId, 10);
+  const price = Number.parseInt(body.price, 10);
+  const roomCount = Number.parseInt(body.roomCount, 10);
+
+  return {
+    propertyId: Number.isNaN(propertyId) ? undefined : propertyId,
+    code: body.code,
+    name: body.name,
+    address: body.address,
+    tagline: body.tagline || null,
+    price: Number.isNaN(price) ? 0 : price,
+    roomCount: Number.isNaN(roomCount) ? 0 : roomCount,
+    imgUrl: body.imgUrl || null,
+    isActive: body.isActive === 'on' || body.isActive === true || body.isActive === '1',
+  };
+}
+
+function parseMapPinFormBody(body) {
+  const latRaw = body.mapLat;
+  const lngRaw = body.mapLng;
+
+  if (latRaw === '' || latRaw === undefined || lngRaw === '' || lngRaw === undefined) {
+    return null;
+  }
+
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+
+  let googleMapsUrl =
+    typeof body.mapGoogleMapsUrl === 'string' ? body.mapGoogleMapsUrl.trim() : '';
+  if (!googleMapsUrl) {
+    googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+
+  const zoom = Number.parseInt(body.mapZoom, 10);
+
+  return {
+    lat,
+    lng,
+    zoom: Number.isNaN(zoom) ? 15 : zoom,
+    label: body.mapLabel || null,
+    pinBadge: body.mapPinBadge || null,
+    pinInfo: body.mapPinInfo || null,
+    googleMapsUrl,
+    embedUrl: body.mapEmbedUrl || null,
+  };
+}
+
+function emptyBranch() {
+  return {
+    propertyId: '',
+    code: '',
+    name: '',
+    address: '',
+    tagline: '',
+    price: 0,
+    roomCount: 0,
+    imgUrl: '',
+    isActive: true,
+  };
+}
+
+function emptyMapPin() {
+  return {
+    lat: '',
+    lng: '',
+    zoom: 15,
+    label: '',
+    pinBadge: '',
+    pinInfo: '',
+    googleMapsUrl: '',
+    embedUrl: '',
+  };
+}
+
+function mapPinFromBranch(branch) {
+  const pin = branch?.mapPin;
+  if (!pin) return emptyMapPin();
+  return {
+    lat: pin.lat != null ? String(pin.lat) : '',
+    lng: pin.lng != null ? String(pin.lng) : '',
+    zoom: pin.zoom ?? 15,
+    label: pin.label || '',
+    pinBadge: pin.pinBadge || '',
+    pinInfo: pin.pinInfo || '',
+    googleMapsUrl: pin.googleMapsUrl || '',
+    embedUrl: pin.embedUrl || '',
+  };
+}
+
+async function loadProperties() {
+  return propertyService.listProperties();
+}
+
+async function saveMapPinForBranch(branchId, body) {
+  const payload = parseMapPinFormBody(body);
+  if (!payload) return;
+
+  const existing = await branchMapPinRepository.findByBranchId(branchId);
+  if (existing) {
+    await branchMapPinService.update(existing.id, payload);
+  } else {
+    await branchMapPinService.create({ ...payload, branchId });
+  }
+}
+
+function formatPriceVnd(price) {
+  return Number(price || 0).toLocaleString('vi-VN');
+}
+
+async function list(req, res) {
+  try {
+    const filters = {};
+    if (req.query.propertyId) filters.propertyId = req.query.propertyId;
+    const [branches, properties] = await Promise.all([
+      branchService.listBranches(filters),
+      loadProperties(),
+    ]);
+
+    renderAdminPage(req, res, 'admin/branches/index', {
+      pageTitle: 'Chi nhánh',
+      adminPage: 'branches',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Chi nhánh' },
+      ],
+      branches,
+      properties,
+      filterPropertyId: req.query.propertyId ? String(req.query.propertyId) : '',
+      formatPriceVnd,
+      flash: req.query.flash || null,
+      msg: req.query.msg || null,
+    });
+  } catch (error) {
+    renderAdminPage(req, res, 'admin/branches/index', {
+      pageTitle: 'Chi nhánh',
+      adminPage: 'branches',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Chi nhánh' },
+      ],
+      branches: [],
+      properties: [],
+      filterPropertyId: '',
+      formatPriceVnd,
+      formError: error.message,
+    });
+  }
+}
+
+async function createForm(req, res) {
+  const properties = await loadProperties();
+  renderAdminPage(req, res, 'admin/branches/form', {
+    pageTitle: 'Thêm chi nhánh',
+    adminPage: 'branches',
+    breadcrumbs: [
+      { label: 'Dashboard', href: '/admin' },
+      { label: 'Chi nhánh', href: '/admin/branches' },
+      { label: 'Thêm mới' },
+    ],
+    mode: 'create',
+    branch: emptyBranch(),
+    mapPin: emptyMapPin(),
+    properties,
+    preselectPropertyId: req.query.propertyId || '',
+  });
+}
+
+async function create(req, res) {
+  try {
+    const branch = await branchService.createBranch(parseBranchFormBody(req.body));
+    await saveMapPinForBranch(branch.id, req.body);
+    res.redirect('/admin/branches?flash=created');
+  } catch (error) {
+    const properties = await loadProperties();
+    renderAdminPage(req, res, 'admin/branches/form', {
+      pageTitle: 'Thêm chi nhánh',
+      adminPage: 'branches',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Chi nhánh', href: '/admin/branches' },
+        { label: 'Thêm mới' },
+      ],
+      mode: 'create',
+      branch: parseBranchFormBody(req.body),
+      mapPin: {
+        lat: req.body.mapLat || '',
+        lng: req.body.mapLng || '',
+        zoom: req.body.mapZoom || 15,
+        label: req.body.mapLabel || '',
+        pinBadge: req.body.mapPinBadge || '',
+        pinInfo: req.body.mapPinInfo || '',
+        googleMapsUrl: req.body.mapGoogleMapsUrl || '',
+        embedUrl: req.body.mapEmbedUrl || '',
+      },
+      properties,
+      formError: error.message,
+    });
+  }
+}
+
+async function editForm(req, res) {
+  try {
+    const branch = await branchService.getBranchById(req.params.id);
+    if (!branch) {
+      return res.redirect('/admin/branches?flash=notfound');
+    }
+    const properties = await loadProperties();
+    renderAdminPage(req, res, 'admin/branches/form', {
+      pageTitle: 'Sửa chi nhánh',
+      adminPage: 'branches',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Chi nhánh', href: '/admin/branches' },
+        { label: branch.name },
+      ],
+      mode: 'edit',
+      branch: {
+        ...branch,
+        propertyId: branch.propertyId,
+        price: Number(branch.price),
+      },
+      mapPin: mapPinFromBranch(branch),
+      properties,
+    });
+  } catch (error) {
+    res.redirect(`/admin/branches?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function update(req, res) {
+  try {
+    await branchService.updateBranch(req.params.id, parseBranchFormBody(req.body));
+    await saveMapPinForBranch(Number(req.params.id), req.body);
+    res.redirect('/admin/branches?flash=updated');
+  } catch (error) {
+    const properties = await loadProperties();
+    const body = parseBranchFormBody(req.body);
+    renderAdminPage(req, res, 'admin/branches/form', {
+      pageTitle: 'Sửa chi nhánh',
+      adminPage: 'branches',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Chi nhánh', href: '/admin/branches' },
+        { label: body.name || 'Sửa' },
+      ],
+      mode: 'edit',
+      branch: { ...body, id: req.params.id },
+      mapPin: {
+        lat: req.body.mapLat || '',
+        lng: req.body.mapLng || '',
+        zoom: req.body.mapZoom || 15,
+        label: req.body.mapLabel || '',
+        pinBadge: req.body.mapPinBadge || '',
+        pinInfo: req.body.mapPinInfo || '',
+        googleMapsUrl: req.body.mapGoogleMapsUrl || '',
+        embedUrl: req.body.mapEmbedUrl || '',
+      },
+      properties,
+      formError: error.message,
+    });
+  }
+}
+
+async function remove(req, res) {
+  try {
+    await branchService.deleteBranch(req.params.id);
+    res.redirect('/admin/branches?flash=deleted');
+  } catch (error) {
+    res.redirect(`/admin/branches?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+module.exports = {
+  list,
+  createForm,
+  create,
+  editForm,
+  update,
+  remove,
+};

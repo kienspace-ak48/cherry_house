@@ -1,8 +1,10 @@
-/** Dữ liệu giả cho trang Booking / bảng trạng thái phòng */
+/** Dữ liệu giả cho trang Booking — gắn property + chi nhánh */
 
 export const MOCK_ROOMS = [
   {
     id: 1,
+    propertySlug: 'cherry-house-da-lat',
+    branchId: 'dl-hxh',
     detailSlug: 'std-101',
     code: 'STD-101',
     type: 'Standard',
@@ -16,6 +18,8 @@ export const MOCK_ROOMS = [
   },
   {
     id: 2,
+    propertySlug: 'cherry-house-da-lat',
+    branchId: 'dl-hxh',
     detailSlug: 'std-102',
     code: 'STD-102',
     type: 'Standard',
@@ -29,6 +33,8 @@ export const MOCK_ROOMS = [
   },
   {
     id: 3,
+    propertySlug: 'cherry-house-da-lat',
+    branchId: 'dl-hxh',
     detailSlug: 'deluxe-city-view',
     code: 'DLX-201',
     type: 'Deluxe',
@@ -42,6 +48,8 @@ export const MOCK_ROOMS = [
   },
   {
     id: 4,
+    propertySlug: 'cherry-house-da-lat',
+    branchId: 'dl-dt',
     detailSlug: 'deluxe-panorama-205',
     code: 'DLX-205',
     type: 'Deluxe',
@@ -55,6 +63,9 @@ export const MOCK_ROOMS = [
   },
   {
     id: 5,
+    propertySlug: 'cherry-house-da-lat',
+    branchId: 'dl-dt',
+    detailSlug: 'deluxe-family-208',
     code: 'DLX-208',
     type: 'Deluxe',
     status: 'available',
@@ -67,6 +78,8 @@ export const MOCK_ROOMS = [
   },
   {
     id: 6,
+    propertySlug: 'cherry-house-da-lat',
+    branchId: 'dl-tt',
     detailSlug: 'cherry-suite',
     code: 'SUT-301',
     type: 'Suite',
@@ -74,39 +87,89 @@ export const MOCK_ROOMS = [
     priceVnd: 4_990_000,
     capacityLabel: 'Tối đa 4 khách · Phòng khách riêng',
     description:
-      'Executive suite có phòng tiếp khách, minibar được refill hằng ngày và quyền lợi Executive Lounge.',
-    alt: 'Executive Suite phòng khách',
+      'Suite có phòng tiếp khách, minibar được refill hằng ngày — gần trung tâm chợ Đà Lạt.',
+    alt: 'Suite phòng khách',
     image:
       'https://lh3.googleusercontent.com/aida-public/AB6AXuC64gQmhwzdUSkPXHbKabI7BvGpDR813Jw_6gn1_5QXQ0t0_zPpopTC_GJuHlLUlJ1YHpCt2EXhd3hAu4JwlrcyqYCImjngFxWDIL4BrZmnO5VoQ6p7TJ_ARlAZbZRvl326bltGLnrsUQ66dXMjB5qabasvw_8mZRjq2yFJS-t8fzQ-RW0sKnRgxLZZOm7nES4mRhGUa3xksWNL_z86SkWHqFL6yl6bNuyrJJb4-T_5tPPfkgR0pHTfFDuE_dbiJeq0xrNxWCI8AA',
   },
   {
     id: 7,
+    propertySlug: 'cherry-house-vung-tau',
+    branchId: 'vt-main',
     detailSlug: 'suite-grand-302',
     code: 'SUT-302',
     type: 'Suite',
     status: 'pending',
     priceVnd: 5_350_000,
     capacityLabel: 'Tối đa 4 khách · 2 WC',
-    description: 'Thiết kế tách khu đêm/ngày, phòng tắm đôi và hệ thống âm thanh Bluetooth.',
-    alt: 'Suite có phòng tắm đôi',
+    description: 'View biển Bãi Sau, phòng tắm đôi và ban công riêng.',
+    alt: 'Suite view biển',
     image:
       'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=900&q=80',
   },
   {
     id: 8,
+    propertySlug: 'cherry-house-da-nang',
+    branchId: 'dn-mk',
+    detailSlug: 'deluxe-city-view',
+    code: 'APT-MK-02',
+    type: 'Deluxe',
+    status: 'available',
+    priceVnd: 2_490_000,
+    capacityLabel: 'Tối đa 3 khách · Có bếp',
+    description: 'Căn hộ Mỹ Khê, bếp nhỏ và máy giặt — lưu trú dài ngày.',
+    alt: 'Căn hộ Mỹ Khê',
+    image:
+      'https://images.unsplash.com/photo-1611892440504-42a792e54d34?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    id: 9,
+    propertySlug: 'cherry-house-da-nang',
+    branchId: 'dn-at',
+    detailSlug: 'std-101',
+    code: 'APT-AT-05',
+    type: 'Standard',
+    status: 'available',
+    priceVnd: 1_690_000,
+    capacityLabel: 'Tối đa 2 khách',
+    description: 'Studio An Thượng, gần quán cà phê và khu coworking.',
+    alt: 'Studio An Thượng',
+    image:
+      'https://images.unsplash.com/photo-1560448204-e02f11c45751?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    id: 10,
+    propertySlug: 'cherry-villa-da-lat',
+    branchId: 'dl-villa',
     detailSlug: 'royal-penthouse',
-    code: 'PNT-701',
+    code: 'VIL-01',
     type: 'Penthouse',
-    status: 'booked',
+    status: 'available',
     priceVnd: 12_900_000,
-    capacityLabel: 'Tối đa 6 khách · Sân thượng riêng',
-    description:
-      'Penthouse tầng cao Cherry Signature: bếp show kitchen, jacuzzi và view 270°.',
-    alt: 'Penthouse view thành phố',
+    capacityLabel: 'Tối đa 10 khách · Nguyên villa',
+    description: 'Nguyên villa Đồi Nam: BBQ, jacuzzi và sân vườn riêng.',
+    alt: 'Villa nguyên căn',
     image:
       'https://lh3.googleusercontent.com/aida-public/AB6AXuANsD8XDA6qYE7OrEoJntoADSCAFFVx5liI2F4uk1NideegT92mjQPAXk_cMQAUMCLL8mbf3LkJ5SWiLWn4sDjuFiC8CHWYCx1ugyDwspaqoJadFGvhzOMT5Yul8_znQ89reEU4joF4PLgcVCxsbHW_oj_2CLw6gALRX9l8Ijuwm5qjMJJ_tgt47cjDASHpCfbyHRmIAfDRGWkCW10KfO2qDlCTgRqtqaD323NXqOqN7WhoZQ_i2dOeSe_5rQeKoSKzrAbSo0asAA',
   },
 ];
+
+/**
+ * @param {string | null | undefined} propertySlug
+ * @param {string | null | undefined} branchId
+ */
+export function filterRoomsByPropertyBranch(propertySlug, branchId) {
+  return MOCK_ROOMS.filter((r) => {
+    if (propertySlug && r.propertySlug !== propertySlug) return false;
+    if (branchId && r.branchId !== branchId) return false;
+    return true;
+  });
+}
+
+/** @param {string} branchId */
+export function countRoomsByBranch(branchId) {
+  return MOCK_ROOMS.filter((r) => r.branchId === branchId).length;
+}
 
 /**
  * @param {typeof MOCK_ROOMS} rooms
@@ -127,4 +190,25 @@ export function formatPriceVnd(amount) {
     currency: 'VND',
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/**
+ * @param {string | undefined} checkIn
+ * @param {string | undefined} checkOut
+ * @returns {number | null}
+ */
+export function countStayNights(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return null;
+  const start = new Date(`${checkIn}T12:00:00`);
+  const end = new Date(`${checkOut}T12:00:00`);
+  const nights = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (!Number.isFinite(nights) || nights <= 0) return null;
+  return nights;
+}
+
+/**
+ * @param {string} detailSlug
+ */
+export function findRoomByDetailSlug(detailSlug) {
+  return MOCK_ROOMS.find((r) => r.detailSlug === detailSlug) ?? null;
 }

@@ -7,6 +7,9 @@ const PUBLIC_PATH = path.resolve(ROOT_PATH, 'public');
 /** Output `npm run build` của frontend (Vite → outDir khớp với đường này) */
 const CLIENT_DIST_PATH = path.resolve(ROOT_PATH, 'client');
 const ENV_PATH = path.resolve(ROOT_PATH, '.env');
+const VIEWS_PATH = path.resolve(SRC_PATH, 'views');
+const UPLOADS_PATH = path.resolve(PUBLIC_PATH, 'uploads');
+const GALLERY_UPLOAD_PATH = path.resolve(UPLOADS_PATH, 'gallery');
 
 module.exports = {
     ROOT_PATH,
@@ -14,4 +17,7 @@ module.exports = {
     PUBLIC_PATH,
     CLIENT_DIST_PATH,
     ENV_PATH,
+    VIEWS_PATH,
+    UPLOADS_PATH,
+    GALLERY_UPLOAD_PATH,
 };

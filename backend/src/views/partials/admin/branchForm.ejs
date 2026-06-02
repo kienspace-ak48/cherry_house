@@ -1,0 +1,110 @@
+<% const b = typeof branch !== 'undefined' ? branch : {}; %>
+<% const pin = typeof mapPin !== 'undefined' ? mapPin : {}; %>
+<% const props = typeof properties !== 'undefined' ? properties : []; %>
+<% const selectedPropertyId = b.propertyId || (typeof preselectPropertyId !== 'undefined' ? preselectPropertyId : ''); %>
+
+<form method="POST" action="<%= formAction %>" class="admin-crud-form">
+  <% if (typeof formError !== 'undefined' && formError) { %>
+  <div class="alert alert-danger"><%= formError %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin chi nhánh</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="propertyId">Cơ sở lưu trú <span class="text-danger">*</span></label>
+              <select class="form-select" id="propertyId" name="propertyId" required>
+                <option value="">— Chọn cơ sở —</option>
+                <% props.forEach(function(prop) { %>
+                <option value="<%= prop.id %>" <%= String(selectedPropertyId) === String(prop.id) ? 'selected' : '' %>><%= prop.name %> · <%= prop.city %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="code">Mã chi nhánh <span class="text-danger">*</span></label>
+              <input class="form-control" id="code" name="code" value="<%= b.code || '' %>" placeholder="dl-hxh" required>
+              <div class="form-text">Chữ thường, số, gạch ngang hoặc gạch dưới</div>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label" for="name">Tên chi nhánh <span class="text-danger">*</span></label>
+              <input class="form-control" id="name" name="name" value="<%= b.name || '' %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="roomCount">Số phòng</label>
+              <input class="form-control" type="number" min="0" id="roomCount" name="roomCount" value="<%= b.roomCount ?? 0 %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="tagline">Tagline</label>
+              <input class="form-control" id="tagline" name="tagline" value="<%= b.tagline || '' %>" placeholder="Mô tả ngắn hiển thị dưới tên">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="address">Địa chỉ <span class="text-danger">*</span></label>
+              <input class="form-control" id="address" name="address" value="<%= b.address || '' %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="price">Giá từ (VND) <span class="text-danger">*</span></label>
+              <input class="form-control" type="number" min="0" step="1000" id="price" name="price" value="<%= b.price ?? 0 %>" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <strong>Bản đồ (Map pin)</strong>
+          <span class="badge text-bg-light text-body-secondary fw-normal">Tùy chọn</span>
+        </div>
+        <div class="card-body">
+          <%- include('branchMapPicker', { mapPin: pin }) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Media & trạng thái</strong></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <%- include('galleryImagePicker', {
+              fieldId: 'imgUrl',
+              fieldName: 'imgUrl',
+              value: b.imgUrl || '',
+              label: 'Ảnh chi nhánh',
+            }) %>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= b.isActive !== false ? 'checked' : '' %>>
+            <label class="form-check-label" for="isActive">Đang hiển thị (Active)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary"><%= submitLabel %></button>
+        <a href="/admin/branches" class="btn btn-outline-secondary">Hủy</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+  (function autoCodeFromName() {
+    const nameEl = document.getElementById('name');
+    const codeEl = document.getElementById('code');
+    if (!nameEl || !codeEl || codeEl.value) return;
+    nameEl.addEventListener('blur', () => {
+      if (codeEl.value.trim()) return;
+      codeEl.value = nameEl.value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40);
+    });
+  })();
+
+</script>

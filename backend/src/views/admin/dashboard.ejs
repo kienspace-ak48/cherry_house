@@ -1,0 +1,85 @@
+<div id="dash-error" class="alert alert-danger d-none" role="alert"></div>
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card text-white bg-primary admin-stat-card admin-card">
+      <div class="card-body">
+        <div class="stat-value" id="stat-properties">—</div>
+        <div class="stat-label">Cơ sở lưu trú</div>
+        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/properties">Xem danh sách →</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card text-white bg-info admin-stat-card admin-card">
+      <div class="card-body">
+        <div class="stat-value" id="stat-branches">—</div>
+        <div class="stat-label">Chi nhánh</div>
+        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/branches">Xem danh sách →</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card text-white bg-warning admin-stat-card admin-card">
+      <div class="card-body">
+        <div class="stat-value" id="stat-rooms">—</div>
+        <div class="stat-label">Phòng (inventory)</div>
+        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/rooms">Xem danh sách →</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card text-white bg-danger admin-stat-card admin-card">
+      <div class="card-body">
+        <div class="stat-value" id="stat-bookings">—</div>
+        <div class="stat-label">Đặt phòng</div>
+        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/bookings">Xem danh sách →</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card admin-card mb-4">
+  <div class="card-header"><strong>Cơ sở mới nhất</strong></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Tên</th>
+            <th>Thành phố</th>
+            <th>Loại</th>
+            <th>Giá từ</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="recent-properties"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  (async function loadDashboard() {
+    try {
+      const [properties, branches, rooms, bookings] = await Promise.all([
+        AdminApi.get('/properties'),
+        AdminApi.get('/branches'),
+        AdminApi.get('/rooms'),
+        AdminApi.get('/bookings'),
+      ]);
+      document.getElementById('stat-properties').textContent = properties.length;
+      document.getElementById('stat-branches').textContent = branches.length;
+      document.getElementById('stat-rooms').textContent = rooms.length;
+      document.getElementById('stat-bookings').textContent = bookings.length;
+      document.getElementById('recent-properties').innerHTML = properties.slice(0, 5).map((p) => `
+        <tr>
+          <td><strong>${p.name}</strong><br><small class="text-body-secondary">${p.slug}</small></td>
+          <td>${p.city}</td>
+          <td><span class="badge badge-kind-${p.kind}">${AdminApi.kindLabel(p.kind)}</span></td>
+          <td>${AdminApi.formatVnd(p.priceFromVnd)}</td>
+          <td>${p.isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Off</span>'}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="text-center text-body-secondary py-4">Chưa có dữ liệu</td></tr>';
+    } catch (err) {
+      AdminApi.showError(document.getElementById('dash-error'), err);
+    }
+  })();
+</script>

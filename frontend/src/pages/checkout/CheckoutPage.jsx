@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import BookingProgress from '../../components/booking/BookingProgress';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import { readProfileContact } from '../../data/profileContact';
+import { buildUrl, getDiscoveryHref, parseBookingContext } from '../../lib/bookingContext';
 import { MOCK_ROOMS } from '../booking/bookingData';
 import { resolveRoomDetail } from '../../data/roomDetails';
 import { STITCH_CHECKOUT_IMG } from './checkoutDefaults';
@@ -45,9 +47,9 @@ function parseGuestsParam(raw) {
   return '2-adults-1-child';
 }
 
-function checkoutDates(searchParams, nightsFallback) {
-  const inRaw = searchParams.get('checkIn');
-  const outRaw = searchParams.get('checkOut');
+function checkoutDates(searchParams, nightsFallback, contextFallback = {}) {
+  const inRaw = searchParams.get('checkIn') || contextFallback.checkIn;
+  const outRaw = searchParams.get('checkOut') || contextFallback.checkOut;
   let checkInDate = null;
   let checkOutDate = null;
 
@@ -94,6 +96,10 @@ function formatViBookingDate(date) {
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const slug = searchParams.get('slug');
+  const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
+  const bookingBackHref = context.property && context.branch
+    ? buildUrl('/booking', context)
+    : getDiscoveryHref(context, { focus: 'search' });
 
   const [payment, setPayment] = useState('card');
   const guestsKey = parseGuestsParam(searchParams.get('guests'));
@@ -116,6 +122,7 @@ export default function CheckoutPage() {
   const { checkInDate, checkOutDate, nights } = checkoutDates(
     searchParams,
     nightsFromQuery,
+    context,
   );
 
   const detail = slug ? resolveRoomDetail(slug) : null;
@@ -186,9 +193,10 @@ export default function CheckoutPage() {
   return (
     <div className="bg-surface pb-24 font-body text-sm selection:bg-primary-fixed selection:text-on-primary-fixed">
       <main className={[LAYOUT_CONTAINER, 'pt-24 pb-14 md:pt-28'].join(' ')}>
+        <BookingProgress current="checkout" />
         <header className="mb-8 md:mb-10">
           <nav className="mb-3 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
-            <Link to="/booking" className="font-semibold text-primary hover:underline">
+            <Link to={bookingBackHref} className="font-semibold text-primary hover:underline">
               Bảng phòng
             </Link>
             <span aria-hidden>/</span>

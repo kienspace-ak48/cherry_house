@@ -1,0 +1,322 @@
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
+      <div>
+        <div class="text-uppercase text-primary fw-semibold small mb-1">Media Library</div>
+        <h1 class="h4 fw-bold mb-1">Gallery / Thư viện ảnh</h1>
+        <p class="text-body-secondary mb-0">
+          File ảnh nên đặt tên không dấu, dùng dấu "_" giữa các từ.
+        </p>
+      </div>
+      <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2">
+        <button id="openModal" class="btn btn-outline-primary fw-semibold">
+          <i class="fa-solid fa-folder-plus me-2 "></i>Add folder
+        </button>
+        <input type="file" id="uploadInput" class="form-control admin-upload-input">
+        <button id="btnUpload" class="btn btn-primary fw-semibold">
+          <i class="fa-solid fa-upload me-2"></i>Upload
+          <small class="fw-medium opacity-75">(Max 5MB)</small>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="gallery_wrapper row g-4">
+    <!-- folder [LEFT] -->
+    <!-- CRUD Folder Section - 3 cols -->
+    <div class="col-md-3">
+        <!-- CRUD Folder component sẽ ở đây -->
+        <div id="folder_tree" class="small user-select-none">
+
+    <!-- ROOT -->
+    <div data-folder="all"
+        class="folder-item root d-flex align-items-center gap-2 px-3 py-2 rounded-3 cursor-pointer bg-primary-subtle text-primary fw-semibold">
+        <!-- <span>📁</span> -->
+                 <i class="fa-solid fa-folder-tree text-warning"></i>
+        <span>Tất cả</span>
+    </div>
+
+    <!-- CHILDREN -->
+    <% folders.forEach(folder => { %>
+  <div data-folder="<%= folder.id %>"
+    class="folder-item child d-flex align-items-center gap-2 px-3 py-2 rounded-3 cursor-pointer text-body-secondary position-relative">
+
+    <span class="admin-folder-line"></span>
+    <span class="ms-4"></span>
+    <i class="fa-solid fa-folder-open text-warning"></i>
+
+    <span class="flex-grow-1"><%= folder.name %></span>
+
+    <!-- delete icon -->
+    <i data-del="<%= folder.id %>"
+      class="fa-solid fa-trash text-danger cursor-pointer"></i>
+
+  </div>
+<% }) %>
+
+</div>
+
+    </div>
+
+    <!-- gallery grid [RIGHT]-->
+<div class="col-md-9 admin-h-dvh overflow-y-auto w-100">
+    <div id="image_container" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-4">
+    <%if(images.length ===0){%>
+        <p class="col-12 text-center text-secondary">Chưa có ảnh nào</p>
+    <%}else{%>
+        <%images.forEach(img=>{%>
+          <div class="col">
+            <div class="admin-gallery-card card border-0 shadow-sm overflow-hidden h-100">
+                <!-- IMAGE -->
+                 <img src="/<%=img.path%>" alt="<%=img.name%>"
+                 loading="lazy"
+                 class="admin-gallery-img w-100"
+                 >
+                 <!-- OVERLAY -->
+        <div
+          class="admin-gallery-overlay d-flex align-items-center justify-content-center gap-3"
+        >
+          <a
+            href="/<%= img.path %>"
+            target="_blank"
+            class="px-3 py-1 bg-white rounded-3 small fw-medium"
+          >
+            View
+          </a>
+
+          <button
+            data-id="<%=img.path%>"
+            class="px-3 py-1 bg-danger text-white rounded-3 small"
+          >
+            Delete
+          </button>
+        </div>
+                 <!--  -->
+            </div>
+          </div>
+       <% })%>
+    <%}%>
+</div>
+</div>
+
+</div>
+
+<!-- Modal -->
+
+<!-- MODAL -->
+<div id="modal" class="admin-modal d-none align-items-center justify-content-center">
+  
+  <!-- BOX -->
+  <div class="admin-modal-dialog bg-white rounded-3 shadow-lg p-4 position-relative">
+
+    <h2 class="fs-5 fw-bold mb-3">Tạo folder mới</h2>
+    <!-- <p class="text-secondary">Nội dung modal ở đây</p> -->
+     <div>
+        <input type="text" name="foler_name" class="form-control" placeholder="Folder name...">
+     </div>
+
+    <!-- actions -->
+    <div class="mt-4 d-flex justify-content-end gap-2">
+      <button id="closeModal" class="btn btn-light">Cancel</button>
+      <button id="btn_cta_create_folder" class="btn btn-primary">OK</button>
+    </div>
+
+    <!-- close icon -->
+    <button id="closeX" class="position-absolute admin-top-2 admin-right-5 text-secondary">✕</button>
+  </div>
+</div>
+
+<!-- ==========SCRIPT HERE ===============-->
+<script>
+    // global scope
+    const imageContainerElement = document.querySelector('#image_container');
+    let activeFolderId = "all";
+    // modal
+    const modal = document.getElementById("modal")
+
+document.getElementById("openModal").onclick = () => {
+  modal.classList.remove("d-none")
+  modal.classList.add("d-flex")
+}
+
+function closeModal(){
+  modal.classList.add("d-none")
+  modal.classList.remove("d-flex")
+}
+
+document.getElementById("closeModal").onclick = closeModal
+document.getElementById("closeX").onclick = closeModal
+
+// click nền đóng
+modal.addEventListener("click",(e)=>{
+  if(e.target === modal) closeModal()
+})
+    // lang nghe su kien click btn xoa
+    imageContainerElement.addEventListener("click", async (ev) => {
+  const deleteBtn = ev.target.closest("button[data-id]");
+  if (!deleteBtn) return;
+
+  const imagePath = deleteBtn.dataset.id;
+
+  if (!confirm("Xoá ảnh này?")) return;
+
+  try {
+    const res = await fetch("/admin/gallery/image-delete-ajax", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        img_path: imagePath,
+        folder_id: activeFolderId
+      })
+    });
+
+    const data = await res.json();
+    if (!data.success) return alert("Xoá lỗi");
+
+    renderImages(data.images);
+
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+    //tao folder
+    document.querySelector('#btn_cta_create_folder').addEventListener('click', (ev)=>{
+        const payload = {folder_name: document.querySelector('input[name="foler_name"]').value}
+        //
+        console.log(payload)
+        fetch(`/admin/gallery/category/create`,
+            {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            }
+        ).then(res=>res.json())
+        .then(res=>{console.log(res); if(res.success){alert('created success'); document.location.reload();}})
+        .catch(err=>{console.log('loi tao thu muc'); alert('created folder failed')})
+    });
+    //folder ajax
+    const folderTree = document.querySelector("#folder_tree");
+
+//btn upload ảnh
+document.getElementById("btnUpload").addEventListener("click", async () => {
+  const fileInput = document.getElementById("uploadInput");
+  const file = fileInput.files[0];
+
+  if (!file) return alert("Chọn ảnh");
+
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("folder_id", activeFolderId);
+
+  try {
+    const res = await fetch("/admin/gallery/image-upload-ajax", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!data.success) return alert("Upload lỗi");
+
+    renderImages(data.images); // render lại ảnh
+    fileInput.value = "";
+
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+//
+function renderImages(images) {
+  imageContainerElement.innerHTML = "";
+
+  if (!images.length) {
+    imageContainerElement.innerHTML = `
+      <p class="col-12 text-center text-secondary">
+        Chưa có ảnh nào
+      </p>
+    `;
+    return;
+  }
+
+  images.forEach(img => {
+    const html = `
+      <div class="col">
+      <div class="admin-gallery-card card border-0 shadow-sm overflow-hidden h-100">
+        <img src="/${img.path}"
+        loading="lazy"
+          class="admin-gallery-img w-100"/>
+
+        <div class="admin-gallery-overlay d-flex align-items-center justify-content-center gap-3">
+
+          <a href="/${img.path}" target="_blank"
+            class="px-3 py-1 bg-white rounded-3 small">View</a>
+
+          <button data-id="${img.path}"
+            class="px-3 py-1 bg-danger text-white rounded-3 small">
+            Delete
+          </button>
+        </div>
+      </div>
+      </div>
+    `;
+
+    imageContainerElement.insertAdjacentHTML("beforeend", html);
+  });
+}
+//xoa folder
+folderTree.addEventListener("click", async (e) => {
+
+  // CLICK XOÁ FOLDER
+  const delBtn = e.target.closest("[data-del]");
+  if (delBtn) {
+    e.stopPropagation();
+    const folderId = delBtn.dataset.del;
+
+    if (!confirm("Xoá folder và toàn bộ ảnh bên trong?")) return;
+
+    try {
+      const res = await fetch("/admin/gallery/folder-delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder_id: folderId })
+      });
+
+      const data = await res.json();
+      if (!data.success) return alert("Xoá lỗi");
+
+      // reset về all
+      activeFolderId = "all";
+
+      // reload folder tree
+      location.reload();
+
+    } catch (err) {
+      console.log(err);
+    }
+
+    return;
+  }
+
+  // CLICK SELECT FOLDER
+  const folderItem = e.target.closest(".folder-item");
+  if (!folderItem) return;
+
+  const folderId = folderItem.dataset.folder;
+  activeFolderId = folderId;
+
+  document.querySelectorAll(".folder-item").forEach(el =>
+    el.classList.remove("bg-primary-subtle","text-primary","fw-semibold")
+  );
+  folderItem.classList.add("bg-primary-subtle","text-primary","fw-semibold");
+
+  const res = await fetch(`/admin/gallery/images?folder=${folderId}`);
+  const data = await res.json();
+  renderImages(data.images);
+});
+
+
+
+</script>

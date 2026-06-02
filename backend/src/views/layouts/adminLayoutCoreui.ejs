@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="description" content="Cherry House Admin">
+    <meta name="author" content="Cherry House">
+    <meta name="theme-color" content="#a82e42">
+    <link rel="icon" href="/favicon.svg">
+    <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' · Cherry House Admin' : 'Cherry House Admin' %></title>
+
+    <link rel="stylesheet" href="/coreui/vendors/simplebar/css/simplebar.css">
+    <link rel="stylesheet" href="/coreui/css/vendors/simplebar.css">
+    <link href="/coreui/css/style.css" rel="stylesheet">
+    <script src="/coreui/js/config.js"></script>
+    <script src="/coreui/js/color-modes.js"></script>
+    <link href="/coreui/vendors/@coreui/chartjs/css/coreui-chartjs.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous">
+    <link href="/admin/css/admin-app.css" rel="stylesheet">
+    <%- style %>
+
+    <style id="admin-shell-fix">
+      body > .wrapper.d-flex.flex-column.min-vh-100 { min-width: 0; isolation: isolate; }
+      body > .wrapper > .body.admin-main { min-width: 0; min-height: 0; flex: 1 1 auto; }
+      body > .wrapper > .body .admin-view-root { max-width: 100%; min-width: 0; overflow-x: clip; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.14.5/sweetalert2.all.min.js" crossorigin="anonymous"></script>
+    <script>
+      function myNotification(text, icon, timer = 2500, position = 'top-end') {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+          text,
+          icon: icon === 'danger' ? 'error' : icon,
+          timer,
+          position,
+          showConfirmButton: false,
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <%- include('../partials/sidebar') %>
+    <div class="wrapper d-flex flex-column min-vh-100">
+      <%- include('../partials/header') %>
+      <div class="body admin-main flex-grow-1">
+        <div class="container-fluid px-4 admin-view-root py-4">
+          <%- body %>
+        </div>
+      </div>
+      <footer class="footer px-4 border-top">
+        <div class="text-body-secondary small">Cherry House Admin · CoreUI v5.3</div>
+      </footer>
+    </div>
+
+    <%- include('../partials/galleryPickerModal') %>
+
+    <script src="/coreui/vendors/@coreui/coreui/js/coreui.bundle.min.js"></script>
+    <script src="/coreui/vendors/simplebar/js/simplebar.min.js"></script>
+    <script>
+      const header = document.querySelector('header.header');
+      document.addEventListener('scroll', () => {
+        if (header) header.classList.toggle('shadow-sm', document.documentElement.scrollTop > 0);
+      });
+    </script>
+    <script src="/coreui/vendors/chart.js/js/chart.umd.js"></script>
+    <script src="/coreui/vendors/@coreui/chartjs/js/coreui-chartjs.js"></script>
+    <script src="/coreui/js/main.js"></script>
+    <script src="/admin/js/admin-auth.js"></script>
+    <script src="/admin/js/admin-api.js"></script>
+    <script src="/admin/js/gallery-picker.js"></script>
+    <%- script %>
+  </body>
+</html>

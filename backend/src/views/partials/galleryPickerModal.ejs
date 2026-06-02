@@ -1,0 +1,31 @@
+<div
+  id="galleryPickerModal"
+  class="admin-modal d-none align-items-center justify-content-center"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="galleryPickerModalTitle"
+>
+  <div class="admin-modal-dialog admin-gallery-picker-dialog bg-white rounded-3 shadow-lg">
+    <div class="d-flex justify-content-between align-items-center border-bottom px-4 py-3">
+      <h5 class="mb-0 fw-semibold" id="galleryPickerModalTitle">Chọn ảnh từ gallery</h5>
+      <button type="button" class="btn btn-sm btn-light" data-gallery-picker-close aria-label="Đóng">×</button>
+    </div>
+
+    <div class="px-4 py-2 border-bottom d-flex flex-wrap align-items-center gap-2">
+      <span class="small text-body-secondary">Thư mục:</span>
+      <div id="galleryPickerFolders" class="d-flex flex-wrap gap-1 gallery-picker-folders"></div>
+    </div>
+
+    <div class="admin-gallery-picker-body px-4 py-3">
+      <div id="galleryPickerLoading" class="text-center text-body-secondary py-5 d-none">
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        Đang tải ảnh…
+      </div>
+      <div id="galleryPickerEmpty" class="text-center text-body-secondary py-5 d-none">
+        <p class="mb-2">Chưa có ảnh trong thư viện.</p>
+        <a href="/admin/gallery" class="btn btn-sm btn-primary" target="_blank" rel="noopener">Mở Gallery để upload</a>
+      </div>
+      <div id="galleryPickerGrid" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-3"></div>
+    </div>
+  </div>
+</div>

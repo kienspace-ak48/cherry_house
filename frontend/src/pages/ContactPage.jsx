@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
+import { getHeaderBookingHref } from '../lib/bookingContext';
 
 /** Cùng địa chỉ với phần "Thông tin" — đổi query khi có địa chỉ thật */
 const MAP_ADDRESS_QUERY = encodeURIComponent(
@@ -11,6 +12,7 @@ const GOOGLE_MAPS_EXTERNAL_HREF = `https://www.google.com/maps/search/?api=1&que
 
 function ContactPage() {
   const [sent, setSent] = useState(false);
+  const bookingHref = getHeaderBookingHref();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,11 +27,11 @@ function ContactPage() {
           Liên hệ
         </div>
         <h1 className="font-headline text-3xl font-bold text-on-surface md:text-4xl">
-          Cherry House luôn sẵn sàng hỗ trợ bạn
+          Liên hệ chuỗi Cherry House
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-on-surface-variant">
-          Đặt phòng, tư vấn gói lưu trú hoặc góp ý dịch vụ — gửi tin nhắn hoặc liên hệ trực tiếp qua các
-          kênh bên dưới.
+          Hỗ trợ đặt phòng tại Đà Lạt, Vũng Tàu, Đà Nẵng và các cơ sở mới — hoặc góp ý về trải nghiệm
+          tại từng chi nhánh.
         </p>
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
@@ -42,10 +44,10 @@ function ContactPage() {
                 <li className="flex gap-4">
                   <span className="material-symbols-outlined shrink-0 text-primary">location_on</span>
                   <div>
-                    <p className="text-xs font-bold tracking-wide text-on-surface uppercase">Địa chỉ</p>
+                    <p className="text-xs font-bold tracking-wide text-on-surface uppercase">Trụ sở vận hành</p>
                     <p className="mt-1 text-sm leading-relaxed">
-                      123 Đường Hoa Anh Đào, Quận 1<br />
-                      Thành phố Hồ Chí Minh, Việt Nam
+                      Văn phòng thương hiệu — hỗ trợ đa cơ sở<br />
+                      Hotline &amp; email dùng chung cho mọi chi nhánh
                     </p>
                   </div>
                 </li>
@@ -66,26 +68,25 @@ function ContactPage() {
                   <div>
                     <p className="text-xs font-bold tracking-wide text-on-surface uppercase">Email</p>
                     <a
-                      href="mailto:concierge@cherryhouse.vn"
+                      href="mailto:hello@cherryhouse.vn"
                       className="mt-1 block text-sm font-semibold text-primary hover:underline"
                     >
-                      concierge@cherryhouse.vn
+                      hello@cherryhouse.vn
                     </a>
                   </div>
                 </li>
                 <li className="flex gap-4">
                   <span className="material-symbols-outlined shrink-0 text-primary">schedule</span>
                   <div>
-                    <p className="text-xs font-bold tracking-wide text-on-surface uppercase">Lễ tân</p>
-                    <p className="mt-1 text-sm">24/7 — Concierge phục vụ mọi lúc</p>
+                    <p className="text-xs font-bold tracking-wide text-on-surface uppercase">Giờ hỗ trợ</p>
+                    <p className="mt-1 text-sm">8:00 – 22:00 hằng ngày (host từng chi nhánh 24/7)</p>
                   </div>
                 </li>
               </ul>
             </div>
             <p className="text-sm text-on-surface-variant">
-              Đặt phòng nhanh:{' '}
-              <Link to="/booking" className="font-bold text-primary hover:underline">
-                Bảng trạng thái phòng
+              <Link to={bookingHref} className="font-bold text-primary hover:underline">
+                Bắt đầu đặt phòng
               </Link>
             </p>
           </div>

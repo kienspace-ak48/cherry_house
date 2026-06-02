@@ -1,7 +1,26 @@
-import { useEffect, useMemo } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import propertyApi from '../../api/propertyApi';
+import roomApi from '../../api/roomApi';
+import BookingProgress from '../../components/booking/BookingProgress';
+import BookingSearchBar from '../../components/booking/BookingSearchBar';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
-import { MOCK_ROOMS, formatPriceVnd, countByStatus } from './bookingData';
+import BranchStep from '../../components/booking/BranchStep';
+import PropertyDiscovery from '../../components/booking/PropertyDiscovery';
+import { mapPropertyFromApi, mapRoomFromApi } from '../../lib/mapProperty';
+import {
+  CTA,
+  buildUrl,
+  getBranchStepHref,
+  getDiscoveryHref,
+  getRoomDetailHref,
+  parseBookingContext,
+  resolveSearchDestination,
+} from '../../lib/bookingContext';
+import {
+  countByStatus,
+  formatPriceVnd,
+} from './bookingData';
 
 const STATUS_LABEL = {
   available: 'Sẵn sàng',
@@ -15,38 +34,38 @@ const STATUS_BADGE_CLASS = {
   booked: 'bg-room-booked text-white',
 };
 
-function RoomCard({ room, onBook }) {
+function RoomCard({ room, onBook, detailHref }) {
   const badge = STATUS_BADGE_CLASS[room.status];
   const label = STATUS_LABEL[room.status];
-  const detailTo = `/room/${room.detailSlug}`;
 
   return (
     <article
       id={`room-${room.id}`}
       className="scroll-mt-32 overflow-hidden rounded-xl border border-black/5 bg-white shadow-sm transition-shadow hover:shadow-lg"
     >
-      <Link to={detailTo} className="relative block aspect-4/3 overflow-hidden">
-        <img
-          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-          src={room.image}
-          alt={room.alt}
-        />
-        <span
-          className={`absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-bold shadow-md ${badge}`}
-        >
-          {label}
-        </span>
-      </Link>
-      <div className="p-5">
-        <Link to={detailTo}>
-          <h3 className="font-headline text-lg font-bold text-on-surface hover:text-primary">
-            {room.code}
-          </h3>
-        </Link>
-        <div className="mt-2 flex items-center gap-1.5 text-sm text-on-surface-variant">
-          <span className="material-symbols-outlined text-lg text-on-surface-variant/80">
-            person
+      {detailHref ? (
+        <Link to={detailHref} className="relative block aspect-4/3 overflow-hidden">
+          <img className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]" src={room.image} alt={room.alt} />
+          <span
+            className={`absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-bold shadow-md ${badge}`}
+          >
+            {label}
           </span>
+        </Link>
+      ) : (
+        <div className="relative aspect-4/3 overflow-hidden">
+          <img className="h-full w-full object-cover" src={room.image} alt={room.alt} />
+          <span
+            className={`absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-bold shadow-md ${badge}`}
+          >
+            {label}
+          </span>
+        </div>
+      )}
+      <div className="p-5">
+        <h3 className="font-headline text-lg font-bold text-on-surface">{room.code}</h3>
+        <div className="mt-2 flex items-center gap-1.5 text-sm text-on-surface-variant">
+          <span className="material-symbols-outlined text-lg text-on-surface-variant/80">person</span>
           <span>{room.capacityLabel}</span>
         </div>
         <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-on-surface-variant/90">
@@ -54,43 +73,44 @@ function RoomCard({ room, onBook }) {
         </p>
         <p className="mt-4 font-headline text-base font-bold text-primary">
           {formatPriceVnd(room.priceVnd)}
+          <span className="text-xs font-semibold text-on-surface-variant"> / đêm</span>
         </p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            to={detailTo}
-            className="order-2 text-center text-sm font-bold text-primary underline-offset-4 hover:underline sm:order-1 sm:text-left"
-          >
-            Xem chi tiết
-          </Link>
-          <div className="order-1 sm:order-2 sm:min-w-[140px]">
-            {room.status === 'available' && (
-              <button
-                type="button"
-                onClick={() => onBook?.(room)}
-                className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 active:scale-[0.98]"
-              >
-                Đặt ngay
-              </button>
-            )}
-            {room.status === 'pending' && (
-              <button
-                type="button"
-                disabled
-                className="w-full cursor-not-allowed rounded-lg bg-surface-container py-3 text-sm font-bold text-on-surface-variant"
-              >
-                Đang được giữ
-              </button>
-            )}
-            {room.status === 'booked' && (
-              <button
-                type="button"
-                disabled
-                className="w-full rounded-lg border-2 border-primary bg-white py-3 text-xs font-bold tracking-wider text-primary uppercase"
-              >
-                Không khả dụng
-              </button>
-            )}
-          </div>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          {detailHref && (
+            <Link
+              to={detailHref}
+              className="flex flex-1 items-center justify-center rounded-lg border-2 border-primary/20 bg-white py-3 text-sm font-bold text-primary transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
+            >
+              {CTA.viewRoomDetail}
+            </Link>
+          )}
+          {room.status === 'available' && (
+            <button
+              type="button"
+              onClick={() => onBook?.(room)}
+              className="flex flex-1 items-center justify-center rounded-lg bg-primary py-3 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 active:scale-[0.98]"
+            >
+              {CTA.bookRoom}
+            </button>
+          )}
+          {room.status === 'pending' && (
+            <button
+              type="button"
+              disabled
+              className="flex flex-1 cursor-not-allowed items-center justify-center rounded-lg bg-surface-container py-3 text-sm font-bold text-on-surface-variant"
+            >
+              Đang được giữ
+            </button>
+          )}
+          {room.status === 'booked' && (
+            <button
+              type="button"
+              disabled
+              className="flex flex-1 items-center justify-center rounded-lg border-2 border-primary/30 bg-white py-3 text-xs font-bold tracking-wider text-primary uppercase"
+            >
+              Không khả dụng
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -111,17 +131,110 @@ function StatPill({ dotClass, label, value }) {
 function BookingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
+
+  const [propertyOnly, setPropertyOnly] = useState(null);
+  const [scopeRooms, setScopeRooms] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState(null);
 
   const roomType = searchParams.get('type') || 'all';
   const priceTier = searchParams.get('price') || 'all';
   const statusFilter = searchParams.get('status') || 'all';
 
-  const patchParam = (key, value, emptyMeansAll = true) => {
-    const next = new URLSearchParams(searchParams);
-    if (emptyMeansAll && (value === 'all' || value === '')) next.delete(key);
-    else next.set(key, value);
-    setSearchParams(next, { replace: true });
-  };
+  useEffect(() => {
+    if (!context.property) {
+      setPropertyOnly(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCatalogLoading(true);
+    setCatalogError(null);
+
+    propertyApi.getBySlug(context.property)
+      .then((res) => {
+        if (cancelled) return;
+        if (!res?.success || !res.data) {
+          throw new Error(res?.message || 'Không tải được cơ sở');
+        }
+        setPropertyOnly(mapPropertyFromApi(res.data));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPropertyOnly(null);
+        setCatalogError(err instanceof Error ? err.message : 'Lỗi tải cơ sở');
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [context.property]);
+
+  useEffect(() => {
+    if (!context.property || !context.branch) {
+      setScopeRooms([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCatalogLoading(true);
+    setCatalogError(null);
+
+    roomApi.list({
+      propertySlug: context.property,
+      branchCode: context.branch,
+      isActive: 'true',
+    })
+      .then((res) => {
+        if (cancelled) return;
+        if (!res?.success) {
+          throw new Error(res?.message || 'Không tải được phòng');
+        }
+        setScopeRooms((res.data ?? []).map(mapRoomFromApi));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setScopeRooms([]);
+        setCatalogError(err instanceof Error ? err.message : 'Lỗi tải phòng');
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [context.property, context.branch]);
+
+  const selectedBranchCtx = useMemo(() => {
+    if (!propertyOnly || !context.branch) return null;
+    const branch = propertyOnly.subBranches.find((b) => b.id === context.branch);
+    if (!branch) return null;
+    return { property: propertyOnly, branch };
+  }, [propertyOnly, context.branch]);
+
+  const canShowRooms = Boolean(context.property && context.branch);
+
+  useEffect(() => {
+    if (
+      propertyOnly &&
+      !context.branch &&
+      propertyOnly.subBranches.length === 1
+    ) {
+      navigate(
+        buildUrl('/booking', {
+          ...context,
+          property: propertyOnly.slug,
+          branch: propertyOnly.subBranches[0].id,
+        }),
+        { replace: true },
+      );
+    }
+  }, [propertyOnly, context, navigate]);
 
   useEffect(() => {
     const h = searchParams.get('highlight');
@@ -132,10 +245,10 @@ function BookingPage() {
     return () => cancelAnimationFrame(id);
   }, [searchParams]);
 
-  const totals = useMemo(() => countByStatus(MOCK_ROOMS), []);
+  const totals = useMemo(() => countByStatus(scopeRooms), [scopeRooms]);
 
   const filtered = useMemo(() => {
-    return MOCK_ROOMS.filter((r) => {
+    return scopeRooms.filter((r) => {
       if (roomType !== 'all' && r.type !== roomType) return false;
       if (priceTier === 'under2m' && r.priceVnd >= 2000000) return false;
       if (priceTier === '2to35' && (r.priceVnd < 2000000 || r.priceVnd > 3500000)) return false;
@@ -144,24 +257,95 @@ function BookingPage() {
       if (statusFilter === 'booked' && r.status !== 'booked') return false;
       return true;
     });
-  }, [roomType, priceTier, statusFilter]);
+  }, [scopeRooms, roomType, priceTier, statusFilter]);
+
+  const patchParam = (key, value, emptyMeansAll = true) => {
+    const next = new URLSearchParams(searchParams);
+    if (emptyMeansAll && (value === 'all' || value === '')) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, { replace: true });
+  };
 
   const handleBook = (room) => {
-    const q = new URLSearchParams({ slug: room.detailSlug });
-    navigate(`/checkout?${q.toString()}`);
+    if (!room.detailSlug) return;
+    navigate(
+      buildUrl('/checkout', context, {
+        slug: room.detailSlug,
+      }),
+    );
   };
+
+  if (context.property && !context.branch) {
+    if (catalogLoading && !propertyOnly) {
+      return (
+        <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16 text-center text-sm text-on-surface-variant'].join(' ')}>
+          Đang tải cơ sở từ API…
+        </div>
+      );
+    }
+    if (catalogError && !propertyOnly) {
+      return (
+        <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16 text-center'].join(' ')}>
+          <p className="font-semibold text-red-800">{catalogError}</p>
+          <Link to={getDiscoveryHref(context)} className="mt-4 inline-block text-sm font-bold text-primary hover:underline">
+            Quay lại danh sách cơ sở
+          </Link>
+        </div>
+      );
+    }
+    if (!propertyOnly) {
+      return <Navigate to={getDiscoveryHref(context)} replace />;
+    }
+    if (propertyOnly.subBranches.length > 1) {
+      return (
+        <BranchStep
+          property={propertyOnly}
+          context={context}
+          onSearch={(ctx) => navigate(resolveSearchDestination(ctx))}
+        />
+      );
+    }
+    return null;
+  }
+
+  if (!canShowRooms) {
+    return <PropertyDiscovery />;
+  }
+
+  const branchStepHref = getBranchStepHref(context);
 
   return (
     <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16'].join(' ')}>
-      <header className="mb-8 max-w-3xl md:mb-10">
+      <BookingProgress current="rooms" />
+
+      <header className="mb-6 max-w-3xl md:mb-8">
+        {selectedBranchCtx && (
+          <nav className="mb-2 text-sm text-on-surface-variant">
+            <Link to={getDiscoveryHref(context)} className="hover:text-primary">
+              Cơ sở
+            </Link>
+            <span className="mx-2">/</span>
+            <Link to={branchStepHref} className="hover:text-primary">
+              {selectedBranchCtx.property.name}
+            </Link>
+            <span className="mx-2">/</span>
+            <Link to={branchStepHref} className="hover:text-primary">
+              {selectedBranchCtx.branch.name}
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="font-semibold text-on-surface">Phòng</span>
+          </nav>
+        )}
         <h1 className="font-headline text-2xl font-bold text-on-surface sm:text-3xl md:text-4xl">
-          Bảng Trạng Thái Phòng
+          {selectedBranchCtx
+            ? `Phòng tại ${selectedBranchCtx.branch.name}`
+            : 'Danh sách phòng'}
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-on-surface-variant md:mt-4 md:text-base">
-          Quản lý hệ thống phòng, theo dõi phòng trống, đang chờ xác nhận hoặc đã đặt theo thời
-          gian thực.
-        </p>
       </header>
+
+      <div className="mb-6">
+        <BookingSearchBar variant="summary" initialContext={context} />
+      </div>
 
       <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-black/5 bg-hero-filter p-4 md:flex-row md:flex-wrap md:items-end">
         <div className="min-w-0 flex-1 md:min-w-[160px]">
@@ -184,25 +368,22 @@ function BookingPage() {
           <label className="mb-1.5 block text-[10px] font-bold tracking-wide text-gray-500 uppercase">
             Khoảng giá
           </label>
-          <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2.5">
-            <span className="material-symbols-outlined shrink-0 text-primary">credit_card</span>
-            <select
-              value={priceTier}
-              onChange={(e) => patchParam('price', e.target.value)}
-              className="min-w-0 flex-1 border-none bg-transparent py-1 text-sm font-medium text-on-surface"
-            >
-              <option value="all">Mọi mức giá</option>
-              <option value="under2m">Dưới 2.000.000đ</option>
-              <option value="2to35">2.000.000đ – 3.500.000đ</option>
-              <option value="over35">Trên 3.500.000đ</option>
-            </select>
-          </div>
+          <select
+            value={priceTier}
+            onChange={(e) => patchParam('price', e.target.value)}
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-3 text-sm font-medium text-on-surface"
+          >
+            <option value="all">Mọi mức giá</option>
+            <option value="under2m">Dưới 2.000.000đ</option>
+            <option value="2to35">2.000.000đ – 3.500.000đ</option>
+            <option value="over35">Trên 3.500.000đ</option>
+          </select>
         </div>
         <div className="min-w-0 flex-1 md:min-w-[220px]">
           <label className="mb-1.5 block text-[10px] font-bold tracking-wide text-gray-500 uppercase">
             Trạng thái
           </label>
-          <div className="flex overflow-x-auto rounded-xl bg-black/5 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex overflow-x-auto rounded-xl bg-black/5 p-1">
             {[
               { id: 'all', label: 'Tất cả' },
               { id: 'available', label: 'Trống' },
@@ -213,7 +394,7 @@ function BookingPage() {
                 type="button"
                 onClick={() => patchParam('status', seg.id)}
                 className={[
-                  'shrink-0 rounded-lg px-3 py-2.5 text-center text-xs font-bold whitespace-nowrap transition-all sm:text-sm',
+                  'shrink-0 rounded-lg px-3 py-2.5 text-center text-xs font-bold whitespace-nowrap sm:text-sm',
                   statusFilter === seg.id
                     ? 'bg-primary text-white shadow-sm'
                     : 'text-on-surface-variant hover:text-on-surface',
@@ -224,16 +405,6 @@ function BookingPage() {
             ))}
           </div>
         </div>
-        <button
-          type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-bold text-white shadow-md shadow-primary/25 transition-all hover:brightness-110 md:w-auto md:shrink-0"
-          onClick={() =>
-            document.getElementById('room-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        >
-          <span className="material-symbols-outlined text-xl">filter_alt</span>
-          Lọc kết quả
-        </button>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 sm:mb-8 sm:gap-3">
@@ -244,7 +415,7 @@ function BookingPage() {
 
       {filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-black/15 bg-white py-12 text-center text-sm text-on-surface-variant md:py-16">
-          Không có phòng phù hợp bộ lọc.
+          Không có phòng phù hợp bộ lọc tại chi nhánh này.
         </p>
       ) : (
         <div
@@ -252,7 +423,12 @@ function BookingPage() {
           className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
           {filtered.map((room) => (
-            <RoomCard key={room.id} room={room} onBook={handleBook} />
+            <RoomCard
+              key={room.id}
+              room={room}
+              onBook={handleBook}
+              detailHref={room.detailSlug ? getRoomDetailHref(context, room.detailSlug) : null}
+            />
           ))}
         </div>
       )}

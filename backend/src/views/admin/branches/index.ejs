@@ -1,0 +1,111 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Chi nhánh</h2>
+    <p class="text-body-secondary mb-0 small">Quản lý bảng <code>branches</code> · gắn với cơ sở lưu trú</p>
+  </div>
+  <a href="/admin/branches/new" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-plus me-1"></i> Thêm chi nhánh
+  </a>
+</div>
+
+<% if (flash === 'created') { %>
+<div class="alert alert-success">Đã tạo chi nhánh mới.</div>
+<% } else if (flash === 'updated') { %>
+<div class="alert alert-success">Đã cập nhật chi nhánh.</div>
+<% } else if (flash === 'deleted') { %>
+<div class="alert alert-success">Đã xóa chi nhánh.</div>
+<% } else if (flash === 'notfound') { %>
+<div class="alert alert-warning">Không tìm thấy chi nhánh.</div>
+<% } else if (flash === 'error') { %>
+<div class="alert alert-danger"><%= typeof msg !== 'undefined' ? msg : 'Có lỗi xảy ra' %></div>
+<% } %>
+<% if (typeof formError !== 'undefined' && formError) { %>
+<div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/branches" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small mb-1" for="filterPropertyId">Lọc theo cơ sở</label>
+        <select class="form-select form-select-sm" id="filterPropertyId" name="propertyId">
+          <option value="">— Tất cả cơ sở —</option>
+          <% properties.forEach(function(prop) { %>
+          <option value="<%= prop.id %>" <%= filterPropertyId === String(prop.id) ? 'selected' : '' %>><%= prop.name %> (<%= prop.city %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Lọc</button>
+        <% if (filterPropertyId) { %>
+        <a href="/admin/branches" class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
+        <% } %>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách</strong>
+    <span class="badge text-bg-secondary"><%= branches.length %> mục</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Ảnh</th>
+            <th>Mã</th>
+            <th>Tên</th>
+            <th>Cơ sở</th>
+            <th>Địa chỉ</th>
+            <th>Giá từ</th>
+            <th>Phòng</th>
+            <th>TT</th>
+            <th class="text-end">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!branches.length) { %>
+          <tr><td colspan="10" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
+          <% } %>
+          <% branches.forEach(function(b) { %>
+          <tr>
+            <td><%= b.id %></td>
+            <td>
+              <% if (b.imgUrl) { %>
+              <img src="<%= b.imgUrl %>" alt="" class="admin-table-thumb">
+              <% } else { %>—<% } %>
+            </td>
+            <td><code><%= b.code %></code></td>
+            <td>
+              <strong><%= b.name %></strong>
+              <% if (b.tagline) { %><br><small class="text-body-secondary"><%= b.tagline %></small><% } %>
+            </td>
+            <td>
+              <%= b.property?.name ?? b.propertyId %><br>
+              <small class="text-body-secondary"><%= b.property?.city ?? '' %></small>
+            </td>
+            <td><%= b.address %></td>
+            <td><%= formatPriceVnd(b.price) %> ₫</td>
+            <td><%= b.roomCount %></td>
+            <td>
+              <% if (b.isActive) { %><span class="badge bg-success">On</span><% } else { %><span class="badge bg-secondary">Off</span><% } %>
+            </td>
+            <td class="text-end text-nowrap">
+              <a href="/admin/rooms?branchId=<%= b.id %>" class="btn btn-sm btn-outline-secondary" title="Danh sách phòng">Phòng</a>
+              <a href="/admin/rooms/new?branchId=<%= b.id %>" class="btn btn-sm btn-outline-secondary" title="Thêm phòng">+</a>
+              <a href="/admin/branches/<%= b.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <form method="POST" action="/admin/branches/<%= b.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa chi nhánh này? Các phòng và đặt chỗ liên quan có thể bị ảnh hưởng.');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+              </form>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

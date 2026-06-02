@@ -1,0 +1,137 @@
+<% const p = typeof property !== 'undefined' ? property : {}; %>
+<form method="POST" action="<%= formAction %>" class="admin-crud-form">
+  <% if (typeof formError !== 'undefined' && formError) { %>
+  <div class="alert alert-danger"><%= formError %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin cơ bản</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label" for="name">Tên cơ sở <span class="text-danger">*</span></label>
+              <input class="form-control" id="name" name="name" value="<%= p.name || '' %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="slug">Slug <span class="text-danger">*</span></label>
+              <input class="form-control" id="slug" name="slug" value="<%= p.slug || '' %>" placeholder="cherry-house-da-lat" required>
+              <div class="form-text">Chữ thường, số, gạch ngang</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="tagline">Tagline</label>
+              <input class="form-control" id="tagline" name="tagline" value="<%= p.tagline || '' %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="description">Mô tả <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="description" name="description" rows="4" required><%= p.description || '' %></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="highlights">Điểm nổi bật</label>
+              <textarea class="form-control" id="highlights" name="highlights" rows="3" placeholder="Mỗi dòng một ý"><%= typeof highlightsText !== 'undefined' ? highlightsText : '' %></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Địa điểm</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="city">Thành phố <span class="text-danger">*</span></label>
+              <input class="form-control" id="city" name="city" value="<%= p.city || '' %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="region">Khu vực <span class="text-danger">*</span></label>
+              <input class="form-control" id="region" name="region" value="<%= p.region || '' %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="kind">Loại hình <span class="text-danger">*</span></label>
+              <select class="form-select" id="kind" name="kind" required>
+                <% propertyKinds.forEach(function(k) { %>
+                <option value="<%= k.value %>" <%= p.kind === k.value ? 'selected' : '' %>><%= k.label %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="address">Địa chỉ <span class="text-danger">*</span></label>
+              <input class="form-control" id="address" name="address" value="<%= p.address || '' %>" required>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Giá & thống kê</strong></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="priceFromVnd">Giá từ (VND) <span class="text-danger">*</span></label>
+            <input class="form-control" type="number" min="0" step="1000" id="priceFromVnd" name="priceFromVnd" value="<%= p.priceFromVnd ?? 0 %>" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label" for="branchCount">Số chi nhánh</label>
+              <input class="form-control" type="number" min="0" id="branchCount" name="branchCount" value="<%= p.branchCount ?? 0 %>">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="roomCount">Số phòng</label>
+              <input class="form-control" type="number" min="0" id="roomCount" name="roomCount" value="<%= p.roomCount ?? 0 %>">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="rating">Rating</label>
+              <input class="form-control" type="number" min="0" max="5" step="0.1" id="rating" name="rating" value="<%= p.rating ?? 0 %>">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="reviewCount">Số review</label>
+              <input class="form-control" type="number" min="0" id="reviewCount" name="reviewCount" value="<%= p.reviewCount ?? 0 %>">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Media & trạng thái</strong></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <%- include('../admin/galleryImagePicker', {
+              fieldId: 'heroImageUrl',
+              fieldName: 'heroImageUrl',
+              value: p.heroImageUrl || '',
+              label: 'Ảnh đại diện',
+            }) %>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= p.isActive !== false ? 'checked' : '' %>>
+            <label class="form-check-label" for="isActive">Đang hiển thị (Active)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary"><%= submitLabel %></button>
+        <a href="/admin/properties" class="btn btn-outline-secondary">Hủy</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+  (function autoSlugFromName() {
+    const nameEl = document.getElementById('name');
+    const slugEl = document.getElementById('slug');
+    if (!nameEl || !slugEl || slugEl.value) return;
+    nameEl.addEventListener('blur', () => {
+      if (slugEl.value.trim()) return;
+      slugEl.value = nameEl.value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    });
+  })();
+</script>

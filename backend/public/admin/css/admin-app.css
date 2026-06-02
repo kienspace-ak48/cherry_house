@@ -1,0 +1,233 @@
+/* Cherry House admin shell — CoreUI overrides + layout fixes */
+
+:root {
+  --cui-primary: #a82e42;
+  --cui-primary-rgb: 168, 46, 66;
+  --cherry-brand: #a82e42;
+  --cherry-sidebar-bg: #2b1c1f;
+}
+
+.sidebar-dark {
+  --cui-sidebar-bg: var(--cherry-sidebar-bg);
+}
+
+.card.text-white.bg-primary,
+.bg-primary {
+  --cui-bg-opacity: 1;
+  background-color: var(--cherry-brand) !important;
+}
+
+.btn-primary {
+  --cui-btn-bg: var(--cherry-brand);
+  --cui-btn-border-color: var(--cherry-brand);
+  --cui-btn-hover-bg: #8f2638;
+  --cui-btn-hover-border-color: #8f2638;
+}
+
+/* Shell layout (ToppiLife pattern) */
+body > .wrapper.d-flex.flex-column.min-vh-100 {
+  min-width: 0;
+  isolation: isolate;
+}
+
+body > .wrapper > .body.admin-main {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+body > .wrapper > .body .admin-view-root {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+/* Sidebar brand */
+.sidebar-dark .sidebar-brand-full {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-dark .sidebar-brand-narrow {
+  color: #f4a5b0;
+  font-size: 1.25rem;
+}
+
+.admin-nav-section-heading {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+/* Header */
+.admin-header-shell .admin-header-theme-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.admin-header-user-trigger {
+  text-decoration: none;
+}
+
+.admin-header-user-trigger:hover {
+  background: var(--cui-tertiary-bg);
+}
+
+.admin-header-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.admin-header-user-chevron {
+  font-size: 0.65rem;
+  opacity: 0.55;
+}
+
+/* Page content */
+.admin-page-head {
+  margin-bottom: 1.25rem;
+}
+
+.admin-page-head h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.admin-stat-card .stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.admin-stat-card .stat-label {
+  opacity: 0.9;
+}
+
+.admin-table-thumb {
+  width: 48px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.badge-kind-homestay { background-color: #6f42c1; }
+.badge-kind-villa { background-color: #a82e42; }
+.badge-kind-mini_hotel { background-color: #0d6efd; }
+.badge-kind-serviced_apartment { background-color: #198754; }
+
+.admin-card {
+  border: 0;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+.admin-crud-form .form-label {
+  font-weight: 500;
+}
+
+.admin-crud-form .card-header {
+  font-size: 0.95rem;
+}
+
+/* Branch map pin picker */
+.branch-map-picker-map {
+  height: 280px;
+  min-height: 200px;
+  z-index: 0;
+}
+
+.branch-map-picker-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font: inherit;
+}
+
+/* Gallery image picker (forms) */
+.gallery-image-picker-thumb {
+  width: 100%;
+  max-width: 200px;
+  height: 120px;
+  object-fit: cover;
+}
+
+.gallery-picker-item {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gallery-picker-item:hover,
+.gallery-picker-item:focus-visible {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  outline: 2px solid var(--cherry-brand);
+  outline-offset: 2px;
+}
+
+.gallery-picker-item-img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-picker-folders {
+  max-height: 4.5rem;
+  overflow-y: auto;
+}
+
+/* Shared admin modal (gallery picker + gallery page) */
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1055;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 1rem;
+}
+
+.admin-modal-dialog {
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-gallery-picker-dialog {
+  max-width: 52rem;
+}
+
+.admin-gallery-picker-body {
+  overflow-y: auto;
+  max-height: min(60vh, 520px);
+}
+
+.admin-gallery-card {
+  position: relative;
+}
+
+.admin-gallery-img {
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-gallery-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.admin-gallery-card:hover .admin-gallery-overlay {
+  opacity: 1;
+}
+
+.admin-h-dvh {
+  max-height: 70vh;
+}
+
+.admin-top-2 { top: 0.5rem; }
+.admin-right-5 { right: 1.25rem; }

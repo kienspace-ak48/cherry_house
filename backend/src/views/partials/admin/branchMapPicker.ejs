@@ -1,0 +1,87 @@
+<% const pin = typeof mapPin !== 'undefined' ? mapPin : {}; %>
+<% const hasCoords = pin.lat !== '' && pin.lng !== '' && pin.lat != null && pin.lng != null; %>
+
+<div class="branch-map-picker" id="branchMapPicker" data-has-coords="<%= hasCoords ? '1' : '0' %>">
+  <div class="alert alert-light border small mb-3">
+    <strong>Dùng để làm gì?</strong> Ghim vị trí chi nhánh trên bản đồ website (trang đặt phòng / liên hệ).
+    Dữ liệu lưu bảng <code>branch_map_pins</code> khi bạn lưu form.
+    <details class="mt-2 mb-0">
+      <summary class="text-primary" style="cursor:pointer">Hướng dẫn lấy từ Google Maps (nếu cần)</summary>
+      <ol class="mb-0 ps-3 mt-2">
+        <li>Mở <a href="https://www.google.com/maps" target="_blank" rel="noopener">Google Maps</a>, tìm đúng địa chỉ chi nhánh.</li>
+        <li><strong>Cách nhanh:</strong> click bản đồ bên dưới hoặc bấm <em>Tìm từ địa chỉ</em> (dùng ô Địa chỉ phía trên).</li>
+        <li><strong>Hoặc:</strong> chuột phải lên vị trí → số tọa độ đầu dòng là lat, lng.</li>
+        <li>Chia sẻ → Sao chép liên kết → dán vào <em>Dán link Google Maps</em>.</li>
+      </ol>
+    </details>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <button type="button" class="btn btn-sm btn-primary" id="btnGeocodeAddress">
+      <i class="fa-solid fa-location-crosshairs me-1"></i>Tìm từ địa chỉ
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="btnTogglePasteMaps" aria-expanded="false" aria-controls="pasteMapsPanel">
+      <i class="fa-solid fa-link me-1"></i>Dán link Google Maps
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnFillPinLabels">
+      <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Điền nhãn từ form
+    </button>
+    <a href="#" class="btn btn-sm btn-outline-secondary d-none" id="linkPreviewMaps" target="_blank" rel="noopener">
+      <i class="fa-solid fa-up-right-from-square me-1"></i>Xem trên Maps
+    </a>
+  </div>
+
+  <div id="pasteMapsPanel" class="collapse mb-3">
+    <div class="input-group input-group-sm">
+      <input type="text" class="form-control" id="pasteMapsInput" placeholder="https://www.google.com/maps/... hoặc https://maps.google.com/?q=lat,lng" autocomplete="off">
+      <button type="button" class="btn btn-primary" id="btnApplyPasteMaps">Áp dụng</button>
+    </div>
+    <div class="form-text">Hệ thống tự đọc tọa độ từ link (dạng <code>?q=lat,lng</code>, <code>@lat,lng</code>, …).</div>
+  </div>
+
+  <div id="branchMapPickerStatus" class="small text-body-secondary mb-2"></div>
+  <div id="branchMapPickerMap" class="branch-map-picker-map rounded border mb-2" role="application" aria-label="Bản đồ chọn vị trí"></div>
+  <p class="form-text mb-3"><i class="fa-solid fa-hand-pointer me-1"></i>Click bản đồ hoặc kéo ghim đỏ để đặt vị trí. Tọa độ cập nhật tự động.</p>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label" for="mapLat">Vĩ độ (lat)</label>
+      <input class="form-control form-control-sm" id="mapLat" name="mapLat" value="<%= pin.lat %>" placeholder="11.9404" step="any" inputmode="decimal">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="mapLng">Kinh độ (lng)</label>
+      <input class="form-control form-control-sm" id="mapLng" name="mapLng" value="<%= pin.lng %>" placeholder="108.4583" step="any" inputmode="decimal">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="mapZoom">Zoom</label>
+      <input class="form-control form-control-sm" type="number" min="1" max="22" id="mapZoom" name="mapZoom" value="<%= pin.zoom ?? 15 %>">
+    </div>
+    <div class="col-12">
+      <label class="form-label" for="mapGoogleMapsUrl">Google Maps URL</label>
+      <input class="form-control form-control-sm" id="mapGoogleMapsUrl" name="mapGoogleMapsUrl" value="<%= pin.googleMapsUrl || '' %>" placeholder="Tự tạo khi có tọa độ — hoặc dán link Chia sẻ từ Google Maps">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" for="mapLabel">Nhãn pin</label>
+      <input class="form-control form-control-sm" id="mapLabel" name="mapLabel" value="<%= pin.label || '' %>" placeholder="Tên hiển thị trên ghim">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="mapPinBadge">Badge</label>
+      <input class="form-control form-control-sm" id="mapPinBadge" name="mapPinBadge" value="<%= pin.pinBadge || '' %>" placeholder="CH" maxlength="50">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="mapPinInfo">Mô tả ngắn</label>
+      <input class="form-control form-control-sm" id="mapPinInfo" name="mapPinInfo" value="<%= pin.pinInfo || '' %>" placeholder="Tagline trên popup">
+    </div>
+    <div class="col-12">
+      <details>
+        <summary class="small text-body-secondary" style="cursor:pointer">Tùy chọn nâng cao (embed iframe)</summary>
+        <label class="form-label mt-2" for="mapEmbedUrl">Embed URL</label>
+        <input class="form-control form-control-sm" id="mapEmbedUrl" name="mapEmbedUrl" value="<%= pin.embedUrl || '' %>" placeholder="Google Maps → Chia sẻ → Nhúng bản đồ → copy src iframe">
+      </details>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/admin/js/branch-map-picker.js"></script>

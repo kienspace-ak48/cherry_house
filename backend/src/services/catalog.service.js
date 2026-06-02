@@ -1,0 +1,144 @@
+const propertyRepository = require('../repositories/property.repository');
+const branchRepository = require('../repositories/branch.repository');
+const inventoryRoomRepository = require('../repositories/inventoryRoom.repository');
+const branchService = require('../services/branch.service');
+const { httpError, parseId, parseOptionalBoolean } = require('../utils/http');
+const { toPublicProperty, toPublicBranch, toPublicRoom } = require('../utils/catalog.mapper');
+
+function parseSlug(raw) {
+  const slug = typeof raw === 'string' ? raw.trim() : '';
+  if (!slug) throw httpError('Invalid property slug');
+  return slug;
+}
+
+function parsePublicListFilters(query) {
+  const filters = { isActive: true };
+
+  if (query.city) filters.city = String(query.city).trim();
+  if (query.kind) filters.kind = String(query.kind).trim();
+  if (query.isActive !== undefined) {
+    filters.isActive = parseOptionalBoolean(query.isActive);
+  }
+
+  return filters;
+}
+
+async function listProperties(query = {}) {
+  const rows = await propertyRepository.findAllForCatalog(parsePublicListFilters(query));
+  return rows.map((row) => toPublicProperty(row, {
+    includeBranches: true,
+    includeGallery: false,
+    includeAmenities: false,
+  }));
+}
+
+async function getPropertyBySlug(slugRaw) {
+  const slug = parseSlug(slugRaw);
+  const row = await propertyRepository.findBySlugForCatalog(slug);
+  if (!row || row.isActive === false) {
+    return null;
+  }
+  return toPublicProperty(row, {
+    includeBranches: true,
+    includeGallery: true,
+    includeAmenities: true,
+  });
+}
+
+async function getPropertyById(idRaw) {
+  const id = parseId(idRaw);
+  const row = await propertyRepository.findByIdForCatalog(id);
+  if (!row || row.isActive === false) return null;
+  return toPublicProperty(row, {
+    includeBranches: true,
+    includeGallery: true,
+    includeAmenities: true,
+  });
+}
+
+async function listBranchesByProperty(propertyIdRaw, query = {}) {
+  const propertyId = parseId(propertyIdRaw, 'propertyId');
+  const property = await propertyRepository.findById(propertyId);
+  if (!property || property.isActive === false) {
+    throw httpError('Property not found', 404);
+  }
+
+  const filters = { propertyId, isActive: true };
+  if (query.isActive !== undefined) {
+    filters.isActive = parseOptionalBoolean(query.isActive);
+  }
+
+  const rows = await branchRepository.findAllForCatalog(filters);
+  return rows.map(toPublicBranch);
+}
+
+async function listBranches(query = {}) {
+  const filters = { isActive: true };
+  if (query.propertyId) filters.propertyId = parseId(query.propertyId, 'propertyId');
+  if (query.isActive !== undefined) filters.isActive = parseOptionalBoolean(query.isActive);
+
+  const rows = await branchRepository.findAllForCatalog(filters);
+  return rows.map(toPublicBranch);
+}
+
+async function getBranchById(idRaw) {
+  const id = parseId(idRaw);
+  const row = await branchRepository.findByIdForCatalog(id);
+  if (!row || row.isActive === false) return null;
+  return toPublicBranch(row);
+}
+
+async function getBranchByPropertyAndCode(propertyIdRaw, codeRaw) {
+  const branch = await branchService.getBranchByPropertyAndCode(propertyIdRaw, codeRaw);
+  if (!branch || branch.isActive === false) return null;
+  const row = await branchRepository.findByIdForCatalog(branch.id);
+  return row ? toPublicBranch(row) : toPublicBranch(branch);
+}
+
+async function listRooms(query = {}) {
+  const filters = { isActive: true };
+
+  if (query.branchId) {
+    filters.branchId = parseId(query.branchId, 'branchId');
+  }
+
+  if (query.propertySlug && query.branchCode) {
+    const property = await propertyRepository.findBySlugForCatalog(parseSlug(query.propertySlug));
+    if (!property) return [];
+    const branchCode = String(query.branchCode).trim().toLowerCase();
+    const branch = await branchRepository.findByPropertyAndCode(property.id, branchCode);
+    if (!branch || branch.isActive === false) return [];
+    filters.branchId = branch.id;
+  }
+
+  if (query.roomTypeId) filters.roomTypeId = parseId(query.roomTypeId, 'roomTypeId');
+  if (query.status) filters.status = String(query.status).trim();
+  if (query.isActive !== undefined) filters.isActive = parseOptionalBoolean(query.isActive);
+
+  const rows = await inventoryRoomRepository.findAllForCatalog(filters);
+  return rows.map(toPublicRoom);
+}
+
+async function listRoomsByBranchId(branchIdRaw, query = {}) {
+  return listRooms({ ...query, branchId: branchIdRaw });
+}
+
+async function getRoomById(idRaw) {
+  const id = parseId(idRaw);
+  const row = await inventoryRoomRepository.findByIdForCatalog(id);
+  if (!row || row.isActive === false) return null;
+  return toPublicRoom(row);
+}
+
+module.exports = {
+  listProperties,
+  getPropertyBySlug,
+  getPropertyById,
+  listBranchesByProperty,
+  listBranches,
+  getBranchById,
+  getBranchByPropertyAndCode,
+  listRooms,
+  listRoomsByBranchId,
+  getRoomById,
+};

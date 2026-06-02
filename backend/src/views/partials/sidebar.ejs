@@ -1,0 +1,68 @@
+<%
+  const currentPage = typeof adminPage !== 'undefined' ? adminPage : '';
+  const catalogOpen = ['properties', 'branches', 'rooms'].includes(currentPage) ? ' show' : '';
+  const bookingOpen = currentPage === 'bookings' ? ' show' : '';
+%>
+<div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
+  <div class="sidebar-header border-bottom">
+    <div class="sidebar-brand d-flex align-items-center justify-content-center justify-content-lg-start px-2">
+      <span class="sidebar-brand-full fw-semibold d-flex align-items-center gap-2">
+        <span>Cherry House</span>
+      </span>
+      <span class="sidebar-brand-narrow"><i class="fa-solid fa-house-chimney"></i></span>
+    </div>
+    <button class="btn-close d-lg-none" type="button" data-coreui-theme="dark" aria-label="Close" onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"></button>
+  </div>
+  <ul class="sidebar-nav" data-coreui="navigation" data-simplebar>
+    <li class="nav-item">
+      <a class="nav-link<%= currentPage === 'dashboard' ? ' active' : '' %>" href="/admin">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-speedometer"></use></svg>
+        Dashboard
+      </a>
+    </li>
+
+    <li class="nav-title admin-nav-section-heading">Quản lý lưu trú</li>
+    <li class="nav-group<%= catalogOpen %>">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-building"></use></svg>
+        Danh mục
+      </a>
+      <ul class="nav-group-items compact">
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'properties' ? ' active' : '' %>" href="/admin/properties"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Cơ sở lưu trú</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'branches' ? ' active' : '' %>" href="/admin/branches"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Chi nhánh</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'rooms' ? ' active' : '' %>" href="/admin/rooms"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Phòng</a></li>
+      </ul>
+    </li>
+
+    <li class="nav-group<%= bookingOpen %>">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-calendar"></use></svg>
+        Đặt phòng
+      </a>
+      <ul class="nav-group-items compact">
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings' ? ' active' : '' %>" href="/admin/bookings"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Danh sách đặt phòng</a></li>
+      </ul>
+    </li>
+
+    <li class="nav-divider"></li>
+    <li class="nav-title admin-nav-section-heading">Media</li>
+    <li class="nav-item">
+      <a class="nav-link<%= currentPage === 'gallery' ? ' active' : '' %>" href="/admin/gallery">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-image"></use></svg>
+        Gallery
+      </a>
+    </li>
+
+    <li class="nav-divider"></li>
+    <li class="nav-title admin-nav-section-heading">Site</li>
+    <li class="nav-item">
+      <a class="nav-link" href="/" target="_blank" rel="noopener">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-external-link"></use></svg>
+        Mở website
+      </a>
+    </li>
+  </ul>
+  <div class="sidebar-footer border-top d-none d-md-flex">
+    <button class="sidebar-toggler" type="button" data-coreui-toggle="unfoldable"></button>
+  </div>
+</div>

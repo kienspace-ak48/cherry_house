@@ -1,0 +1,12 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= mode === 'edit' ? 'Sửa chi nhánh' : 'Thêm chi nhánh' %></h2>
+    <p class="text-body-secondary mb-0 small">Form CRUD · bảng <code>branches</code> &amp; <code>branch_map_pins</code></p>
+  </div>
+  <a href="/admin/branches" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+</div>
+
+<%- include('../../partials/admin/branchForm', {
+  formAction: mode === 'edit' ? '/admin/branches/' + branch.id : '/admin/branches',
+  submitLabel: mode === 'edit' ? 'Cập nhật' : 'Tạo mới',
+}) %>
