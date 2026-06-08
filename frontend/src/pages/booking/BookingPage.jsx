@@ -6,9 +6,11 @@ import roomApi from '../../api/roomApi';
 import BookingBreadcrumbs from '../../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../../components/booking/BookingProgress';
 import BookingSearchBar from '../../components/booking/BookingSearchBar';
+import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import BranchStep from '../../components/booking/BranchStep';
 import PropertyDiscovery from '../../components/booking/PropertyDiscovery';
+import RoomPickerGrid from '../../components/booking/RoomPickerGrid';
 import { mapPropertyFromApi, mapRoomFromApi } from '../../lib/mapProperty';
 import {
   CTA,
@@ -18,9 +20,11 @@ import {
   getDiscoveryHref,
   getDiscoveryListHref,
   getRoomDetailHref,
+  hasDateRange,
   parseBookingContext,
   resolveSearchDestination,
 } from '../../lib/bookingContext';
+import { countNights } from '../../lib/dateRange';
 import {
   countByStatus,
   formatPriceVnd,
@@ -38,7 +42,7 @@ const STATUS_BADGE_CLASS = {
   booked: 'bg-room-booked text-white',
 };
 
-function RoomCard({ room, onBook, detailHref }) {
+function RoomCard({ room, onBook, detailHref, datesReady = true }) {
   const badge = STATUS_BADGE_CLASS[room.status];
   const label = STATUS_LABEL[room.status];
 
@@ -92,9 +96,16 @@ function RoomCard({ room, onBook, detailHref }) {
             <button
               type="button"
               onClick={() => onBook?.(room)}
-              className="flex flex-1 items-center justify-center rounded-lg bg-primary py-3 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 active:scale-[0.98]"
+              disabled={!datesReady}
+              title={!datesReady ? 'Chọn ngày nhận – trả phòng trước' : undefined}
+              className={[
+                'flex flex-1 items-center justify-center rounded-lg py-3 text-sm font-bold shadow-md transition-all active:scale-[0.98]',
+                datesReady
+                  ? 'bg-primary text-white shadow-primary/20 hover:brightness-110'
+                  : 'cursor-not-allowed bg-surface-container text-on-surface-variant',
+              ].join(' ')}
             >
-              {CTA.bookRoom}
+              {datesReady ? CTA.bookRoom : 'Chọn ngày để đặt'}
             </button>
           )}
           {room.status === 'pending' && (
@@ -145,6 +156,9 @@ function BookingPage() {
   const roomType = searchParams.get('type') || 'all';
   const priceTier = searchParams.get('price') || 'all';
   const statusFilter = searchParams.get('status') || 'all';
+  const viewMode = searchParams.get('view') === 'cards' ? 'cards' : 'picker';
+
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
 
   useEffect(() => {
     if (!context.property) {
@@ -294,6 +308,13 @@ function BookingPage() {
     });
   }, [scopeRooms, roomType, priceTier, statusFilter]);
 
+  useEffect(() => {
+    if (!selectedRoomId) return;
+    if (!filtered.some((r) => r.id === selectedRoomId)) {
+      setSelectedRoomId(null);
+    }
+  }, [filtered, selectedRoomId]);
+
   const patchParam = (key, value, emptyMeansAll = true) => {
     const next = new URLSearchParams(searchParams);
     if (emptyMeansAll && (value === 'all' || value === '')) next.delete(key);
@@ -301,13 +322,49 @@ function BookingPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const handleDateChange = ({ checkIn, checkOut }) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (checkIn) next.set('checkIn', checkIn);
+        else next.delete('checkIn');
+        if (checkOut) next.set('checkOut', checkOut);
+        else next.delete('checkOut');
+        const nightsCount = countNights(checkIn ?? '', checkOut ?? '');
+        if (nightsCount > 0) next.set('nights', String(nightsCount));
+        else next.delete('nights');
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
   const handleBook = (room) => {
     if (!room.detailSlug) return;
+    if (!hasDateRange(context)) {
+      document.getElementById('booking-date-strip')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     navigate(
       buildUrl('/checkout', context, {
         slug: room.detailSlug,
       }),
     );
+  };
+
+  const handleSelectRoom = (room) => {
+    if (!hasDateRange(context)) {
+      document.getElementById('booking-date-strip')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setSelectedRoomId((prev) => (prev === room.id ? null : room.id));
+  };
+
+  const setViewMode = (mode) => {
+    const next = new URLSearchParams(searchParams);
+    if (mode === 'cards') next.set('view', 'cards');
+    else next.delete('view');
+    setSearchParams(next, { replace: true });
   };
 
   if (context.property && !context.branch) {
@@ -376,8 +433,39 @@ function BookingPage() {
         </h1>
       </header>
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-4">
         <BookingSearchBar variant="summary" initialContext={context} />
+        <div
+          id="booking-date-strip"
+          className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm md:p-5"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 flex-1 md:max-w-md">
+              <p className="mb-2 text-[10px] font-bold tracking-wide text-on-surface-variant uppercase">
+                Ngày lưu trú
+              </p>
+              <DateRangePicker
+                checkIn={context.checkIn ?? ''}
+                checkOut={context.checkOut ?? ''}
+                onChange={handleDateChange}
+                label="Nhận – trả phòng"
+                placeholder="Chọn ngày để xem phòng trống"
+              />
+            </div>
+            {hasDateRange(context) ? (
+              <p className="text-sm text-on-surface-variant">
+                <span className="font-semibold text-on-surface">
+                  {countNights(context.checkIn, context.checkOut)} đêm
+                </span>
+                {' '}· trạng thái phòng theo lịch thực tế
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-amber-800">
+                Chọn ngày để cập nhật phòng trống / đã đặt
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-black/5 bg-hero-filter p-4 md:flex-row md:flex-wrap md:items-end">
@@ -440,13 +528,53 @@ function BookingPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2 sm:mb-8 sm:gap-3">
-        <StatPill dotClass="bg-room-available" label="Sẵn sàng" value={totals.available} />
-        <StatPill dotClass="bg-room-pending" label="Đang chờ" value={totals.pending} />
-        <StatPill dotClass="bg-room-booked" label="Đã đặt" value={totals.booked} />
+      {!hasDateRange(context) ? (
+        <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Đang hiển thị trạng thái catalog — chưa lọc theo ngày. Chọn ngày ở trên để biết phòng nào thực sự trống.
+        </p>
+      ) : null}
+
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <StatPill dotClass="bg-room-available" label="Sẵn sàng" value={totals.available} />
+          <StatPill dotClass="bg-room-pending" label="Đang chờ" value={totals.pending} />
+          <StatPill dotClass="bg-room-booked" label="Đã đặt" value={totals.booked} />
+        </div>
+        <div className="flex overflow-x-auto rounded-xl bg-black/5 p-1 self-start">
+          {[
+            { id: 'picker', label: 'Sơ đồ phòng' },
+            { id: 'cards', label: 'Danh sách thẻ' },
+          ].map((seg) => (
+            <button
+              key={seg.id}
+              type="button"
+              onClick={() => setViewMode(seg.id)}
+              className={[
+                'shrink-0 rounded-lg px-3 py-2 text-center text-xs font-bold whitespace-nowrap sm:px-4 sm:text-sm',
+                viewMode === seg.id
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-on-surface-variant hover:text-on-surface',
+              ].join(' ')}
+            >
+              {seg.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {viewMode === 'picker' ? (
+        <RoomPickerGrid
+          rooms={filtered}
+          selectedId={selectedRoomId}
+          datesReady={hasDateRange(context)}
+          branchName={selectedBranchCtx?.branch.name}
+          onSelect={handleSelectRoom}
+          onBook={handleBook}
+          detailHrefFor={(room) =>
+            room.detailSlug ? getRoomDetailHref(context, room.detailSlug) : null
+          }
+        />
+      ) : filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-black/15 bg-white py-12 text-center text-sm text-on-surface-variant md:py-16">
           Không có phòng phù hợp bộ lọc tại chi nhánh này.
         </p>
@@ -460,6 +588,7 @@ function BookingPage() {
               key={room.id}
               room={room}
               onBook={handleBook}
+              datesReady={hasDateRange(context)}
               detailHref={room.detailSlug ? getRoomDetailHref(context, room.detailSlug) : null}
             />
           ))}

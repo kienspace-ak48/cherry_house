@@ -1,0 +1,187 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Quản lý đặt phòng</h2>
+    <p class="text-body-secondary mb-0 small">Danh sách booking — lọc theo trạng thái, ngày, phòng.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/bookings/calendar" class="btn btn-outline-secondary btn-sm">
+      <i class="fa-solid fa-calendar-days me-1"></i> Lịch phòng
+    </a>
+    <a href="/admin/bookings/new" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-plus me-1"></i> Tạo booking
+    </a>
+  </div>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'created') { %><div class="alert alert-success">Đã tạo booking mới.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật booking.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'status_updated') { %><div class="alert alert-success">Đã đổi trạng thái booking.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'notfound') { %><div class="alert alert-warning">Không tìm thấy booking.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/bookings" class="row g-2 align-items-end" id="bookingsFilterForm">
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterPropertyId">Cơ sở</label>
+        <select class="form-select form-select-sm" id="filterPropertyId" name="propertyId">
+          <option value="">— Tất cả —</option>
+          <% properties.forEach(function(prop) { %>
+          <option value="<%= prop.id %>" <%= filterPropertyId === String(prop.id) ? 'selected' : '' %>><%= prop.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterBranchId">Chi nhánh</label>
+        <select class="form-select form-select-sm" id="filterBranchId" name="branchId">
+          <option value="">— Tất cả —</option>
+          <% filterBranches.forEach(function(br) { %>
+          <option value="<%= br.id %>" data-property-id="<%= br.propertyId %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterRoomId">Phòng</label>
+        <select class="form-select form-select-sm" id="filterRoomId" name="roomId">
+          <option value="">— Tất cả —</option>
+          <% filterRooms.forEach(function(room) { %>
+          <option value="<%= room.id %>" data-branch-id="<%= room.branchId %>" <%= filterRoomId === String(room.id) ? 'selected' : '' %>><%= room.code %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterStatus">Trạng thái</label>
+        <select class="form-select form-select-sm" id="filterStatus" name="status">
+          <option value="">— Tất cả —</option>
+          <% bookingStatuses.forEach(function(s) { %>
+          <option value="<%= s.value %>" <%= filterStatus === s.value ? 'selected' : '' %>><%= s.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="checkInFrom">Check-in từ</label>
+        <input class="form-control form-control-sm" type="date" id="checkInFrom" name="checkInFrom" value="<%= checkInFrom %>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="checkInTo">Check-in đến</label>
+        <input class="form-control form-control-sm" type="date" id="checkInTo" name="checkInTo" value="<%= checkInTo %>">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="searchQ">Tìm kiếm</label>
+        <input class="form-control form-control-sm" type="search" id="searchQ" name="q" value="<%= searchQ %>" placeholder="Mã, tên, email, SĐT…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterCode">Mã booking</label>
+        <input class="form-control form-control-sm" type="text" id="filterCode" name="code" value="<%= filterCode %>" placeholder="CH-…">
+      </div>
+      <div class="col-md-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
+        <a href="/admin/bookings" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách</strong>
+    <span class="badge text-bg-secondary"><%= bookings.length %> mục</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Mã</th>
+            <th>Khách</th>
+            <th>Cơ sở / CN</th>
+            <th>Phòng</th>
+            <th>Nhận → Trả</th>
+            <th>Tổng</th>
+            <th>Thanh toán</th>
+            <th>Trạng thái</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!bookings.length) { %>
+          <tr><td colspan="9" class="text-center text-body-secondary py-4">Không có booking phù hợp</td></tr>
+          <% } else { bookings.forEach(function(b) { %>
+          <tr>
+            <td><a href="/admin/bookings/<%= b.id %>"><code><%= b.bookingCode %></code></a></td>
+            <td>
+              <strong><%= b.guestName %></strong><br>
+              <small class="text-body-secondary"><%= b.guestEmail %></small>
+            </td>
+            <td><%= b.propertyName %><br><small class="text-body-secondary"><%= b.branchName %></small></td>
+            <td><%= b.roomCode %></td>
+            <td>
+              <%= formatDateOnly(b.checkIn) %> → <%= formatDateOnly(b.checkOut) %><br>
+              <small><%= b.nights %> đêm</small>
+            </td>
+            <td><%= formatVnd(b.totalVnd) %></td>
+            <td>
+              <% if (b.payment) { %>
+              <span class="badge bg-<%= b.payment.status === 'paid' ? 'success' : (b.payment.status === 'failed' ? 'danger' : 'warning') %>"><%= b.payment.status %></span>
+              <% } else { %>
+              <span class="text-body-secondary">—</span>
+              <% } %>
+            </td>
+            <td><span class="badge bg-<%= statusBadgeClass(b.status) %>"><%= statusLabel(b.status) %></span></td>
+            <td class="text-end text-nowrap">
+              <a href="/admin/bookings/<%= b.id %>" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+              <a href="/admin/bookings/<%= b.id %>/edit" class="btn btn-sm btn-outline-secondary">Sửa</a>
+            </td>
+          </tr>
+          <% }); } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function initBookingFilters() {
+    const propertySel = document.getElementById('filterPropertyId');
+    const branchSel = document.getElementById('filterBranchId');
+    const roomSel = document.getElementById('filterRoomId');
+    if (!propertySel || !branchSel || !roomSel) return;
+
+    const allBranchOptions = Array.from(branchSel.options).slice(1);
+    const allRoomOptions = Array.from(roomSel.options).slice(1);
+
+    function filterBranches() {
+      const pid = propertySel.value;
+      const current = branchSel.value;
+      branchSel.innerHTML = '<option value="">— Tất cả —</option>';
+      allBranchOptions.forEach((opt) => {
+        if (!pid || opt.dataset.propertyId === pid) {
+          branchSel.appendChild(opt.cloneNode(true));
+        }
+      });
+      if (current && Array.from(branchSel.options).some((o) => o.value === current)) {
+        branchSel.value = current;
+      }
+      filterRooms();
+    }
+
+    function filterRooms() {
+      const bid = branchSel.value;
+      const current = roomSel.value;
+      roomSel.innerHTML = '<option value="">— Tất cả —</option>';
+      allRoomOptions.forEach((opt) => {
+        if (!bid || opt.dataset.branchId === bid) {
+          roomSel.appendChild(opt.cloneNode(true));
+        }
+      });
+      if (current && Array.from(roomSel.options).some((o) => o.value === current)) {
+        roomSel.value = current;
+      }
+    }
+
+    propertySel.addEventListener('change', filterBranches);
+    branchSel.addEventListener('change', filterRooms);
+  })();
+</script>

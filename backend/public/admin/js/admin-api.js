@@ -9,6 +9,10 @@ const AdminApi = {
     return json.data;
   },
 
+  async getDashboardOverview(period = 'week') {
+    return this.get(`/admin/dashboard/overview?period=${encodeURIComponent(period)}`);
+  },
+
   formatVnd(amount) {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',

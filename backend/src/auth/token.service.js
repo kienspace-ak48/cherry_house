@@ -2,8 +2,13 @@ const crypto = require('crypto');
 const { generateJWT } = require('../utils/generateJWT.util');
 const refreshTokenRepository = require('../repositories/refreshToken.repository');
 
+/** Access token khách (React app) */
 const ACCESS_EXPIRES =
   process.env.JWT_ACCESS_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '15m';
+
+/** Access token admin CMS (cookie / panel) — mặc định 3h */
+const ADMIN_ACCESS_EXPIRES = process.env.JWT_ADMIN_ACCESS_EXPIRES_IN || '3h';
+
 const REFRESH_EXPIRES_DAYS = Number(process.env.JWT_REFRESH_EXPIRES_DAYS || 7);
 
 function hashToken(raw) {
@@ -39,7 +44,7 @@ async function issueAdminAccessToken(admin) {
       role: admin.role,
       typ: 'admin',
     },
-    ACCESS_EXPIRES,
+    ADMIN_ACCESS_EXPIRES,
   );
 }
 
@@ -83,14 +88,14 @@ async function createAdminSession(admin) {
     accessToken,
     refreshToken,
     token: accessToken,
-    expiresIn: ACCESS_EXPIRES,
+    expiresIn: ADMIN_ACCESS_EXPIRES,
   };
 }
 
 /** Chỉ access token cho admin cookie SSR (không lưu refresh trong cookie flow cũ) */
 async function createAdminAccessOnly(admin) {
   const accessToken = await issueAdminAccessToken(admin);
-  return { accessToken, token: accessToken, expiresIn: ACCESS_EXPIRES };
+  return { accessToken, token: accessToken, expiresIn: ADMIN_ACCESS_EXPIRES };
 }
 
 async function rotateClientRefresh(rawRefresh) {
@@ -129,5 +134,6 @@ module.exports = {
   revokeClientRefresh,
   normalizeJwtPayload,
   ACCESS_EXPIRES,
+  ADMIN_ACCESS_EXPIRES,
   REFRESH_EXPIRES_DAYS,
 };

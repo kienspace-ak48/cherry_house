@@ -1,0 +1,278 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= mode === 'edit' ? 'Sửa booking' : 'Tạo booking thủ công' %></h2>
+    <p class="text-body-secondary mb-0 small">
+      Walk-in, gọi điện — chọn phòng, ngày, khách và trạng thái (mặc định <strong>Đã xác nhận</strong>).
+    </p>
+  </div>
+  <a href="<%= mode === 'edit' ? '/admin/bookings/' + bookingId : '/admin/bookings' %>" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<% if (typeof formError !== 'undefined' && formError) { %>
+<div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<form method="POST" action="<%= mode === 'edit' ? '/admin/bookings/' + bookingId : '/admin/bookings' %>" class="admin-crud-form" id="bookingForm">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Phòng &amp; ngày</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="formPropertyId">Cơ sở</label>
+              <select class="form-select" id="formPropertyId">
+                <option value="">— Chọn —</option>
+                <% properties.forEach(function(prop) { %>
+                <option value="<%= prop.id %>"><%= prop.name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="formBranchId">Chi nhánh</label>
+              <select class="form-select" id="formBranchId">
+                <option value="">— Chọn —</option>
+                <% branches.forEach(function(br) { %>
+                <option value="<%= br.id %>" data-property-id="<%= br.propertyId %>"><%= br.name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="roomId">Phòng <span class="text-danger">*</span></label>
+              <select class="form-select" name="roomId" id="roomId" required>
+                <option value="">— Chọn phòng —</option>
+                <% rooms.forEach(function(room) { %>
+                <option
+                  value="<%= room.id %>"
+                  data-branch-id="<%= room.branchId %>"
+                  data-price="<%= room.priceVnd %>"
+                  <%= String(booking.roomId) === String(room.id) ? 'selected' : '' %>
+                ><%= room.code %> — <%= Number(room.priceVnd).toLocaleString('vi-VN') %> ₫</option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="checkIn">Check-in <span class="text-danger">*</span></label>
+              <input class="form-control" type="date" name="checkIn" id="checkIn" value="<%= booking.checkIn %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="checkOut">Check-out <span class="text-danger">*</span></label>
+              <input class="form-control" type="date" name="checkOut" id="checkOut" value="<%= booking.checkOut %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="status">Trạng thái</label>
+              <select class="form-select" name="status" id="status">
+                <% bookingStatuses.forEach(function(s) { %>
+                <option value="<%= s.value %>" <%= booking.status === s.value ? 'selected' : '' %>><%= s.label %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+          <div id="availability-hint" class="small mt-3 text-body-secondary"></div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin khách</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="guestName">Họ tên <span class="text-danger">*</span></label>
+              <input class="form-control" type="text" name="guestName" id="guestName" value="<%= booking.guestName %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="guestPhone">Điện thoại <span class="text-danger">*</span></label>
+              <input class="form-control" type="tel" name="guestPhone" id="guestPhone" value="<%= booking.guestPhone %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="guestEmail">Email <span class="text-danger">*</span></label>
+              <input class="form-control" type="email" name="guestEmail" id="guestEmail" value="<%= booking.guestEmail %>" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="adults">Người lớn</label>
+              <input class="form-control" type="number" min="1" name="adults" id="adults" value="<%= booking.adults %>">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="children">Trẻ em</label>
+              <input class="form-control" type="number" min="0" name="children" id="children" value="<%= booking.children %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="specialNote">Ghi chú</label>
+              <textarea class="form-control" name="specialNote" id="specialNote" rows="3"><%= booking.specialNote %></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Giá</strong></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="pricePerNightVnd">Giá/đêm (VND)</label>
+            <input class="form-control" type="number" min="0" step="1000" name="pricePerNightVnd" id="pricePerNightVnd" value="<%= booking.pricePerNightVnd %>">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="serviceFeeVnd">Phí dịch vụ</label>
+            <input class="form-control" type="number" min="0" step="1000" name="serviceFeeVnd" id="serviceFeeVnd" value="<%= booking.serviceFeeVnd %>">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="discountVnd">Giảm giá</label>
+            <input class="form-control" type="number" min="0" step="1000" name="discountVnd" id="discountVnd" value="<%= booking.discountVnd %>">
+          </div>
+          <div class="border-top pt-3">
+            <div class="d-flex justify-content-between fw-semibold">
+              <span>Tổng ước tính</span>
+              <span id="totalPreview">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="markPaid" id="markPaid" value="on" <%= booking.markPaid ? 'checked' : '' %>>
+            <label class="form-check-label" for="markPaid">Đã thanh toán tại quầy</label>
+            <div class="form-text">Tạo/cập nhật payment <code>paid</code> (walk-in, tiền mặt/chuyển khoản).</div>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <%= mode === 'edit' ? 'Cập nhật booking' : 'Tạo booking' %>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+  (function bookingFormPage() {
+    const propertySel = document.getElementById('formPropertyId');
+    const branchSel = document.getElementById('formBranchId');
+    const roomSel = document.getElementById('roomId');
+    const priceInput = document.getElementById('pricePerNightVnd');
+    const checkIn = document.getElementById('checkIn');
+    const checkOut = document.getElementById('checkOut');
+    const serviceFee = document.getElementById('serviceFeeVnd');
+    const discount = document.getElementById('discountVnd');
+    const totalPreview = document.getElementById('totalPreview');
+    const availabilityHint = document.getElementById('availability-hint');
+    const mode = '<%= mode %>';
+    const excludeBookingId = <%= mode === 'edit' ? bookingId : 'null' %>;
+
+    const allBranchOptions = Array.from(branchSel.options).slice(1);
+    const allRoomOptions = Array.from(roomSel.options).slice(1);
+
+    function syncCascadeFromRoom() {
+      const selectedRoom = roomSel.selectedOptions[0];
+      if (!selectedRoom || !selectedRoom.value) return;
+      const branchId = selectedRoom.dataset.branchId;
+      const branchOpt = allBranchOptions.find((o) => o.value === branchId);
+      if (branchOpt) {
+        branchSel.value = branchId;
+        propertySel.value = branchOpt.dataset.propertyId;
+        filterRooms();
+        roomSel.value = selectedRoom.value;
+      }
+    }
+
+    function filterBranches() {
+      const pid = propertySel.value;
+      const current = branchSel.value;
+      branchSel.innerHTML = '<option value="">— Chọn —</option>';
+      allBranchOptions.forEach((opt) => {
+        if (!pid || opt.dataset.propertyId === pid) {
+          branchSel.appendChild(opt.cloneNode(true));
+        }
+      });
+      if (current && Array.from(branchSel.options).some((o) => o.value === current)) {
+        branchSel.value = current;
+      }
+      filterRooms();
+    }
+
+    function filterRooms() {
+      const bid = branchSel.value;
+      const current = roomSel.value;
+      roomSel.innerHTML = '<option value="">— Chọn phòng —</option>';
+      allRoomOptions.forEach((opt) => {
+        if (!bid || opt.dataset.branchId === bid) {
+          roomSel.appendChild(opt.cloneNode(true));
+        }
+      });
+      if (current && Array.from(roomSel.options).some((o) => o.value === current)) {
+        roomSel.value = current;
+      }
+      applyRoomPrice();
+    }
+
+    function applyRoomPrice() {
+      const opt = roomSel.selectedOptions[0];
+      if (opt && opt.dataset.price && (!priceInput.value || mode === 'create')) {
+        priceInput.value = opt.dataset.price;
+      }
+      updateTotalPreview();
+    }
+
+    function nightsBetween() {
+      if (!checkIn.value || !checkOut.value) return 0;
+      const a = new Date(checkIn.value + 'T12:00:00');
+      const b = new Date(checkOut.value + 'T12:00:00');
+      return Math.max(0, Math.round((b - a) / 86400000));
+    }
+
+    function updateTotalPreview() {
+      const nights = nightsBetween();
+      const price = Number(priceInput.value) || 0;
+      const fee = Number(serviceFee.value) || 0;
+      const disc = Number(discount.value) || 0;
+      const total = price * nights + fee - disc;
+      totalPreview.textContent = nights > 0
+        ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Math.max(0, total))
+        : '—';
+    }
+
+    async function checkAvailability() {
+      if (!roomSel.value || !checkIn.value || !checkOut.value) {
+        availabilityHint.textContent = '';
+        return;
+      }
+      availabilityHint.textContent = 'Đang kiểm tra phòng…';
+      try {
+        const body = {
+          roomId: Number(roomSel.value),
+          checkIn: checkIn.value,
+          checkOut: checkOut.value,
+        };
+        if (excludeBookingId) body.excludeBookingId = excludeBookingId;
+        const res = await fetch('/api/bookings/check-availability', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const json = await res.json();
+        if (json.success && json.data.available) {
+          availabilityHint.innerHTML = '<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i>Phòng trống trong khoảng ngày đã chọn.</span>';
+        } else {
+          availabilityHint.innerHTML = '<span class="text-danger"><i class="fa-solid fa-circle-xmark me-1"></i>' + (json.data?.message || json.message || 'Phòng không trống') + '</span>';
+        }
+      } catch (err) {
+        availabilityHint.textContent = '';
+      }
+    }
+
+    propertySel.addEventListener('change', filterBranches);
+    branchSel.addEventListener('change', filterRooms);
+    roomSel.addEventListener('change', applyRoomPrice);
+    [checkIn, checkOut, priceInput, serviceFee, discount].forEach((el) => {
+      el.addEventListener('change', () => { updateTotalPreview(); checkAvailability(); });
+      el.addEventListener('input', updateTotalPreview);
+    });
+
+    syncCascadeFromRoom();
+    updateTotalPreview();
+    checkAvailability();
+  })();
+</script>

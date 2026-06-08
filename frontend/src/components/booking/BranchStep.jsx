@@ -10,6 +10,7 @@ import {
   buildUrl,
   getBookingStepHref,
   getDiscoveryListHref,
+  hasDateRange,
 } from '../../lib/bookingContext';
 
 function branchLabel(name) {
@@ -42,6 +43,12 @@ export default function BranchStep({ property, context, onSearch }) {
             Chọn chi nhánh
           </h1>
           <p className="mt-2 text-base text-on-surface-variant">{property.name}</p>
+
+          {!hasDateRange(context) ? (
+            <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Chưa có ngày lưu trú — chọn ngày bên dưới để xem phòng trống chính xác.
+            </p>
+          ) : null}
 
           <div className="mt-8">
             <BookingSearchBar

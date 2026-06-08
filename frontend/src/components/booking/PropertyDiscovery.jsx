@@ -14,7 +14,9 @@ import {
   CTA,
   formatContextSummary,
   getBookingStepHref,
+  getDiscoveryProgressStep,
   getPropertyContinueHref,
+  hasDateRange,
   parseBookingContext,
   resolveSearchDestination,
   shouldAutoAdvanceProperty,
@@ -142,13 +144,17 @@ export default function PropertyDiscovery() {
     <div className="bg-surface pb-20">
       <section className="border-b border-black/5 bg-surface-container-low/80">
         <div className={[LAYOUT_CONTAINER, 'pt-24 pb-10 md:pt-28 md:pb-12'].join(' ')}>
-          <BookingProgress current="property" context={context} />
+          <BookingProgress current={getDiscoveryProgressStep(context)} context={context} />
           <BookingBreadcrumbs
             className="mb-4"
-            items={[
-              { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
-              { label: 'Chọn cơ sở', current: true },
-            ]}
+            items={
+              getDiscoveryProgressStep(context) === 'search'
+                ? [{ label: 'Tìm kiếm', current: true }]
+                : [
+                    { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
+                    { label: 'Chọn cơ sở', current: true },
+                  ]
+            }
           />
           <p className="font-headline text-xs font-bold tracking-[0.2em] text-primary uppercase">
             Đặt phòng Cherry House
@@ -169,10 +175,18 @@ export default function PropertyDiscovery() {
       </section>
 
       <div className={[LAYOUT_CONTAINER, 'pt-10'].join(' ')}>
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+        {/* <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
           <span className="material-symbols-outlined text-sm">cloud_done</span>
           Dữ liệu từ API · GET /api/catalog/properties
-        </p>
+        </p> */}
+
+        {!hasDateRange(context) ? (
+          <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span className="material-symbols-outlined align-middle text-base">info</span>
+            {' '}
+            Chọn <strong>ngày nhận – trả phòng</strong> ở bước Tìm kiếm để xem phòng trống chính xác ở các bước sau.
+          </p>
+        ) : null}
 
         {summary ? (
           <p className="mb-4 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-on-surface-variant">
@@ -221,7 +235,7 @@ export default function PropertyDiscovery() {
         )}
 
         {!loading && !error && filtered.length > 0 && (
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((property) => (
               <PropertyCard key={property.slug} property={property} context={context} />
             ))}

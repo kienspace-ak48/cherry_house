@@ -1,7 +1,8 @@
 <%
   const currentPage = typeof adminPage !== 'undefined' ? adminPage : '';
   const catalogOpen = ['properties', 'branches', 'rooms'].includes(currentPage) ? ' show' : '';
-  const bookingOpen = currentPage === 'bookings' ? ' show' : '';
+  const bookingOpen = ['bookings', 'bookings-calendar'].includes(currentPage) ? ' show' : '';
+  const usersOpen = currentPage === 'users' ? ' show' : '';
 %>
 <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
   <div class="sidebar-header border-bottom">
@@ -40,7 +41,21 @@
         Đặt phòng
       </a>
       <ul class="nav-group-items compact">
-        <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings' ? ' active' : '' %>" href="/admin/bookings"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Danh sách đặt phòng</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings' ? ' active' : '' %>" href="/admin/bookings"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Danh sách</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings-calendar' ? ' active' : '' %>" href="/admin/bookings/calendar"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Lịch phòng</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/bookings/new"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tạo booking</a></li>
+      </ul>
+    </li>
+
+    <li class="nav-divider"></li>
+    <li class="nav-title admin-nav-section-heading">Khách hàng</li>
+    <li class="nav-group<%= usersOpen %>">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-people"></use></svg>
+        Tài khoản
+      </a>
+      <ul class="nav-group-items compact">
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'users' ? ' active' : '' %>" href="/admin/users"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Khách hàng</a></li>
       </ul>
     </li>
 
@@ -52,6 +67,17 @@
         Gallery
       </a>
     </li>
+
+    <% if (typeof isSuperAdmin !== 'undefined' && isSuperAdmin) { %>
+    <li class="nav-divider"></li>
+    <li class="nav-title admin-nav-section-heading">Hệ thống</li>
+    <li class="nav-item">
+      <a class="nav-link<%= currentPage === 'backups' ? ' active' : '' %>" href="/admin/backups">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-data-transfer-down"></use></svg>
+        Backup DB
+      </a>
+    </li>
+    <% } %>
 
     <li class="nav-divider"></li>
     <li class="nav-title admin-nav-section-heading">Site</li>

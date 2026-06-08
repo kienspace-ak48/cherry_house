@@ -1,0 +1,85 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Sửa khách hàng</h2>
+    <p class="text-body-secondary mb-0 small">
+      <%= user ? user.email : '' %>
+      <% if (user) { %> · <%= authProviderLabel(user.authProvider) %><% } %>
+    </p>
+  </div>
+  <a href="<%= user ? '/admin/users/' + user.id : '/admin/users' %>" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
+</div>
+
+<% if (typeof formError !== 'undefined' && formError) { %>
+<div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<form method="POST" action="/admin/users/<%= user.id %>" class="admin-crud-form">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin cơ bản</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="fullName">Họ tên <span class="text-danger">*</span></label>
+              <input class="form-control" type="text" name="fullName" id="fullName" value="<%= form.fullName %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="email">Email <span class="text-danger">*</span></label>
+              <input class="form-control" type="email" name="email" id="email" value="<%= form.email %>" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="phone">Điện thoại</label>
+              <input class="form-control" type="tel" name="phone" id="phone" value="<%= form.phone %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="membershipTier">Hạng thành viên</label>
+              <select class="form-select" name="membershipTier" id="membershipTier">
+                <% membershipTiers.forEach(function(t) { %>
+                <option value="<%= t.value %>" <%= form.membershipTier === t.value ? 'selected' : '' %>><%= t.label %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <% if (user && user.authProvider === 'local') { %>
+      <div class="card admin-card">
+        <div class="card-header"><strong>Mật khẩu</strong></div>
+        <div class="card-body">
+          <label class="form-label" for="password">Mật khẩu mới</label>
+          <input class="form-control" type="password" name="password" id="password" autocomplete="new-password" minlength="6" placeholder="Để trống nếu không đổi">
+          <div class="form-text">Tối thiểu 6 ký tự. Chỉ áp dụng tài khoản đăng nhập email.</div>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Trạng thái</strong></div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="isActive" id="isActive" value="on" <%= form.isActive ? 'checked' : '' %>>
+            <label class="form-check-label" for="isActive">Tài khoản đang hoạt động</label>
+            <div class="form-text">Bỏ chọn → khóa đăng nhập hoàn toàn.</div>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="emailVerified" id="emailVerified" value="on" <%= form.emailVerified ? 'checked' : '' %>>
+            <label class="form-check-label" for="emailVerified">Email đã xác thực</label>
+          </div>
+          <hr>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="bookingBanned" id="bookingBanned" value="on" <%= form.bookingBanned ? 'checked' : '' %>>
+            <label class="form-check-label text-danger fw-semibold" for="bookingBanned">Cấm đặt phòng (blacklist)</label>
+            <div class="form-text">Vẫn đăng nhập được; chặn checkout/booking mới (kể cả khi dùng cùng email).</div>
+          </div>
+          <label class="form-label small" for="bookingBanReason">Lý do cấm (hiện cho khách)</label>
+          <textarea class="form-control form-control-sm" name="bookingBanReason" id="bookingBanReason" rows="3" placeholder="VD: No-show nhiều lần, vi phạm nội quy…"><%= form.bookingBanReason %></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Lưu thay đổi</button>
+    </div>
+  </div>
+</form>

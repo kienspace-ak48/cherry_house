@@ -29,6 +29,7 @@ const bookingRoute = require('./booking.route');
 
 const paymentRoute = require('./payment.route');
 const checkoutRoute = require('../modules/checkout/checkout.routes');
+const dashboardRoute = require('../modules/dashboard/dashboard.routes');
 const catalogRoute = require('./catalog.route');
 const clientAuthRoute = require('./clientAuth.route');
 const prisma = require('../config/prisma.config');
@@ -95,6 +96,8 @@ router.use('/promo-codes', promoCodeRoute);
 router.use('/bookings', bookingRoute);
 
 router.use('/checkout', checkoutRoute);
+
+router.use('/admin/dashboard', dashboardRoute);
 
 router.use('/payments', paymentRoute);
 

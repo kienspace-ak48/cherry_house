@@ -25,8 +25,6 @@ const GUEST_LABEL = {
   '1-adult-0-children': '1 Người lớn',
 };
 
-const PROMO_OK = ['CHERRY10', 'CHERRYVIP'];
-
 /**
  * Phương thức thanh toán đang bật:
  * - card → VNPay redirect (thẻ / ATM trên cổng VNPay)
@@ -143,8 +141,6 @@ export default function CheckoutPage() {
   const profileFromStore = readProfileContact();
 
   const [note, setNote] = useState('');
-  const [voucherDraft, setVoucherDraft] = useState('');
-  const [appliedCode, setAppliedCode] = useState(null);
   const [availability, setAvailability] = useState({
     status: 'idle',
     data: null,
@@ -201,27 +197,17 @@ export default function CheckoutPage() {
 
   const guestLine = GUEST_LABEL[guestsKey];
 
-  const pricePerNight =
-    availability.data?.room?.priceVnd
-    ?? detail?.priceVnd
-    ?? bookingRow?.priceVnd
-    ?? 2_100_000;
+  /** Giá/đêm từ DB (API check-availability trả về room.priceVnd). */
+  const pricePerNight = availability.data?.room?.priceVnd ?? 0;
 
   const pricing = useMemo(() => {
     const roomSubtotal = pricePerNight * nights;
-    const serviceFee = Math.round(roomSubtotal * 0.1);
-    let discountAmt = 210_000;
-    if (appliedCode === 'CHERRYVIP') discountAmt = Math.round(roomSubtotal * 0.07);
-    else if (appliedCode === 'CHERRY10') discountAmt = Math.round(roomSubtotal * 0.05);
-    const totalVal = Math.max(0, roomSubtotal + serviceFee - discountAmt);
     return {
-      serviceFee,
-      discountAmt,
-      totalVal,
+      totalVal: roomSubtotal,
       subtotalFormatted: fmtMoneyCompact(roomSubtotal),
-      discountFormatted: `-${fmtMoneyCompact(discountAmt)}`,
+      pricePerNightFormatted: fmtMoneyCompact(pricePerNight),
     };
-  }, [pricePerNight, nights, appliedCode]);
+  }, [pricePerNight, nights]);
 
   const checkInFmt = formatViBookingDate(checkInDate);
   const checkOutFmt = formatViBookingDate(checkOutDate);
@@ -286,20 +272,6 @@ export default function CheckoutPage() {
     };
   }, [checkInIso, checkOutIso, slug, context.property, context.branch]);
 
-  function applyPromo(e) {
-    e.preventDefault();
-    const trimmed = voucherDraft.trim().toUpperCase();
-    if (!trimmed) {
-      setAppliedCode(null);
-      return;
-    }
-    if (PROMO_OK.includes(trimmed)) {
-      setAppliedCode(trimmed);
-    } else {
-      alert('Mã không hợp lệ trong bản demo. Dùng CHERRY10 hoặc CHERRYVIP.');
-    }
-  }
-
   async function handleConfirm() {
     if (!canConfirm || submitting) return;
 
@@ -324,7 +296,6 @@ export default function CheckoutPage() {
         guestPhone: contact.phone.trim(),
         guestEmail: contact.email.trim(),
         specialNote: note.trim() || undefined,
-        promoCode: appliedCode,
         paymentMethod: payment,
       });
 
@@ -643,58 +614,32 @@ export default function CheckoutPage() {
                   <span className="text-sm font-medium">{guestLine}</span>
                 </div>
 
-                <div className="flex flex-col gap-2 py-1">
-                  <label className="px-1 text-[10px] font-bold tracking-wider text-on-surface-variant uppercase opacity-65">
-                    Mã ưu đãi
-                  </label>
-                  <form className="flex gap-2" onSubmit={applyPromo}>
-                    <input
-                      type="text"
-                      value={voucherDraft}
-                      onChange={(e) => setVoucherDraft(e.target.value)}
-                      placeholder="Nhập mã ưu đãi..."
-                      className="flex-1 rounded-xl border-none bg-surface-container-high px-3 py-2 text-xs font-body text-on-surface outline-none transition-all focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary/30"
-                    />
-                    <button
-                      type="submit"
-                      className="shrink-0 rounded-xl bg-primary-container px-4 py-2 font-headline text-xs font-bold text-on-primary-container transition-colors hover:bg-primary hover:text-on-primary active:scale-95"
-                    >
-                      Áp dụng
-                    </button>
-                  </form>
-                  {appliedCode ? (
-                    <p className="text-xs font-semibold text-tertiary">
-                      Đã áp dụng: <span className="uppercase">{appliedCode}</span>
-                    </p>
-                  ) : null}
-                </div>
-
                 <div className="space-y-2 text-xs text-on-surface-variant">
+                  {pricePerNight > 0 ? (
+                    <div className="flex justify-between">
+                      <span>Giá phòng / đêm</span>
+                      <span>{pricing.pricePerNightFormatted}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between">
-                    <span>Giá phòng ({nights} đêm)</span>
-                    <span>{pricing.subtotalFormatted}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Phí dịch vụ & Thuế</span>
-                    <span>{fmtMoneyCompact(pricing.serviceFee)}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-tertiary">
                     <span>
-                      Ưu đãi{' '}
-                      {appliedCode ? `(${appliedCode})` : 'thành viên'}
+                      {nights > 0 ? `${nights} đêm` : 'Tổng tiền phòng'}
                     </span>
-                    <span>{pricing.discountFormatted}</span>
+                    <span>
+                      {pricePerNight > 0 && nights > 0
+                        ? pricing.subtotalFormatted
+                        : '—'}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-end justify-between border-t border-outline-variant/10 pt-4">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase opacity-65">
-                      Tổng cộng
-                    </span>
-                    <span className="text-xs italic text-on-surface-variant">(Đã bao gồm thuế)</span>
-                  </div>
+                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase opacity-65">
+                    Tổng thanh toán
+                  </span>
                   <div className="font-headline text-xl font-bold text-primary md:text-2xl">
-                    {fmtMoneyCompact(pricing.totalVal)}
+                    {pricePerNight > 0 && nights > 0
+                      ? fmtMoneyCompact(pricing.totalVal)
+                      : '—'}
                   </div>
                 </div>
                 {submitError ? (

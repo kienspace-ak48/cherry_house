@@ -1,0 +1,109 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= user.fullName %></h2>
+    <p class="text-body-secondary mb-0 small">
+      <%= user.email %> · Đăng ký <%= formatDateTime(user.createdAt) %>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/users" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+    <a href="/admin/users/<%= user.id %>/edit" class="btn btn-primary btn-sm">Sửa tài khoản</a>
+  </div>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật tài khoản.</div><% } %>
+
+<% if (user.bookingBanned) { %>
+<div class="alert alert-danger mb-4">
+  <strong>Cấm đặt phòng</strong>
+  <% if (user.bookingBannedAt) { %> · từ <%= formatDateTime(user.bookingBannedAt) %><% } %>
+  <% if (user.bookingBanReason) { %>
+  <p class="mb-0 mt-2 small"><%= user.bookingBanReason %></p>
+  <% } else { %>
+  <p class="mb-0 mt-2 small">Khách vẫn có thể đăng nhập nhưng không thể tạo booking mới.</p>
+  <% } %>
+</div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card admin-card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Thông tin</strong>
+        <% if (user.isActive) { %>
+        <span class="badge bg-success">Active</span>
+        <% } else { %>
+        <span class="badge bg-danger">Đã khóa</span>
+        <% } %>
+      </div>
+      <div class="card-body">
+        <% if (user.avatarUrl) { %>
+        <div class="mb-3 text-center">
+          <img src="<%= user.avatarUrl %>" alt="" class="rounded-circle" width="72" height="72" referrerpolicy="no-referrer">
+        </div>
+        <% } %>
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4">Email</dt>
+          <dd class="col-sm-8"><a href="mailto:<%= user.email %>"><%= user.email %></a></dd>
+          <dt class="col-sm-4">Điện thoại</dt>
+          <dd class="col-sm-8"><%= user.phone || '—' %></dd>
+          <dt class="col-sm-4">Đăng nhập</dt>
+          <dd class="col-sm-8"><%= authProviderLabel(user.authProvider) %></dd>
+          <dt class="col-sm-4">Email xác thực</dt>
+          <dd class="col-sm-8"><%= user.emailVerified ? 'Có' : 'Chưa' %></dd>
+          <dt class="col-sm-4">Hạng thành viên</dt>
+          <dd class="col-sm-8"><%= tierLabel(user.membershipTier) %></dd>
+          <dt class="col-sm-4">Đặt phòng</dt>
+          <dd class="col-sm-8">
+            <% if (user.bookingBanned) { %>
+            <span class="text-danger fw-semibold">Bị cấm</span>
+            <% } else { %>
+            <span class="text-success">Được phép</span>
+            <% } %>
+          </dd>
+          <dt class="col-sm-4">Tổng booking</dt>
+          <dd class="col-sm-8"><%= user._count?.bookings ?? 0 %></dd>
+          <dt class="col-sm-4">Cập nhật</dt>
+          <dd class="col-sm-8"><%= formatDateTime(user.updatedAt) %></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card admin-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Lịch sử đặt phòng</strong>
+        <a href="/admin/bookings?userId=<%= user.id %>" class="small">Xem tất cả →</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Mã</th>
+                <th>Phòng</th>
+                <th>Ngày</th>
+                <th>Tổng</th>
+                <th>TT</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!bookings.length) { %>
+              <tr><td colspan="5" class="text-center text-body-secondary py-4">Chưa có booking</td></tr>
+              <% } else { bookings.slice(0, 10).forEach(function(b) { %>
+              <tr>
+                <td><a href="/admin/bookings/<%= b.id %>"><code><%= b.bookingCode %></code></a></td>
+                <td><%= b.roomCode %><br><small class="text-body-secondary"><%= b.propertyName %></small></td>
+                <td><small><%= b.checkIn %> → <%= b.checkOut %></small></td>
+                <td><%= formatVnd(b.totalVnd) %></td>
+                <td><span class="badge bg-secondary"><%= b.status %></span></td>
+              </tr>
+              <% }); } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

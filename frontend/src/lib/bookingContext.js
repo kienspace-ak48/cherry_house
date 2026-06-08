@@ -1,5 +1,6 @@
 import { BOOKING_CITY_OPTIONS } from '../constants/bookingCities';
 import { PROPERTY_KIND_LABELS } from '../data/properties';
+import { countNights } from './dateRange';
 
 /** @typedef {{
  *   city?: string;
@@ -126,8 +127,20 @@ export function mergeContext(base, patch) {
 /**
  * @param {BookingContext} ctx
  */
+export function hasDateRange(ctx) {
+  return Boolean(ctx.checkIn && ctx.checkOut && countNights(ctx.checkIn, ctx.checkOut) > 0);
+}
+
 export function hasCompleteBookingTarget(ctx) {
-  return Boolean(ctx.property && ctx.branch && ctx.checkIn && ctx.checkOut);
+  return Boolean(ctx.property && ctx.branch && hasDateRange(ctx));
+}
+
+/**
+ * Bước tiến trình hiện tại trên màn discovery (tìm kiếm vs chọn cơ sở).
+ * @param {BookingContext} ctx
+ */
+export function getDiscoveryProgressStep(ctx) {
+  return hasDateRange(ctx) ? 'property' : 'search';
 }
 
 export function getDiscoveryHref(ctx = {}, extra = {}) {
@@ -185,20 +198,37 @@ export function formatContextSummary(ctx) {
  * Form values → context (normalize city from free text)
  * @param {{ city?: string; checkIn?: string; checkOut?: string; kind?: string }} values
  */
+/**
+ * @param {{ city?: string; checkIn?: string; checkOut?: string; kind?: string }} values
+ * @returns {{ ctx: BookingContext; error?: string }}
+ */
 export function formValuesToContext(values) {
   const cityInput = values.city?.trim() ?? '';
   const city = normalizeCity(cityInput) ?? (cityInput || undefined);
+  const checkIn = values.checkIn || undefined;
+  const checkOut = values.checkOut || undefined;
+
+  if (checkIn && !checkOut) {
+    return { ctx: {}, error: 'Vui lòng chọn ngày trả phòng.' };
+  }
+  if (!checkIn && checkOut) {
+    return { ctx: {}, error: 'Vui lòng chọn ngày nhận phòng.' };
+  }
+  if (checkIn && checkOut && countNights(checkIn, checkOut) < 1) {
+    return { ctx: {}, error: 'Ngày trả phòng phải sau ngày nhận phòng.' };
+  }
+
   /** @type {BookingContext} */
   const ctx = {
-    checkIn: values.checkIn || undefined,
-    checkOut: values.checkOut || undefined,
+    checkIn,
+    checkOut,
     kind: values.kind && values.kind !== 'all' ? values.kind : undefined,
   };
   if (city) {
     ctx.city = city;
     if (!BOOKING_CITY_OPTIONS.includes(city)) ctx.q = cityInput;
   }
-  return ctx;
+  return { ctx };
 }
 
 /** Strip property/branch for discovery-only URLs */
@@ -324,6 +354,8 @@ export function isBookingStepReachable(stepId, ctx = {}, extra = {}) {
   if (stepId === 'search' || stepId === 'property') return true;
   if (stepId === 'branch') return Boolean(ctx.property);
   if (stepId === 'rooms') return Boolean(ctx.property && ctx.branch);
-  if (stepId === 'checkout') return Boolean(ctx.property && ctx.branch && extra.slug);
+  if (stepId === 'checkout') {
+    return Boolean(ctx.property && ctx.branch && extra.slug && hasDateRange(ctx));
+  }
   return false;
 }

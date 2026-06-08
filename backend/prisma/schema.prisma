@@ -260,9 +260,12 @@ model User {
   membershipTier MembershipTier @default(standard) @map("membership_tier")
   authProvider   AuthProvider   @default(local) @map("auth_provider")
   googleId       String?        @unique @map("google_id") @db.VarChar(120)
-  emailVerified  Boolean        @default(false) @map("email_verified")
-  isActive       Boolean        @default(true) @map("is_active")
-  createdAt      DateTime       @default(now()) @map("created_at")
+  emailVerified    Boolean        @default(false) @map("email_verified")
+  isActive         Boolean        @default(true) @map("is_active")
+  bookingBanned    Boolean        @default(false) @map("booking_banned")
+  bookingBanReason String?        @map("booking_ban_reason") @db.Text
+  bookingBannedAt  DateTime?      @map("booking_banned_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   bookings       Booking[]
   refreshTokens  RefreshToken[]

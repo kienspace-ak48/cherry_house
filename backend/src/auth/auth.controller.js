@@ -5,7 +5,10 @@ const isProduction = process.env.NODE_ENV === 'production';
 const ADMIN_COOKIE = 'token';
 
 function cookieMaxAgeMs() {
-  const raw = process.env.JWT_ACCESS_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '1h';
+  const raw =
+    process.env.JWT_ADMIN_ACCESS_EXPIRES_IN
+    || process.env.JWT_ACCESS_EXPIRES_IN
+    || '3h';
   if (raw.endsWith('h')) return Number(raw.slice(0, -1)) * 60 * 60 * 1000;
   if (raw.endsWith('m')) return Number(raw.slice(0, -1)) * 60 * 1000;
   if (raw.endsWith('d')) return Number(raw.slice(0, -1)) * 24 * 60 * 60 * 1000;

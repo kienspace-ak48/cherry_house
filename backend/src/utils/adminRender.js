@@ -20,6 +20,9 @@ function renderAdminPage(req, res, view, options = {}) {
       role: sessionUser.role,
     },
     isSuperAdmin: sessionUser.role === 'super_admin',
+    flash: null,
+    msg: null,
+    formError: null,
     ...rest,
   });
 }

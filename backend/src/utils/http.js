@@ -59,8 +59,8 @@ function parseId(raw, label = 'id') {
 
 function parseOptionalBoolean(raw) {
   if (raw === undefined || raw === '') return undefined;
-  if (raw === 'true' || raw === '1') return true;
-  if (raw === 'false' || raw === '0') return false;
+  if (raw === true || raw === 'true' || raw === '1') return true;
+  if (raw === false || raw === 'false' || raw === '0') return false;
   throw httpError('Invalid isActive value (use true or false)');
 }
 

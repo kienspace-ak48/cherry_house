@@ -1,0 +1,232 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Lịch phòng</h2>
+    <p class="text-body-secondary mb-0 small">Xem phòng nào bận theo ngày — theo chi nhánh.</p>
+  </div>
+  <a href="/admin/bookings" class="btn btn-outline-secondary btn-sm">← Danh sách booking</a>
+</div>
+
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/bookings/calendar" class="row g-2 align-items-end" id="calendarFilterForm">
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="calPropertyId">Cơ sở</label>
+        <select class="form-select form-select-sm" id="calPropertyId" name="propertyId">
+          <option value="">— Chọn —</option>
+          <% properties.forEach(function(prop) { %>
+          <option value="<%= prop.id %>" <%= filterPropertyId === String(prop.id) ? 'selected' : '' %>><%= prop.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="calBranchId">Chi nhánh <span class="text-danger">*</span></label>
+        <select class="form-select form-select-sm" id="calBranchId" name="branchId" required>
+          <option value="">— Chọn —</option>
+          <% branches.forEach(function(br) { %>
+          <option value="<%= br.id %>" data-property-id="<%= br.propertyId %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="calFrom">Từ ngày</label>
+        <input class="form-control form-control-sm" type="date" id="calFrom" name="from" value="<%= from %>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="calTo">Đến ngày</label>
+        <input class="form-control form-control-sm" type="date" id="calTo" name="to" value="<%= to %>">
+      </div>
+      <div class="col-md-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Xem lịch</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="calendar-error" class="alert alert-danger d-none"></div>
+
+<div class="card admin-card d-none" id="calendar-summary-card">
+  <div class="card-body py-3 d-flex flex-wrap gap-3 small">
+    <span><strong id="sum-total">0</strong> phòng</span>
+    <span class="text-success"><i class="fa-solid fa-circle me-1"></i>Trống: <strong id="sum-available">0</strong></span>
+    <span class="text-warning"><i class="fa-solid fa-circle me-1"></i>Giữ chỗ: <strong id="sum-held">0</strong></span>
+    <span class="text-danger"><i class="fa-solid fa-circle me-1"></i>Đã đặt: <strong id="sum-booked">0</strong></span>
+    <span class="text-body-secondary ms-md-auto" id="calendar-as-of"></span>
+  </div>
+</div>
+
+<div class="card admin-card mt-3 d-none" id="calendar-grid-card">
+  <div class="card-body p-0">
+    <div class="booking-calendar-scroll">
+      <table class="table table-bordered table-sm mb-0 booking-calendar-table" id="calendar-table">
+        <thead class="table-light">
+          <tr id="calendar-head-row">
+            <th class="booking-calendar-room-col">Phòng</th>
+          </tr>
+        </thead>
+        <tbody id="calendar-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="text-center text-body-secondary py-5" id="calendar-placeholder">
+  Chọn chi nhánh và khoảng ngày để xem lịch.
+</div>
+
+<script>
+  (function bookingCalendarPage() {
+    const allBranches = <%- JSON.stringify(allBranches.map(function(b) { return { id: b.id, propertyId: b.propertyId, name: b.name }; })) %>;
+    const propertySel = document.getElementById('calPropertyId');
+    const branchSel = document.getElementById('calBranchId');
+    const fromInput = document.getElementById('calFrom');
+    const toInput = document.getElementById('calTo');
+
+    function defaultDates() {
+      if (!fromInput.value || !toInput.value) {
+        const start = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() + 13);
+        fromInput.value = start.toISOString().slice(0, 10);
+        toInput.value = end.toISOString().slice(0, 10);
+      }
+    }
+
+    function filterBranches() {
+      const pid = propertySel.value;
+      const current = branchSel.value;
+      branchSel.innerHTML = '<option value="">— Chọn —</option>';
+      allBranches.forEach((br) => {
+        if (!pid || String(br.propertyId) === pid) {
+          const opt = document.createElement('option');
+          opt.value = br.id;
+          opt.textContent = br.name;
+          opt.dataset.propertyId = br.propertyId;
+          branchSel.appendChild(opt);
+        }
+      });
+      if (current && Array.from(branchSel.options).some((o) => o.value === current)) {
+        branchSel.value = current;
+      }
+    }
+
+    function dateRange(fromStr, toStr) {
+      const dates = [];
+      const cur = new Date(fromStr + 'T12:00:00');
+      const end = new Date(toStr + 'T12:00:00');
+      while (cur < end) {
+        dates.push(cur.toISOString().slice(0, 10));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function cellClassForDay(room, dateStr, bookings) {
+      const day = new Date(dateStr + 'T12:00:00');
+      for (const b of bookings) {
+        if (b.roomId !== room.roomId) continue;
+        const cin = new Date(b.checkIn + 'T12:00:00');
+        const cout = new Date(b.checkOut + 'T12:00:00');
+        if (day >= cin && day < cout) {
+          return b.status === 'confirmed' ? 'booking-cal-booked' : 'booking-cal-held';
+        }
+      }
+      if (!room.isActive) return 'booking-cal-inactive';
+      return 'booking-cal-free';
+    }
+
+    function findBookingOnDay(roomId, dateStr, bookings) {
+      const day = new Date(dateStr + 'T12:00:00');
+      return bookings.find((b) => {
+        if (b.roomId !== roomId) return false;
+        const cin = new Date(b.checkIn + 'T12:00:00');
+        const cout = new Date(b.checkOut + 'T12:00:00');
+        return day >= cin && day < cout;
+      });
+    }
+
+    async function loadCalendar() {
+      const branchId = branchSel.value;
+      if (!branchId) return;
+
+      defaultDates();
+      const from = fromInput.value;
+      const to = toInput.value;
+      const errEl = document.getElementById('calendar-error');
+      errEl.classList.add('d-none');
+
+      document.getElementById('calendar-placeholder').classList.add('d-none');
+
+      try {
+        const data = await AdminApi.get(`/bookings/occupancy?branchId=${branchId}&from=${from}&to=${to}`);
+        renderCalendar(data, dateRange(from, to));
+      } catch (err) {
+        document.getElementById('calendar-summary-card').classList.add('d-none');
+        document.getElementById('calendar-grid-card').classList.add('d-none');
+        document.getElementById('calendar-placeholder').classList.remove('d-none');
+        AdminApi.showError(errEl, err);
+      }
+    }
+
+    function renderCalendar(data, dates) {
+      document.getElementById('calendar-summary-card').classList.remove('d-none');
+      document.getElementById('calendar-grid-card').classList.remove('d-none');
+      document.getElementById('calendar-placeholder').classList.add('d-none');
+
+      const s = data.summary;
+      document.getElementById('sum-total').textContent = s.totalRooms;
+      document.getElementById('sum-available').textContent = s.available;
+      document.getElementById('sum-held').textContent = s.held;
+      document.getElementById('sum-booked').textContent = s.booked;
+      document.getElementById('calendar-as-of').textContent = 'Cập nhật ' + new Date(data.asOf).toLocaleString('vi-VN');
+
+      const headRow = document.getElementById('calendar-head-row');
+      headRow.innerHTML = '<th class="booking-calendar-room-col">Phòng</th>';
+      dates.forEach((d) => {
+        const th = document.createElement('th');
+        th.className = 'booking-calendar-day-col text-center';
+        const dt = new Date(d + 'T12:00:00');
+        th.innerHTML = `<div class="small fw-normal">${dt.toLocaleDateString('vi-VN', { weekday: 'short' })}</div><div>${dt.getDate()}/${dt.getMonth() + 1}</div>`;
+        headRow.appendChild(th);
+      });
+
+      const tbody = document.getElementById('calendar-body');
+      tbody.innerHTML = '';
+      const bookings = data.activeBookings || [];
+
+      data.rooms.forEach((room) => {
+        const tr = document.createElement('tr');
+        const roomTd = document.createElement('td');
+        roomTd.className = 'booking-calendar-room-col fw-semibold';
+        roomTd.textContent = room.code;
+        tr.appendChild(roomTd);
+
+        dates.forEach((dateStr) => {
+          const td = document.createElement('td');
+          td.className = 'booking-calendar-day-col ' + cellClassForDay(room, dateStr, bookings);
+          const hit = findBookingOnDay(room.roomId, dateStr, bookings);
+          if (hit) {
+            td.title = `${hit.guestName} · ${hit.bookingCode} · ${hit.checkIn} → ${hit.checkOut}`;
+            td.innerHTML = `<a href="/admin/bookings/${hit.bookingId}" class="booking-cal-link">${hit.guestName.split(' ').slice(-1)[0]}</a>`;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    propertySel.addEventListener('change', filterBranches);
+    document.getElementById('calendarFilterForm').addEventListener('submit', (e) => {
+      if (!branchSel.value) return;
+      e.preventDefault();
+      loadCalendar();
+      const params = new URLSearchParams(new FormData(e.target));
+      history.replaceState(null, '', '/admin/bookings/calendar?' + params.toString());
+    });
+
+    filterBranches();
+    defaultDates();
+    <% if (filterBranchId) { %>loadCalendar();<% } %>
+  })();
+</script>

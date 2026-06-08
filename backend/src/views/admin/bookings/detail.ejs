@@ -1,0 +1,153 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Booking <code><%= booking.bookingCode %></code></h2>
+    <p class="text-body-secondary mb-0 small">
+      Tạo lúc <%= formatDateTime(booking.createdAt) %>
+      <% if (booking.updatedAt) { %> · Cập nhật <%= formatDateTime(booking.updatedAt) %><% } %>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/bookings" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+    <a href="/admin/bookings/<%= booking.id %>/edit" class="btn btn-primary btn-sm">Sửa booking</a>
+  </div>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'created') { %><div class="alert alert-success">Đã tạo booking thành công.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật booking.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'status_updated') { %><div class="alert alert-success">Đã đổi trạng thái.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi' %></div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card admin-card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Thông tin lưu trú</strong>
+        <span class="badge bg-<%= statusBadgeClass(booking.status) %>"><%= statusLabel(booking.status) %></span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-body-secondary small">Cơ sở</div>
+            <div><%= booking.propertyName %></div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-body-secondary small">Chi nhánh</div>
+            <div><%= booking.branchName %></div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Phòng</div>
+            <div><strong><%= booking.roomCode %></strong></div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Check-in</div>
+            <div><%= formatDateOnly(booking.checkIn) %></div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Check-out</div>
+            <div><%= formatDateOnly(booking.checkOut) %> (<%= booking.nights %> đêm)</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Người lớn / Trẻ em</div>
+            <div><%= booking.adults %> / <%= booking.children %></div>
+          </div>
+          <% if (booking.holdExpiresAt) { %>
+          <div class="col-md-8">
+            <div class="text-body-secondary small">Hết hạn giữ chỗ</div>
+            <div class="text-warning"><%= formatDateTime(booking.holdExpiresAt) %></div>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card admin-card mb-4">
+      <div class="card-header"><strong>Khách hàng</strong></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Họ tên</div>
+            <div><%= booking.guestName %></div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Điện thoại</div>
+            <div><a href="tel:<%= booking.guestPhone %>"><%= booking.guestPhone %></a></div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-body-secondary small">Email</div>
+            <div><a href="mailto:<%= booking.guestEmail %>"><%= booking.guestEmail %></a></div>
+          </div>
+          <% if (booking.user) { %>
+          <div class="col-12">
+            <div class="text-body-secondary small">Tài khoản</div>
+            <div><%= booking.user.fullName || booking.user.email %> (ID <%= booking.user.id %>)</div>
+          </div>
+          <% } %>
+          <% if (booking.specialNote) { %>
+          <div class="col-12">
+            <div class="text-body-secondary small">Ghi chú</div>
+            <div class="border rounded p-2 bg-body-tertiary"><%= booking.specialNote %></div>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card admin-card">
+      <div class="card-header"><strong>Giá &amp; thanh toán</strong></div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><td>Giá/đêm</td><td class="text-end"><%= formatVnd(booking.pricePerNightVnd) %></td></tr>
+            <tr><td>Tạm tính (<%= booking.nights %> đêm)</td><td class="text-end"><%= formatVnd(booking.subtotalVnd) %></td></tr>
+            <tr><td>Phí dịch vụ</td><td class="text-end"><%= formatVnd(booking.serviceFeeVnd) %></td></tr>
+            <tr><td>Giảm giá</td><td class="text-end text-danger">-<%= formatVnd(booking.discountVnd) %></td></tr>
+            <tr class="fw-bold"><td>Tổng</td><td class="text-end"><%= formatVnd(booking.totalVnd) %></td></tr>
+          </tbody>
+        </table>
+        <% if (booking.promoCode) { %>
+        <p class="small text-body-secondary mt-2 mb-0">Mã KM: <code><%= booking.promoCode %></code></p>
+        <% } %>
+        <% if (booking.payment) { %>
+        <hr>
+        <div class="row g-2 small">
+          <div class="col-md-4"><span class="text-body-secondary">Phương thức:</span> <%= booking.payment.method %></div>
+          <div class="col-md-4">
+            <span class="text-body-secondary">Trạng thái:</span>
+            <span class="badge bg-<%= booking.payment.status === 'paid' ? 'success' : 'warning' %>"><%= booking.payment.status %></span>
+          </div>
+          <div class="col-md-4">
+            <span class="text-body-secondary">Thanh toán lúc:</span> <%= formatDateTime(booking.payment.paidAt) %>
+          </div>
+        </div>
+        <% } else { %>
+        <p class="text-body-secondary small mt-3 mb-0">Chưa có bản ghi thanh toán.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card">
+      <div class="card-header"><strong>Thao tác nhanh</strong></div>
+      <div class="card-body">
+        <form method="POST" action="/admin/bookings/<%= booking.id %>/status" class="mb-0">
+          <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
+          <label class="form-label small" for="quickStatus">Đổi trạng thái</label>
+          <div class="input-group input-group-sm mb-2">
+            <select class="form-select" id="quickStatus" name="status" required>
+              <% bookingStatuses.forEach(function(s) { %>
+              <option value="<%= s.value %>" <%= booking.status === s.value ? 'selected' : '' %>><%= s.label %></option>
+              <% }); %>
+            </select>
+            <button type="submit" class="btn btn-outline-primary">Lưu</button>
+          </div>
+        </form>
+        <hr>
+        <a href="/admin/bookings/calendar?branchId=<%= booking.branchId %>" class="btn btn-sm btn-outline-secondary w-100">
+          <i class="fa-solid fa-calendar me-1"></i> Xem lịch chi nhánh
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

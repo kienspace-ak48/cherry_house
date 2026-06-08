@@ -1,0 +1,127 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Khách hàng</h2>
+    <p class="text-body-secondary mb-0 small">Tài khoản đặt phòng trên website (bảng <code>users</code>).</p>
+  </div>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật khách hàng.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'notfound') { %><div class="alert alert-warning">Không tìm thấy tài khoản.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/users" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="searchQ">Tìm kiếm</label>
+        <input class="form-control form-control-sm" type="search" id="searchQ" name="q" value="<%= searchQ %>" placeholder="Tên, email, SĐT…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterTier">Hạng thành viên</label>
+        <select class="form-select form-select-sm" id="filterTier" name="membershipTier">
+          <option value="">— Tất cả —</option>
+          <% membershipTiers.forEach(function(t) { %>
+          <option value="<%= t.value %>" <%= filterTier === t.value ? 'selected' : '' %>><%= t.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterProvider">Đăng nhập</label>
+        <select class="form-select form-select-sm" id="filterProvider" name="authProvider">
+          <option value="">— Tất cả —</option>
+          <% authProviders.forEach(function(p) { %>
+          <option value="<%= p.value %>" <%= filterProvider === p.value ? 'selected' : '' %>><%= p.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterActive">Trạng thái</label>
+        <select class="form-select form-select-sm" id="filterActive" name="isActive">
+          <option value="">— Tất cả —</option>
+          <option value="true" <%= filterActive === 'true' ? 'selected' : '' %>>Đang hoạt động</option>
+          <option value="false" <%= filterActive === 'false' ? 'selected' : '' %>>Đã khóa</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterBookingBanned">Đặt phòng</label>
+        <select class="form-select form-select-sm" id="filterBookingBanned" name="bookingBanned">
+          <option value="">— Tất cả —</option>
+          <option value="true" <%= filterBookingBanned === 'true' ? 'selected' : '' %>>Bị cấm</option>
+          <option value="false" <%= filterBookingBanned === 'false' ? 'selected' : '' %>>Được phép</option>
+        </select>
+      </div>
+      <div class="col-md-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
+        <a href="/admin/users" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách</strong>
+    <span class="badge text-bg-secondary"><%= users.length %> tài khoản</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Khách hàng</th>
+            <th>Liên hệ</th>
+            <th>Đăng nhập</th>
+            <th>Hạng</th>
+            <th>Booking</th>
+            <th>Trạng thái</th>
+            <th>Đăng ký</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!users.length) { %>
+          <tr><td colspan="8" class="text-center text-body-secondary py-4">Không có tài khoản phù hợp</td></tr>
+          <% } else { users.forEach(function(u) { %>
+          <tr>
+            <td>
+              <a href="/admin/users/<%= u.id %>" class="fw-semibold text-decoration-none"><%= u.fullName %></a><br>
+              <small class="text-body-secondary">ID <%= u.id %></small>
+            </td>
+            <td>
+              <a href="mailto:<%= u.email %>"><%= u.email %></a><br>
+              <small class="text-body-secondary"><%= u.phone || '—' %></small>
+            </td>
+            <td>
+              <span class="badge bg-<%= u.authProvider === 'google' ? 'info' : 'secondary' %>">
+                <%= authProviderLabel(u.authProvider) %>
+              </span>
+              <% if (u.emailVerified) { %>
+              <br><small class="text-success">Email đã xác thực</small>
+              <% } %>
+            </td>
+            <td><span class="badge bg-primary-subtle text-primary-emphasis"><%= tierLabel(u.membershipTier) %></span></td>
+            <td><%= u._count?.bookings ?? 0 %></td>
+            <td>
+              <% if (u.isActive) { %>
+              <span class="badge bg-success">Active</span>
+              <% } else { %>
+              <span class="badge bg-danger">Khóa</span>
+              <% } %>
+              <% if (u.bookingBanned) { %>
+              <br><span class="badge bg-dark mt-1">Cấm đặt phòng</span>
+              <% } %>
+            </td>
+            <td><small><%= formatDateTime(u.createdAt) %></small></td>
+            <td class="text-end text-nowrap">
+              <a href="/admin/users/<%= u.id %>" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+              <a href="/admin/users/<%= u.id %>/edit" class="btn btn-sm btn-outline-secondary">Sửa</a>
+            </td>
+          </tr>
+          <% }); } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,119 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Backup database</h2>
+    <p class="text-body-secondary mb-0 small">
+      Xuất toàn bộ dữ liệu MySQL ra file <code>.sql</code> (mysqldump). Chỉ <strong>super admin</strong>.
+    </p>
+  </div>
+  <form method="POST" action="/admin/backups/create" id="formCreateBackup">
+    <button type="submit" class="btn btn-primary">
+      <i class="fa-solid fa-database me-1"></i> Tạo backup ngay
+    </button>
+  </form>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'created') { %>
+<div class="alert alert-success">
+  Đã tạo backup thành công<% if (typeof lastBackup !== 'undefined' && lastBackup) { %>: <code><%= lastBackup %></code><% } %>.
+</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'deleted') { %>
+<div class="alert alert-success">Đã xóa file backup.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-header py-3">
+    <strong>Lưu ý</strong>
+  </div>
+  <div class="card-body small text-body-secondary">
+    <ul class="mb-0">
+      <li>File lưu tại server: <code>backend/backups/</code> — không public qua web.</li>
+      <li>Cần <code>mysqldump</code> trong PATH hoặc cấu hình <code>MYSQLDUMP_PATH</code> trong <code>.env</code>.</li>
+      <li>Nên tải file về và lưu ngoài server; xóa bản cũ định kỳ để tiết kiệm dung lượng.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header py-3 d-flex justify-content-between align-items-center">
+    <strong>Các bản backup</strong>
+    <span class="badge text-bg-secondary"><%= backups.length %> file</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Tên file</th>
+          <th>Kích thước</th>
+          <th>Thời gian</th>
+          <th class="text-end" style="width: 180px;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!backups.length) { %>
+        <tr>
+          <td colspan="4" class="text-center text-body-secondary py-5">
+            Chưa có backup nào. Nhấn <strong>Tạo backup ngay</strong> để bắt đầu.
+          </td>
+        </tr>
+        <% } else { %>
+        <% backups.forEach(function(b) { %>
+        <tr>
+          <td><code class="small"><%= b.filename %></code></td>
+          <td><%= b.sizeLabel %></td>
+          <td class="small"><%= b.createdAtLabel %></td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="/admin/backups/download/<%= encodeURIComponent(b.filename) %>">
+              <i class="fa-solid fa-download"></i> Tải
+            </a>
+            <form method="POST" action="/admin/backups/delete/<%= encodeURIComponent(b.filename) %>" class="d-inline form-delete-backup" data-filename="<%= b.filename %>">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.getElementById('formCreateBackup')?.addEventListener('submit', function (e) {
+    if (typeof Swal === 'undefined') return;
+    e.preventDefault();
+    const form = this;
+    Swal.fire({
+      title: 'Tạo backup database?',
+      text: 'Quá trình có thể mất vài giây tùy dung lượng DB.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Tạo backup',
+      cancelButtonText: 'Hủy',
+    }).then((r) => {
+      if (r.isConfirmed) form.submit();
+    });
+  });
+
+  document.querySelectorAll('.form-delete-backup').forEach((form) => {
+    form.addEventListener('submit', function (e) {
+      if (typeof Swal === 'undefined') return;
+      e.preventDefault();
+      const name = form.dataset.filename || 'file này';
+      Swal.fire({
+        title: 'Xóa backup?',
+        text: name,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#dc3545',
+      }).then((r) => {
+        if (r.isConfirmed) form.submit();
+      });
+    });
+  });
+</script>

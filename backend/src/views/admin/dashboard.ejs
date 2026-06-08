@@ -1,42 +1,166 @@
 <div id="dash-error" class="alert alert-danger d-none" role="alert"></div>
+
+<section class="mb-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h5 class="mb-0">Tổng quan hôm nay</h5>
+      <small class="text-body-secondary" id="dash-as-of"></small>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card text-white bg-primary admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value" id="stat-bookings-today">—</div>
+          <div class="stat-label">Booking mới hôm nay</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card text-white bg-success admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value" id="stat-revenue-today">—</div>
+          <div class="stat-label">Doanh thu hôm nay</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card text-white bg-info admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value" id="stat-rooms-available">—</div>
+          <div class="stat-label">Phòng trống hôm nay</div>
+          <small class="text-white text-opacity-75" id="stat-rooms-total"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card text-white bg-warning admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value" id="stat-rooms-occupied">—</div>
+          <div class="stat-label">Phòng đang có khách</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="card admin-card mb-4">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <strong>Biểu đồ booking &amp; doanh thu</strong>
+    <div class="btn-group btn-group-sm" role="group" aria-label="Chu kỳ biểu đồ">
+      <button type="button" class="btn btn-outline-secondary dash-period-btn" data-period="day">Ngày</button>
+      <button type="button" class="btn btn-outline-secondary dash-period-btn active" data-period="week">Tuần</button>
+      <button type="button" class="btn btn-outline-secondary dash-period-btn" data-period="month">Tháng</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="dashboard-chart-wrap">
+      <canvas id="dashboard-booking-chart" height="120"></canvas>
+    </div>
+  </div>
+</div>
+
 <div class="row g-4 mb-4">
-  <div class="col-sm-6 col-xl-3">
-    <div class="card text-white bg-primary admin-stat-card admin-card">
-      <div class="card-body">
-        <div class="stat-value" id="stat-properties">—</div>
-        <div class="stat-label">Cơ sở lưu trú</div>
-        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/properties">Xem danh sách →</a>
+  <div class="col-lg-6">
+    <div class="card admin-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Check-in hôm nay</strong>
+        <span class="badge bg-primary" id="badge-checkin-count">0</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Mã</th>
+                <th>Khách</th>
+                <th>Phòng</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="checkin-today-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-xl-3">
-    <div class="card text-white bg-info admin-stat-card admin-card">
-      <div class="card-body">
-        <div class="stat-value" id="stat-branches">—</div>
-        <div class="stat-label">Chi nhánh</div>
-        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/branches">Xem danh sách →</a>
+  <div class="col-lg-6">
+    <div class="card admin-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Check-out hôm nay</strong>
+        <span class="badge bg-primary" id="badge-checkout-count">0</span>
       </div>
-    </div>
-  </div>
-  <div class="col-sm-6 col-xl-3">
-    <div class="card text-white bg-warning admin-stat-card admin-card">
-      <div class="card-body">
-        <div class="stat-value" id="stat-rooms">—</div>
-        <div class="stat-label">Phòng (inventory)</div>
-        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/rooms">Xem danh sách →</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-6 col-xl-3">
-    <div class="card text-white bg-danger admin-stat-card admin-card">
-      <div class="card-body">
-        <div class="stat-value" id="stat-bookings">—</div>
-        <div class="stat-label">Đặt phòng</div>
-        <a class="small text-white text-opacity-75 mt-2 d-inline-block" href="/admin/bookings">Xem danh sách →</a>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Mã</th>
+                <th>Khách</th>
+                <th>Phòng</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="checkout-today-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<div class="card admin-card mb-4" id="dash-alerts-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Cảnh báo</strong>
+    <span class="badge bg-danger" id="badge-alert-count">0</span>
+  </div>
+  <div class="card-body p-0" id="dash-alerts-body">
+    <div class="text-center text-body-secondary py-4">Đang tải…</div>
+  </div>
+</div>
+
+<section class="mb-2">
+  <h5 class="mb-3">Hệ thống</h5>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value text-primary" id="stat-properties">—</div>
+          <div class="stat-label text-body-secondary">Cơ sở lưu trú</div>
+          <a class="small mt-2 d-inline-block" href="/admin/properties">Xem danh sách →</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value text-info" id="stat-branches">—</div>
+          <div class="stat-label text-body-secondary">Chi nhánh</div>
+          <a class="small mt-2 d-inline-block" href="/admin/branches">Xem danh sách →</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value text-warning" id="stat-rooms">—</div>
+          <div class="stat-label text-body-secondary">Phòng (inventory)</div>
+          <a class="small mt-2 d-inline-block" href="/admin/rooms">Xem danh sách →</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card admin-stat-card admin-card h-100">
+        <div class="card-body">
+          <div class="stat-value text-danger" id="stat-bookings">—</div>
+          <div class="stat-label text-body-secondary">Tổng đặt phòng</div>
+          <a class="small mt-2 d-inline-block" href="/admin/bookings">Xem danh sách →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="card admin-card mb-4">
   <div class="card-header"><strong>Cơ sở mới nhất</strong></div>
   <div class="card-body p-0">
@@ -58,28 +182,195 @@
 </div>
 
 <script>
-  (async function loadDashboard() {
-    try {
-      const [properties, branches, rooms, bookings] = await Promise.all([
-        AdminApi.get('/properties'),
-        AdminApi.get('/branches'),
-        AdminApi.get('/rooms'),
-        AdminApi.get('/bookings'),
-      ]);
-      document.getElementById('stat-properties').textContent = properties.length;
-      document.getElementById('stat-branches').textContent = branches.length;
-      document.getElementById('stat-rooms').textContent = rooms.length;
-      document.getElementById('stat-bookings').textContent = bookings.length;
-      document.getElementById('recent-properties').innerHTML = properties.slice(0, 5).map((p) => `
-        <tr>
-          <td><strong>${p.name}</strong><br><small class="text-body-secondary">${p.slug}</small></td>
-          <td>${p.city}</td>
-          <td><span class="badge badge-kind-${p.kind}">${AdminApi.kindLabel(p.kind)}</span></td>
-          <td>${AdminApi.formatVnd(p.priceFromVnd)}</td>
-          <td>${p.isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Off</span>'}</td>
-        </tr>`).join('') || '<tr><td colspan="5" class="text-center text-body-secondary py-4">Chưa có dữ liệu</td></tr>';
-    } catch (err) {
-      AdminApi.showError(document.getElementById('dash-error'), err);
+  (function dashboardPage() {
+    let chartInstance = null;
+    let currentPeriod = 'week';
+
+    function bookingStatusLabel(status) {
+      const map = {
+        pending_payment: 'Chờ thanh toán',
+        confirmed: 'Đã xác nhận',
+        cancelled: 'Đã hủy',
+        completed: 'Hoàn tất',
+      };
+      return map[status] || status;
     }
+
+    function renderMovementRow(b) {
+      const href = `/admin/bookings?code=${encodeURIComponent(b.bookingCode)}`;
+      return `
+        <tr>
+          <td><a href="${href}"><strong>${b.bookingCode}</strong></a></td>
+          <td>${b.guestName || '—'}<br><small class="text-body-secondary">${b.guestPhone || ''}</small></td>
+          <td>
+            <strong>${b.roomCode}</strong><br>
+            <small class="text-body-secondary">${b.propertyName} · ${b.branchName}</small>
+          </td>
+          <td><span class="badge bg-${AdminApi.statusBadge(b.status)}">${bookingStatusLabel(b.status)}</span></td>
+        </tr>`;
+    }
+
+    function renderMovementTable(rows, tbodyId, badgeId) {
+      document.getElementById(badgeId).textContent = rows.length;
+      document.getElementById(tbodyId).innerHTML = rows.length
+        ? rows.map(renderMovementRow).join('')
+        : '<tr><td colspan="4" class="text-center text-body-secondary py-4">Không có lịch trình hôm nay</td></tr>';
+    }
+
+    function renderAlerts(alerts) {
+      document.getElementById('badge-alert-count').textContent = alerts.length;
+      const body = document.getElementById('dash-alerts-body');
+      if (!alerts.length) {
+        body.innerHTML = '<div class="text-center text-body-secondary py-4">Không có cảnh báo</div>';
+        return;
+      }
+      body.innerHTML = `
+        <div class="list-group list-group-flush">
+          ${alerts.map((a) => {
+            const b = a.booking;
+            const href = `/admin/bookings?code=${encodeURIComponent(b.bookingCode)}`;
+            return `
+              <div class="list-group-item dashboard-alert-item dashboard-alert-${a.severity}">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                  <div>
+                    <span class="badge bg-${a.severity === 'danger' ? 'danger' : 'warning'} me-2">${a.title}</span>
+                    <span>${a.message}</span>
+                  </div>
+                  <a href="${href}" class="small text-nowrap">${b.bookingCode} →</a>
+                </div>
+                <small class="text-body-secondary d-block mt-1">
+                  ${b.guestName || '—'} · ${b.roomCode} · ${b.propertyName}
+                </small>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    function renderChart(chart) {
+      const canvas = document.getElementById('dashboard-booking-chart');
+      if (!canvas || typeof Chart === 'undefined') return;
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: chart.labels,
+          datasets: [
+            {
+              label: 'Số booking',
+              data: chart.bookings,
+              backgroundColor: 'rgba(13, 110, 253, 0.55)',
+              borderColor: 'rgb(13, 110, 253)',
+              borderWidth: 1,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Doanh thu (triệu VND)',
+              data: chart.revenueVnd.map((v) => Math.round(v / 1_000_000)),
+              type: 'line',
+              borderColor: 'rgb(25, 135, 84)',
+              backgroundColor: 'rgba(25, 135, 84, 0.15)',
+              tension: 0.3,
+              yAxisID: 'y1',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  if (ctx.dataset.label.includes('Doanh thu')) {
+                    const idx = ctx.dataIndex;
+                    const raw = chart.revenueVnd[idx] || 0;
+                    return `Doanh thu: ${AdminApi.formatVnd(raw)}`;
+                  }
+                  return `${ctx.dataset.label}: ${ctx.formattedValue}`;
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              position: 'left',
+              title: { display: true, text: 'Booking' },
+              ticks: { precision: 0 },
+            },
+            y1: {
+              beginAtZero: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: 'Triệu VND' },
+            },
+          },
+        },
+      });
+    }
+
+    function applyDashboard(data) {
+      const { todayStats, catalog, chart, movements, alerts, recentProperties, asOf, today } = data;
+
+      document.getElementById('dash-as-of').textContent = `Cập nhật ${new Date(asOf).toLocaleString('vi-VN')} · ${today}`;
+      document.getElementById('stat-bookings-today').textContent = todayStats.bookingsCreated;
+      document.getElementById('stat-revenue-today').textContent = AdminApi.formatVnd(todayStats.revenueVnd);
+      document.getElementById('stat-rooms-available').textContent = todayStats.roomsAvailable;
+      document.getElementById('stat-rooms-occupied').textContent = todayStats.roomsOccupied;
+      document.getElementById('stat-rooms-total').textContent = `Tổng ${todayStats.roomsTotal} phòng active`;
+
+      document.getElementById('stat-properties').textContent = catalog.properties;
+      document.getElementById('stat-branches').textContent = catalog.branches;
+      document.getElementById('stat-rooms').textContent = catalog.rooms;
+      document.getElementById('stat-bookings').textContent = catalog.bookingsTotal;
+
+      renderChart(chart);
+      renderMovementTable(movements.checkInsToday, 'checkin-today-body', 'badge-checkin-count');
+      renderMovementTable(movements.checkOutsToday, 'checkout-today-body', 'badge-checkout-count');
+      renderAlerts(alerts);
+
+      document.getElementById('recent-properties').innerHTML = recentProperties.length
+        ? recentProperties.map((p) => `
+          <tr>
+            <td><strong>${p.name}</strong><br><small class="text-body-secondary">${p.slug}</small></td>
+            <td>${p.city}</td>
+            <td><span class="badge badge-kind-${p.kind}">${AdminApi.kindLabel(p.kind)}</span></td>
+            <td>${AdminApi.formatVnd(p.priceFromVnd)}</td>
+            <td>${p.isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Off</span>'}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="5" class="text-center text-body-secondary py-4">Chưa có dữ liệu</td></tr>';
+    }
+
+    async function loadDashboard(period) {
+      currentPeriod = period || currentPeriod;
+      const data = await AdminApi.getDashboardOverview(currentPeriod);
+      applyDashboard(data);
+    }
+
+    document.querySelectorAll('.dash-period-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('.dash-period-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        try {
+          await loadDashboard(btn.dataset.period);
+        } catch (err) {
+          AdminApi.showError(document.getElementById('dash-error'), err);
+        }
+      });
+    });
+
+    (async function init() {
+      try {
+        await loadDashboard('week');
+      } catch (err) {
+        AdminApi.showError(document.getElementById('dash-error'), err);
+      }
+    })();
   })();
 </script>

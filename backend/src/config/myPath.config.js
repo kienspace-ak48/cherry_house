@@ -10,6 +10,8 @@ const ENV_PATH = path.resolve(ROOT_PATH, '.env');
 const VIEWS_PATH = path.resolve(SRC_PATH, 'views');
 const UPLOADS_PATH = path.resolve(PUBLIC_PATH, 'uploads');
 const GALLERY_UPLOAD_PATH = path.resolve(UPLOADS_PATH, 'gallery');
+/** SQL dumps — chỉ admin tải qua route có auth */
+const BACKUPS_PATH = path.resolve(ROOT_PATH, 'backups');
 
 module.exports = {
     ROOT_PATH,
@@ -20,4 +22,5 @@ module.exports = {
     VIEWS_PATH,
     UPLOADS_PATH,
     GALLERY_UPLOAD_PATH,
+    BACKUPS_PATH,
 };

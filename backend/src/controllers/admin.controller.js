@@ -15,19 +15,7 @@ function dashboard(req, res) {
   });
 }
 
-function bookings(req, res) {
-  renderAdminPage(req, res, 'admin/bookings', {
-    pageTitle: 'Đặt phòng',
-    adminPage: 'bookings',
-    breadcrumbs: [
-      { label: 'Dashboard', href: '/admin' },
-      { label: 'Đặt phòng' },
-    ],
-  });
-}
-
 module.exports = {
   loginPage,
   dashboard,
-  bookings,
 };

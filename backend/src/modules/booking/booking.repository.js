@@ -39,6 +39,29 @@ function findAll(filters = {}) {
   if (filters.status) where.status = filters.status;
   if (filters.propertyId) where.propertyId = filters.propertyId;
   if (filters.branchId) where.branchId = filters.branchId;
+  if (filters.roomId) where.roomId = filters.roomId;
+  if (filters.bookingCode) {
+    where.bookingCode = { contains: filters.bookingCode };
+  }
+  if (filters.checkInFrom || filters.checkInTo) {
+    where.checkIn = {};
+    if (filters.checkInFrom) where.checkIn.gte = filters.checkInFrom;
+    if (filters.checkInTo) where.checkIn.lte = filters.checkInTo;
+  }
+  if (filters.checkOutFrom || filters.checkOutTo) {
+    where.checkOut = {};
+    if (filters.checkOutFrom) where.checkOut.gte = filters.checkOutFrom;
+    if (filters.checkOutTo) where.checkOut.lte = filters.checkOutTo;
+  }
+  if (filters.q) {
+    where.OR = [
+      { guestName: { contains: filters.q } },
+      { guestEmail: { contains: filters.q } },
+      { guestPhone: { contains: filters.q } },
+      { bookingCode: { contains: filters.q } },
+      { roomCode: { contains: filters.q } },
+    ];
+  }
 
   return prisma.booking.findMany({
     where,
@@ -62,6 +85,14 @@ function updateStatus(id, status) {
   return prisma.booking.update({
     where: { id },
     data: { status },
+    include: bookingInclude,
+  });
+}
+
+function update(id, data) {
+  return prisma.booking.update({
+    where: { id },
+    data,
     include: bookingInclude,
   });
 }
@@ -158,6 +189,7 @@ module.exports = {
   findAll,
   findById,
   create,
+  update,
   updateStatus,
   findOverlappingActive,
   findActiveByBranch,

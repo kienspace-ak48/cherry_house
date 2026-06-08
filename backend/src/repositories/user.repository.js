@@ -5,8 +5,14 @@ const userSelect = {
   email: true,
   fullName: true,
   phone: true,
+  avatarUrl: true,
   membershipTier: true,
+  authProvider: true,
+  emailVerified: true,
   isActive: true,
+  bookingBanned: true,
+  bookingBanReason: true,
+  bookingBannedAt: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -20,16 +26,34 @@ function findAll(filters = {}) {
   if (filters.membershipTier) where.membershipTier = filters.membershipTier;
   if (filters.isActive !== undefined) where.isActive = filters.isActive;
   if (filters.email) where.email = { contains: filters.email };
+  if (filters.authProvider) where.authProvider = filters.authProvider;
+  if (filters.bookingBanned !== undefined) where.bookingBanned = filters.bookingBanned;
+  if (filters.q) {
+    where.OR = [
+      { email: { contains: filters.q } },
+      { fullName: { contains: filters.q } },
+      { phone: { contains: filters.q } },
+    ];
+  }
 
   return prisma.user.findMany({
     where,
-    select: userSelect,
-    orderBy: [{ fullName: 'asc' }],
+    select: {
+      ...userSelect,
+      _count: { select: { bookings: true } },
+    },
+    orderBy: [{ createdAt: 'desc' }],
   });
 }
 
 function findById(id) {
-  return prisma.user.findUnique({ where: { id }, select: userSelect });
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      ...userSelect,
+      _count: { select: { bookings: true } },
+    },
+  });
 }
 
 function findByEmail(email) {

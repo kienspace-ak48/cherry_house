@@ -6,7 +6,6 @@ async function generateJWT(payload, expiresInOverride) {
   const expiresIn =
     expiresInOverride
     || process.env.JWT_ACCESS_EXPIRES_IN
-    || process.env.JWT_EXPIRES_IN
     || '15m';
   const token = await jwt.sign(payload, secret, { expiresIn });
   return token;

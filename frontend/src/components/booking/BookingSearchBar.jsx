@@ -22,6 +22,7 @@ export default function BookingSearchBar({
   initialContext = {},
   onSubmit,
   showKind = variant !== 'hero',
+  requireDates = true,
   className = '',
   id = 'booking-search',
 }) {
@@ -29,6 +30,7 @@ export default function BookingSearchBar({
   const [checkIn, setCheckIn] = useState(initialContext.checkIn ?? '');
   const [checkOut, setCheckOut] = useState(initialContext.checkOut ?? '');
   const [kind, setKind] = useState(initialContext.kind ?? 'all');
+  const [dateError, setDateError] = useState('');
 
   useEffect(() => {
     setCity(initialContext.city ?? initialContext.q ?? '');
@@ -45,7 +47,19 @@ export default function BookingSearchBar({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const ctx = formValuesToContext({ city, checkIn, checkOut, kind });
+    setDateError('');
+
+    if (requireDates && (!checkIn || !checkOut)) {
+      setDateError('Chọn ngày nhận và trả phòng để tìm phòng trống.');
+      return;
+    }
+
+    const { ctx, error } = formValuesToContext({ city, checkIn, checkOut, kind });
+    if (error) {
+      setDateError(error);
+      return;
+    }
+
     const merged = mergeContext(discoveryContext(initialContext), ctx);
     onSubmit?.(merged);
   };
@@ -53,6 +67,7 @@ export default function BookingSearchBar({
   const handleRangeChange = ({ checkIn: inVal, checkOut: outVal }) => {
     setCheckIn(inVal ?? '');
     setCheckOut(outVal ?? '');
+    if (dateError) setDateError('');
   };
 
   if (variant === 'summary') {
@@ -150,6 +165,16 @@ export default function BookingSearchBar({
           label="Ngày ở"
           placeholder="Chọn ngày nhận – trả phòng"
         />
+        {dateError ? (
+          <p className="mt-1.5 text-xs font-semibold text-red-600" role="alert">
+            {dateError}
+          </p>
+        ) : requireDates ? (
+          null
+          // <p className="mt-1.5 text-[11px] text-on-surface-variant">
+          //   Bắt buộc để kiểm tra phòng trống theo ngày.
+          // </p>
+        ) : null}
       </div>
 
       {showKind && (

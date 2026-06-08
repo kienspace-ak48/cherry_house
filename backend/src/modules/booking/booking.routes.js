@@ -10,6 +10,7 @@ router.get('/me', authMiddleware, bookingController.listMine);
 router.get('/', bookingController.list);
 router.get('/:id', bookingController.getById);
 router.post('/', bookingController.create);
+router.patch('/:id', bookingController.update);
 router.patch('/:id/status', bookingController.patchStatus);
 
 module.exports = router;

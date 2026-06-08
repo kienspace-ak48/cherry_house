@@ -49,6 +49,15 @@ async function patchStatus(req, res) {
   }
 }
 
+async function update(req, res) {
+  try {
+    const item = await bookingService.update(req.params.id, req.body);
+    res.json({ success: true, data: item });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+}
+
 async function checkAvailability(req, res) {
   try {
     const data = await bookingService.checkAvailability(req.body);
@@ -72,6 +81,7 @@ module.exports = {
   listMine,
   getById,
   create,
+  update,
   patchStatus,
   checkAvailability,
   getOccupancy,

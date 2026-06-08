@@ -7,10 +7,10 @@ const { DEFAULT_HOLD_MINUTES } = require('../booking/booking.constants');
 const vnpayPayService = require('../../services/vnpayPay.service');
 // const sepayPgService = require('../../services/sepayPg.service'); // SePay tạm tắt
 const bookingRepository = require('../booking/booking.repository');
+const { assertUserCanBook } = require('../../services/userBookingGuard.service');
 
 /** Tạm tắt SePay — bỏ `bank` khỏi set cho đến khi bật lại */
 const PAYMENT_METHODS = new Set(['card', 'wallet']);
-const PROMO_CODES = new Set(['CHERRY10', 'CHERRYVIP']);
 
 function generateBookingCode() {
   const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -44,25 +44,17 @@ function normalizeOrderInfo(text) {
     .slice(0, 255);
 }
 
-function calculatePricing(roomPriceVnd, nights, promoCode) {
+/** Giá = priceVnd trong DB × số đêm (không phí dịch vụ, không giảm giá). */
+function calculatePricing(roomPriceVnd, nights) {
   const pricePerNightVnd = Math.round(roomPriceVnd);
   const subtotalVnd = pricePerNightVnd * nights;
-  const serviceFeeVnd = Math.round(subtotalVnd * 0.1);
-  let discountVnd = 210_000;
-  const promo = promoCode ? String(promoCode).trim().toUpperCase() : '';
-  if (promo === 'CHERRYVIP') discountVnd = Math.round(subtotalVnd * 0.07);
-  else if (promo === 'CHERRY10') discountVnd = Math.round(subtotalVnd * 0.05);
-  else if (promo && !PROMO_CODES.has(promo)) {
-    throw httpError('Invalid promo code');
-  }
-  const totalVnd = Math.max(0, subtotalVnd + serviceFeeVnd - discountVnd);
   return {
     pricePerNightVnd,
     subtotalVnd,
-    serviceFeeVnd,
-    discountVnd,
-    totalVnd,
-    promoCode: promo || null,
+    serviceFeeVnd: 0,
+    discountVnd: 0,
+    totalVnd: subtotalVnd,
+    promoCode: null,
   };
 }
 
@@ -222,9 +214,14 @@ async function startCheckout(req, body = {}) {
     parseDateOnly(body.checkIn, 'checkIn'),
     parseDateOnly(body.checkOut, 'checkOut'),
   );
-  const pricing = calculatePricing(room.priceVnd, nights, body.promoCode);
+  const pricing = calculatePricing(room.priceVnd, nights);
 
   const userId = req.user?.id ? Number(req.user.id) : null;
+  await assertUserCanBook({
+    userId: Number.isInteger(userId) ? userId : null,
+    guestEmail,
+  });
+
   const { booking, payment } = await createBookingWithPayment({
     room,
     body: { ...body, guestName, guestPhone, guestEmail },
