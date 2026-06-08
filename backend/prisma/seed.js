@@ -13,8 +13,17 @@ const {
   AMENITIES,
 } = require('./seed-data/vietnam-catalog');
 
+const { hashPassword } = require('../src/utils/hashPassword.util');
+
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL);
 const prisma = new PrismaClient({ adapter });
+
+const SAMPLE_ADMIN = {
+  email: 'admin@cherryhouse.vn',
+  fullName: 'Cherry House Admin',
+  role: 'super_admin',
+  password: 'Admin@123',
+};
 
 const SAMPLE_USER = {
   email: 'guest@cherryhouse.vn',
@@ -269,6 +278,24 @@ async function main() {
 
   const totalBranches = Object.keys(branchByKey).length;
 
+  const adminPasswordHash = await hashPassword(SAMPLE_ADMIN.password);
+  await prisma.admin.upsert({
+    where: { email: SAMPLE_ADMIN.email },
+    update: {
+      fullName: SAMPLE_ADMIN.fullName,
+      role: SAMPLE_ADMIN.role,
+      passwordHash: adminPasswordHash,
+      isActive: true,
+    },
+    create: {
+      email: SAMPLE_ADMIN.email,
+      fullName: SAMPLE_ADMIN.fullName,
+      role: SAMPLE_ADMIN.role,
+      passwordHash: adminPasswordHash,
+      isActive: true,
+    },
+  });
+
   await prisma.user.upsert({
     where: { email: SAMPLE_USER.email },
     update: SAMPLE_USER,
@@ -282,7 +309,7 @@ async function main() {
   });
 
   console.log(
-    `Seed completed: ${PROPERTIES.length} cơ sở, ${totalBranches} chi nhánh, ${roomCount} phòng mẫu, room types, amenities, user, promo.`,
+    `Seed completed: ${PROPERTIES.length} cơ sở, ${totalBranches} chi nhánh, ${roomCount} phòng mẫu, admin, user, promo.`,
   );
 }
 

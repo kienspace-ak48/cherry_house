@@ -53,13 +53,198 @@
     background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
 
-  /** Stitch export – hero vignette over photography */
+  /** Hero vignette + warm glow */
   .hero-home-gradient {
     background: linear-gradient(
-      to bottom,
-      rgba(28, 28, 25, 0.4),
-      rgba(28, 28, 25, 0.7)
+      165deg,
+      rgba(28, 28, 25, 0.55) 0%,
+      rgba(28, 28, 25, 0.35) 45%,
+      rgba(28, 28, 25, 0.82) 100%
     );
+  }
+
+  .hero-home-glow {
+    background: radial-gradient(
+      ellipse 80% 50% at 50% 100%,
+      color-mix(in srgb, var(--color-primary) 28%, transparent),
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  @keyframes hero-zoom {
+    from {
+      transform: scale(1.05);
+    }
+    to {
+      transform: scale(1.12);
+    }
+  }
+
+  .animate-hero-zoom {
+    animation: hero-zoom 24s ease-in-out infinite alternate;
+  }
+
+  .home-feature-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .home-feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgb(28 28 25 / 0.08);
+  }
+
+  /* Date range picker — kiểu VN (một lần chọn nhận/trả) */
+  .date-range-popover {
+    border-radius: 1rem;
+    border: 1px solid rgb(28 28 25 / 0.08);
+    background: #fff;
+    padding: 1rem;
+    box-shadow: 0 20px 50px rgb(28 28 25 / 0.22);
+  }
+
+  .date-range-popover--portal {
+    max-height: min(80vh, 520px);
+    overflow-y: auto;
+  }
+
+  .date-range-popover-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .date-range-nav {
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgb(28 28 25 / 0.1);
+    background: var(--color-surface-container-low);
+    color: var(--color-on-surface);
+  }
+
+  .date-range-nav:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .date-range-calendars {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .date-range-calendars {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .date-range-month-title {
+    margin-bottom: 0.5rem;
+    font-family: var(--font-family-headline);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-on-surface);
+  }
+
+  .date-range-weekdays,
+  .date-range-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .date-range-weekdays {
+    margin-bottom: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--color-on-surface-variant);
+  }
+
+  .date-range-day {
+    display: flex;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-on-surface);
+  }
+
+  .date-range-day:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+  }
+
+  .date-range-day--disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .date-range-day--in-range {
+    border-radius: 0;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+
+  .date-range-day--start,
+  .date-range-day--end {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+    border-radius: 0.5rem;
+  }
+
+  .date-range-presets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgb(28 28 25 / 0.06);
+  }
+
+  .date-range-preset {
+    border-radius: 999px;
+    border: 1px solid rgb(28 28 25 / 0.1);
+    background: var(--color-surface-container-low);
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-on-surface);
+  }
+
+  .date-range-preset:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .date-range-popover-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+  }
+
+  .date-range-apply {
+    border-radius: 999px;
+    background: var(--color-primary);
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .date-range-apply:hover {
+    background: var(--color-primary-container);
   }
 
   .no-scrollbar::-webkit-scrollbar {

@@ -1,9 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import bookingApi from '../../api/bookingApi';
+import checkoutApi from '../../api/checkoutApi';
+import { submitSepayForm } from '../../lib/submitSepayForm';
+import BookingBreadcrumbs from '../../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../../components/booking/BookingProgress';
+import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import { readProfileContact } from '../../data/profileContact';
-import { buildUrl, getDiscoveryHref, parseBookingContext } from '../../lib/bookingContext';
+import { resolveBranch } from '../../data/properties';
+import {
+  buildUrl,
+  getBookingStepHref,
+  parseBookingContext,
+} from '../../lib/bookingContext';
+import { countNights } from '../../lib/dateRange';
 import { MOCK_ROOMS } from '../booking/bookingData';
 import { resolveRoomDetail } from '../../data/roomDetails';
 import { STITCH_CHECKOUT_IMG } from './checkoutDefaults';
@@ -16,25 +27,33 @@ const GUEST_LABEL = {
 
 const PROMO_OK = ['CHERRY10', 'CHERRYVIP'];
 
+/**
+ * Phương thức thanh toán đang bật:
+ * - card → VNPay redirect (thẻ / ATM trên cổng VNPay)
+ *
+ * Tạm tắt:
+ * - bank   → SePay chuyển khoản QR
+ * - wallet → VNPay QR / Momo-ZaloPay (chưa tích hợp ví thật)
+ */
 const PAY_OPTIONS = [
   {
     id: 'card',
     icon: 'credit_card',
     title: 'Thẻ tín dụng / Ghi nợ',
-    subtitle: 'Visa, Mastercard, JCB, American Express',
+    subtitle: 'Thanh toán qua VNPay (Visa, Mastercard, JCB, ATM)',
   },
-  {
-    id: 'bank',
-    icon: 'account_balance',
-    title: 'Chuyển khoản ngân hàng',
-    subtitle: 'Xác nhận nhanh trong vòng 15 phút',
-  },
-  {
-    id: 'wallet',
-    icon: 'qr_code_2',
-    title: 'Ví điện tử (Momo/ZaloPay)',
-    subtitle: 'Thanh toán một chạm cực kỳ tiện lợi',
-  },
+  // {
+  //   id: 'bank',
+  //   icon: 'account_balance',
+  //   title: 'Chuyển khoản ngân hàng',
+  //   subtitle: 'Quét QR chuyển khoản qua SePay — tạm tắt',
+  // },
+  // {
+  //   id: 'wallet',
+  //   icon: 'qr_code_2',
+  //   title: 'Ví điện tử (Momo/ZaloPay)',
+  //   subtitle: 'Chưa tích hợp — sẽ bật khi có cổng Momo/ZaloPay',
+  // },
 ];
 
 function fmtMoneyCompact(amountVnd) {
@@ -62,20 +81,17 @@ function checkoutDates(searchParams, nightsFallback, contextFallback = {}) {
     }
   }
 
-  if (!checkInDate || !checkOutDate) {
-    checkInDate = new Date(Date.UTC(2024, 9, 24));
-    checkOutDate = new Date(Date.UTC(2024, 9, 26));
-  }
+  // Không dùng ngày giả khi chưa chọn — pricing chờ user chọn trên picker
 
-  const nightsComputed = Math.max(
-    1,
-    Math.round((+checkOutDate - +checkInDate) / 86400000),
-  );
+  const nightsComputed =
+    checkInDate && checkOutDate
+      ? Math.max(1, Math.round((+checkOutDate - +checkInDate) / 86400000))
+      : 0;
 
   const nights =
     Number.isFinite(nightsFallback) && nightsFallback > 0
       ? nightsFallback
-      : nightsComputed;
+      : nightsComputed || 1;
 
   return { checkInDate, checkOutDate, nights };
 }
@@ -93,16 +109,31 @@ function formatViBookingDate(date) {
   }
 }
 
+function formatConflictRange(conflict) {
+  if (!conflict?.checkIn || !conflict?.checkOut) return '';
+  const inFmt = formatViBookingDate(new Date(`${conflict.checkIn}T12:00:00`));
+  const outFmt = formatViBookingDate(new Date(`${conflict.checkOut}T12:00:00`));
+  return `${inFmt} – ${outFmt}`;
+}
+
 export default function CheckoutPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const slug = searchParams.get('slug');
+  const guestsKey = parseGuestsParam(searchParams.get('guests'));
   const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
-  const bookingBackHref = context.property && context.branch
-    ? buildUrl('/booking', context)
-    : getDiscoveryHref(context, { focus: 'search' });
+  const progressExtra = useMemo(
+    () => ({ slug: slug || undefined, guests: guestsKey }),
+    [slug, guestsKey],
+  );
+  const branchCtx = useMemo(
+    () => (context.property && context.branch
+      ? resolveBranch(context.property, context.branch)
+      : null),
+    [context.property, context.branch],
+  );
+  const bookingBackHref = buildUrl('/booking', context);
 
   const [payment, setPayment] = useState('card');
-  const guestsKey = parseGuestsParam(searchParams.get('guests'));
 
   /** Mặc định từ hồ sơ; khi nhập tay, dùng cùng state `contactDraft`. */
   const [profileLocked, setProfileLocked] = useState(true);
@@ -114,6 +145,36 @@ export default function CheckoutPage() {
   const [note, setNote] = useState('');
   const [voucherDraft, setVoucherDraft] = useState('');
   const [appliedCode, setAppliedCode] = useState(null);
+  const [availability, setAvailability] = useState({
+    status: 'idle',
+    data: null,
+    error: null,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [qrModal, setQrModal] = useState(null);
+
+  const checkInIso = searchParams.get('checkIn') || context.checkIn || '';
+  const checkOutIso = searchParams.get('checkOut') || context.checkOut || '';
+
+  /** Đồng bộ ngày từ URL context (trang chủ → booking → checkout) */
+  useEffect(() => {
+    if (!context.checkIn || !context.checkOut) return undefined;
+    if (searchParams.get('checkIn') && searchParams.get('checkOut')) return undefined;
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('checkIn', context.checkIn);
+        next.set('checkOut', context.checkOut);
+        const nightsCount = countNights(context.checkIn, context.checkOut);
+        if (nightsCount > 0) next.set('nights', String(nightsCount));
+        return next;
+      },
+      { replace: true },
+    );
+    return undefined;
+  }, [context.checkIn, context.checkOut, setSearchParams]);
 
   const nightsParsed = Number.parseInt(searchParams.get('nights') || '', 10);
   const nightsFromQuery =
@@ -141,7 +202,10 @@ export default function CheckoutPage() {
   const guestLine = GUEST_LABEL[guestsKey];
 
   const pricePerNight =
-    detail?.priceVnd ?? bookingRow?.priceVnd ?? 2_100_000;
+    availability.data?.room?.priceVnd
+    ?? detail?.priceVnd
+    ?? bookingRow?.priceVnd
+    ?? 2_100_000;
 
   const pricing = useMemo(() => {
     const roomSubtotal = pricePerNight * nights;
@@ -162,6 +226,66 @@ export default function CheckoutPage() {
   const checkInFmt = formatViBookingDate(checkInDate);
   const checkOutFmt = formatViBookingDate(checkOutDate);
 
+  const canConfirm =
+    availability.status === 'available'
+    && Boolean(checkInIso && checkOutIso && slug && context.property && context.branch);
+
+  function handleDateChange({ checkIn, checkOut }) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (checkIn) next.set('checkIn', checkIn);
+        else next.delete('checkIn');
+        if (checkOut) next.set('checkOut', checkOut);
+        else next.delete('checkOut');
+        const nightsCount = countNights(checkIn ?? '', checkOut ?? '');
+        if (nightsCount > 0) next.set('nights', String(nightsCount));
+        else next.delete('nights');
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  useEffect(() => {
+    if (!checkInIso || !checkOutIso || !slug || !context.property || !context.branch) {
+      setAvailability({ status: 'idle', data: null, error: null });
+      return undefined;
+    }
+
+    let cancelled = false;
+    setAvailability((prev) => ({ ...prev, status: 'checking', error: null }));
+
+    bookingApi
+      .checkAvailability({
+        propertySlug: context.property,
+        branchCode: context.branch,
+        detailSlug: slug,
+        checkIn: checkInIso,
+        checkOut: checkOutIso,
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setAvailability({
+          status: data.available ? 'available' : 'unavailable',
+          data,
+          error: null,
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setAvailability({
+          status: 'error',
+          data: null,
+          error: err?.message || 'Không kiểm tra được phòng. Vui lòng thử lại.',
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkInIso, checkOutIso, slug, context.property, context.branch]);
+
   function applyPromo(e) {
     e.preventDefault();
     const trimmed = voucherDraft.trim().toUpperCase();
@@ -176,32 +300,85 @@ export default function CheckoutPage() {
     }
   }
 
-  function handleConfirm() {
-    console.info('[demo] Checkout', {
-      slug,
-      nights,
-      payment,
-      voucher: appliedCode,
-      guestLine,
-      bookingContact: profileLocked ? profileFromStore : contactDraft,
-      summaryLockedToProfile: profileLocked,
-      total: pricing.totalVal,
-    });
-    alert('Đã ghi nhận yêu cầu (demo). Sau này bạn có thể nối API thanh toán tại đây.');
+  async function handleConfirm() {
+    if (!canConfirm || submitting) return;
+
+    const contact = profileLocked ? profileFromStore : contactDraft;
+    if (!contact.fullName?.trim() || !contact.phone?.trim() || !contact.email?.trim()) {
+      setSubmitError('Vui lòng điền đầy đủ họ tên, số điện thoại và email.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const result = await checkoutApi.startPay({
+        propertySlug: context.property,
+        branchCode: context.branch,
+        detailSlug: slug,
+        checkIn: checkInIso,
+        checkOut: checkOutIso,
+        guests: guestsKey,
+        guestName: contact.fullName.trim(),
+        guestPhone: contact.phone.trim(),
+        guestEmail: contact.email.trim(),
+        specialNote: note.trim() || undefined,
+        promoCode: appliedCode,
+        paymentMethod: payment,
+      });
+
+      if (result.action === 'redirect' && result.redirectUrl) {
+        window.location.href = result.redirectUrl;
+        return;
+      }
+
+      if (result.action === 'form' && result.sepay?.checkoutUrl) {
+        submitSepayForm(result.sepay.checkoutUrl, result.sepay.fields);
+        return;
+      }
+
+      if (result.action === 'qr' && result.qr?.dataUrl) {
+        setQrModal({
+          bookingCode: result.bookingCode,
+          dataUrl: result.qr.dataUrl,
+          amountVnd: result.amountVnd,
+          expireMinutes: result.qr.expireMinutes ?? 15,
+        });
+        return;
+      }
+
+      setSubmitError('Không nhận được phản hồi thanh toán từ server.');
+    } catch (err) {
+      setSubmitError(err?.message || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="bg-surface pb-24 font-body text-sm selection:bg-primary-fixed selection:text-on-primary-fixed">
       <main className={[LAYOUT_CONTAINER, 'pt-24 pb-14 md:pt-28'].join(' ')}>
-        <BookingProgress current="checkout" />
+        <BookingProgress current="checkout" context={context} extra={progressExtra} />
         <header className="mb-8 md:mb-10">
-          <nav className="mb-3 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
-            <Link to={bookingBackHref} className="font-semibold text-primary hover:underline">
-              Bảng phòng
-            </Link>
-            <span aria-hidden>/</span>
-            <span>Đặt phòng &amp; thanh toán</span>
-          </nav>
+          <BookingBreadcrumbs
+            className="mb-3 text-xs"
+            items={[
+              { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
+              { label: 'Cơ sở', href: getBookingStepHref('property', context) },
+              branchCtx
+                ? {
+                    label: branchCtx.property.name,
+                    href: getBookingStepHref('branch', context),
+                  }
+                : { label: 'Chi nhánh', href: getBookingStepHref('branch', context) },
+              {
+                label: branchCtx?.branch.name ?? 'Phòng',
+                href: bookingBackHref,
+              },
+              { label: 'Thanh toán', current: true },
+            ]}
+          />
           <h1 className="mb-3 font-headline text-2xl font-bold tracking-tight text-primary md:text-3xl">
             Hoàn tất đặt phòng
           </h1>
@@ -408,19 +585,56 @@ export default function CheckoutPage() {
                 </div>
               </div>
               <div className="space-y-5 p-5 md:p-6">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase opacity-65">
-                      Ngày đến
-                    </span>
-                    <p className="font-headline text-sm font-bold text-on-surface">{checkInFmt}</p>
-                  </div>
-                  <div className="space-y-0.5 text-right">
-                    <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase opacity-65">
-                      Ngày đi
-                    </span>
-                    <p className="font-headline text-sm font-bold text-on-surface">{checkOutFmt}</p>
-                  </div>
+                <div className="space-y-2">
+                  <DateRangePicker
+                    checkIn={checkInIso}
+                    checkOut={checkOutIso}
+                    onChange={handleDateChange}
+                    variant="default"
+                    label="Ngày nhận – trả phòng"
+                    placeholder="Chọn ngày nhận – trả phòng"
+                    className="w-full"
+                  />
+                  {checkInIso && checkOutIso ? (
+                    <p className="px-1 text-xs text-on-surface-variant">
+                      {checkInFmt} → {checkOutFmt}
+                      {nights > 0 ? ` · ${nights} đêm` : null}
+                    </p>
+                  ) : null}
+                  {availability.status === 'checking' ? (
+                    <p className="flex items-center gap-2 px-1 text-xs font-medium text-on-surface-variant">
+                      <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                      Đang kiểm tra phòng...
+                    </p>
+                  ) : null}
+                  {availability.status === 'available' ? (
+                    <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-tertiary">
+                      <span className="material-symbols-outlined text-base">check_circle</span>
+                      Phòng còn trống trong khoảng ngày đã chọn
+                    </p>
+                  ) : null}
+                  {availability.status === 'unavailable' ? (
+                    <div className="rounded-xl bg-error-container/40 px-3 py-2 text-xs text-on-error-container">
+                      <p className="font-semibold">
+                        {availability.data?.message || 'Phòng không còn trống trong khoảng ngày này.'}
+                      </p>
+                      {availability.data?.conflicts?.length ? (
+                        <ul className="mt-1 list-inside list-disc opacity-90">
+                          {availability.data.conflicts.map((c) => (
+                            <li key={c.bookingId}>
+                              Đã đặt {formatConflictRange(c)}
+                              {c.status === 'pending_payment' ? ' (đang giữ chỗ)' : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {availability.status === 'error' ? (
+                    <p className="rounded-xl bg-error-container/40 px-3 py-2 text-xs font-medium text-on-error-container">
+                      {availability.error}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2.5 border-y border-outline-variant/10 py-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-container-high">
@@ -483,12 +697,27 @@ export default function CheckoutPage() {
                     {fmtMoneyCompact(pricing.totalVal)}
                   </div>
                 </div>
+                {submitError ? (
+                  <p className="rounded-xl bg-error-container/40 px-3 py-2 text-xs font-medium text-on-error-container">
+                    {submitError}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  className="active:scale-[0.98] w-full rounded-full bg-primary py-3.5 font-headline text-sm font-bold text-on-primary shadow-[0_20px_40px_-6px_rgba(168,46,66,0.18)] transition-transform"
+                  disabled={!canConfirm || submitting}
+                  className={[
+                    'w-full rounded-full py-3.5 font-headline text-sm font-bold transition-transform',
+                    canConfirm && !submitting
+                      ? 'active:scale-[0.98] bg-primary text-on-primary shadow-[0_20px_40px_-6px_rgba(168,46,66,0.18)]'
+                      : 'cursor-not-allowed bg-outline-variant/25 text-on-surface-variant',
+                  ].join(' ')}
                 >
-                  XÁC NHẬN ĐẶT PHÒNG
+                  {submitting
+                    ? 'ĐANG XỬ LÝ...'
+                    : availability.status === 'checking'
+                      ? 'ĐANG KIỂM TRA...'
+                      : 'XÁC NHẬN ĐẶT PHÒNG'}
                 </button>
                 <p className="px-2 text-center text-[11px] leading-snug text-on-surface-variant">
                   Bằng cách nhấn nút, bạn đồng ý với{' '}
@@ -512,6 +741,43 @@ export default function CheckoutPage() {
           </aside>
         </div>
       </main>
+
+      {qrModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-surface-container-lowest p-6 text-center shadow-xl">
+            <h2 className="font-headline text-lg font-bold text-on-surface">Quét mã thanh toán</h2>
+            <p className="mt-1 text-xs text-on-surface-variant">
+              Mã đơn: <strong>{qrModal.bookingCode}</strong>
+            </p>
+            <p className="text-sm font-semibold text-primary">
+              {fmtMoneyCompact(qrModal.amountVnd)}
+            </p>
+            <img
+              src={qrModal.dataUrl}
+              alt="VNPay QR"
+              className="mx-auto my-4 rounded-lg bg-white p-2"
+              width={280}
+              height={280}
+            />
+            <p className="text-xs text-on-surface-variant">
+              Hết hạn sau {qrModal.expireMinutes} phút. Mở app ngân hàng để quét.
+            </p>
+            <Link
+              to={`/checkout/result?bookingCode=${encodeURIComponent(qrModal.bookingCode)}`}
+              className="mt-4 inline-block rounded-full bg-primary px-5 py-2.5 font-headline text-sm font-bold text-on-primary"
+            >
+              Đã thanh toán — xem kết quả
+            </Link>
+            <button
+              type="button"
+              onClick={() => setQrModal(null)}
+              className="mt-3 block w-full text-sm text-on-surface-variant hover:text-on-surface"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

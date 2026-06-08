@@ -7,10 +7,36 @@ import {
   PROPERTY_KIND_LABELS,
   countPropertiesByKind,
 } from '../data/properties';
-import { buildUrl, getDiscoveryHref, resolveSearchDestination } from '../lib/bookingContext';
+import { getDiscoveryHref, resolveSearchDestination } from '../lib/bookingContext';
 
 const HERO_IMG =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuB46N4gVdqMtHJt5y5SfzRJ7LGlY14me9PiNAgF3Chaet_LX03hK5BdX1GUFDyspTd1Vh69BeDxCF1J_-Z8fNcyKqv-PPeuVSISenigGRv76VonFLP5i9lzkQ2Nw7Gr0TE2UhGXKNjZ9lwaroGdk-xko0snVoPidEyg16Cr2mKoML6WVyc_qwTLdug0M8NYVZIXicCvZPa0KLeATfwcDXbggz26e4dXmjEMxclfT9kEPX_OSM7P-_A2hF9YJjdGtgIyW-1jwo6T3Q';
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80';
+
+const HERO_QUICK_CITIES = ['Đà Lạt', 'Đà Nẵng', 'Vũng Tàu', 'Hội An', 'Phú Quốc'];
+
+const TRUST_STATS = [
+  { value: '10+', label: 'điểm đến', icon: 'map' },
+  { value: 'Đặt trực tiếp', label: 'không qua sàn', icon: 'verified' },
+  { value: '24/7', label: 'hỗ trợ đặt phòng', icon: 'support_agent' },
+];
+
+const WHY_ITEMS = [
+  {
+    icon: 'savings',
+    title: 'Giá minh bạch',
+    desc: 'Xem giá theo phòng, theo đêm — không phí ẩn từ sàn trung gian.',
+  },
+  {
+    icon: 'domain',
+    title: 'Nhiều chi nhánh',
+    desc: 'Một cơ sở có thể có nhiều điểm — chọn đúng khu vực bạn muốn ở.',
+  },
+  {
+    icon: 'bolt',
+    title: 'Đặt nhanh',
+    desc: 'Chọn địa điểm, ngày ở và phòng trống — hoàn tất trong vài bước.',
+  },
+];
 
 function scrollCarousel(ref, direction) {
   const el = ref.current;
@@ -50,32 +76,96 @@ function HomePage() {
 
   return (
     <div className="bg-surface text-on-surface">
-      <section className="relative flex min-h-[max(560px,calc(100svh-4.25rem))] items-center justify-center overflow-hidden md:min-h-[max(700px,calc(100svh-4.75rem))]">
-        <div className="absolute inset-0 z-0">
+      <section className="relative flex min-h-[max(620px,calc(100svh-4.25rem))] items-center justify-center md:min-h-[max(760px,calc(100svh-4.75rem))]">
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <img
-            className="h-full w-full object-cover"
-            alt="Cherry House — chuỗi homestay đa chi nhánh tại Việt Nam"
+            className="h-full w-full scale-105 object-cover animate-hero-zoom"
+            alt="Cherry House — homestay và mini stay trên khắp Việt Nam"
             src={HERO_IMG}
           />
           <div className="hero-home-gradient absolute inset-0" aria-hidden />
+          <div className="hero-home-glow absolute inset-0" aria-hidden />
         </div>
 
-        <div className={[LAYOUT_CONTAINER, 'relative z-10 text-center'].join(' ')}>
-          <h1 className="mb-6 font-headline text-5xl leading-tight font-extrabold text-white md:text-7xl">
-            Homestay &amp; Mini Stay <br />
-            <span className="font-normal italic">Trên khắp Việt Nam</span>
+        <div className={[LAYOUT_CONTAINER, 'relative z-10 w-full py-12 text-center md:py-16'].join(' ')}>
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-bold tracking-wide text-white/95 uppercase backdrop-blur-sm">
+            <span className="material-symbols-outlined text-base text-primary-container">favorite</span>
+            Website chính thức Cherry House
+          </div>
+
+          <h1 className="mx-auto mb-5 max-w-4xl font-headline text-4xl leading-[1.1] font-extrabold text-white sm:text-5xl md:text-7xl">
+            Trải nghiệm lưu trú
+            <span className="mt-2 block font-normal italic text-white/95">ấm áp trên khắp Việt Nam</span>
           </h1>
-          <p className="mx-auto mb-12 max-w-2xl text-lg text-white/90 md:text-xl">
-            Website chính thức của chuỗi Cherry House — tìm cơ sở theo địa điểm, chọn chi nhánh và đặt
-            trực tiếp, không qua sàn trung gian.
+
+          <p className="mx-auto mb-8 max-w-2xl text-base leading-relaxed text-white/88 md:text-lg">
+            Homestay, mini stay và villa đồng bộ thương hiệu — tìm theo địa điểm, chọn chi nhánh phù hợp
+            và đặt phòng trực tiếp.
           </p>
 
-          <BookingSearchBar
-            variant="hero"
-            onSubmit={handleSearch}
-            showKind={false}
-            id="home-hero-search"
-          />
+          <div className="relative z-20">
+            <BookingSearchBar
+              variant="hero"
+              onSubmit={handleSearch}
+              showKind={false}
+              id="home-hero-search"
+            />
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs font-semibold text-white/70">Phổ biến:</span>
+            {HERO_QUICK_CITIES.map((city) => (
+              <Link
+                key={city}
+                to={getDiscoveryHref({ city })}
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white/20"
+              >
+                {city}
+              </Link>
+            ))}
+          </div>
+
+          <div className="relative z-0 mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
+            {TRUST_STATS.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-black/20 px-4 py-3 backdrop-blur-sm"
+              >
+                <span className="material-symbols-outlined text-xl text-primary-container">{item.icon}</span>
+                <div className="text-left">
+                  <p className="font-headline text-sm font-bold text-white">{item.value}</p>
+                  <p className="text-[11px] text-white/75">{item.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-black/5 bg-white py-12 md:py-14">
+        <div className={LAYOUT_CONTAINER}>
+          <div className="mb-8 text-center">
+            <h2 className="font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
+              Vì sao đặt trên Cherry House?
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-on-surface-variant md:text-base">
+              Trải nghiệm đặt phòng được thiết kế cho khách Việt — rõ ràng, nhanh và đúng thương hiệu.
+            </p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {WHY_ITEMS.map((item) => (
+              <div
+                key={item.title}
+                className="home-feature-card rounded-2xl border border-black/5 bg-surface-container-low p-6 text-center md:text-left"
+              >
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary md:mx-0">
+                  <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+                </div>
+                <h3 className="font-headline text-lg font-bold text-on-surface">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">{item.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -83,12 +173,12 @@ function HomePage() {
         <div className={LAYOUT_CONTAINER}>
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <h2 className="font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
+              <p className="text-xs font-bold tracking-widest text-primary uppercase">Khám phá</p>
+              <h2 className="mt-1 font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
                 Khu vực phổ biến
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-on-surface-variant md:text-base">
-                Những địa điểm lưu trú được khách Cherry House quan tâm — chọn khu vực để xem cơ sở và
-                chi nhánh tương ứng.
+                Chọn điểm đến — xem cơ sở Cherry House và chi nhánh tương ứng.
               </p>
             </div>
             <div className="flex gap-2">
@@ -114,16 +204,16 @@ function HomePage() {
               <Link
                 key={area.city}
                 to={areaHref(area)}
-                className="group relative min-w-[200px] shrink-0 snap-start overflow-hidden rounded-2xl sm:min-w-[220px] md:min-w-[calc(20%-16px)] md:flex-1"
+                className="group relative min-w-[200px] shrink-0 snap-start overflow-hidden rounded-2xl shadow-md transition-shadow hover:shadow-xl sm:min-w-[220px] md:min-w-[calc(20%-16px)] md:flex-1"
                 style={{ aspectRatio: '3/4' }}
               >
                 <img
                   src={area.image}
                   alt={area.label}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div
-                  className="absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent"
+                  className="absolute inset-0 bg-linear-to-t from-black/80 via-black/25 to-transparent"
                   aria-hidden
                 />
                 {area.comingSoon ? (
@@ -142,12 +232,12 @@ function HomePage() {
 
       <section id="loai-hinh-luu-tru" className="scroll-mt-28 bg-surface-container-low py-16 md:py-20">
         <div className={LAYOUT_CONTAINER}>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
+          <p className="text-xs font-bold tracking-widest text-primary uppercase">Loại hình</p>
+          <h2 className="mt-1 font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
             Khám phá thêm loại hình lưu trú
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-on-surface-variant md:text-base">
-            Cherry House vận hành nhiều loại hình trong cùng thương hiệu — chọn theo nhu cầu chuyến đi
-            của bạn.
+            Homestay ấm cúng, mini hotel tiện nghi hay villa riêng tư — cùng một hành trình đặt phòng.
           </p>
 
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
@@ -158,7 +248,7 @@ function HomePage() {
                 <Link
                   key={card.kind}
                   to={kindHref(card.kind)}
-                  className="group overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm transition-shadow hover:shadow-md"
+                  className="group overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
                 >
                   <div className="aspect-[4/3] overflow-hidden">
                     <img
@@ -190,16 +280,15 @@ function HomePage() {
 
       <section className="py-16 md:py-20">
         <div className={LAYOUT_CONTAINER}>
-          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-surface-container-high p-10 text-center md:rounded-[3rem] md:p-16">
-            <div className="absolute -top-24 -right-24 size-64 rounded-full bg-primary/5 blur-3xl" aria-hidden />
-            <div className="absolute -bottom-24 -left-24 size-64 rounded-full bg-primary/5 blur-3xl" aria-hidden />
+          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-linear-to-br from-primary/8 via-white to-surface-container-high p-10 text-center md:rounded-[3rem] md:p-16">
+            <div className="absolute -top-24 -right-24 size-64 rounded-full bg-primary/10 blur-3xl" aria-hidden />
+            <div className="absolute -bottom-24 -left-24 size-64 rounded-full bg-primary/10 blur-3xl" aria-hidden />
             <div className="relative z-10 space-y-6">
               <h2 className="font-headline text-2xl leading-tight font-extrabold text-on-surface md:text-4xl">
                 Ưu đãi khi đặt trực tiếp trên web
               </h2>
               <p className="mx-auto max-w-lg text-sm text-on-surface-variant md:text-base">
-                Nhận tin mở cơ sở mới, mã giảm giá theo chi nhánh và gợi ý phòng trống theo mùa — chỉ
-                dành cho khách đặt qua Cherry House.
+                Nhận tin mở cơ sở mới, mã giảm giá theo chi nhánh và gợi ý phòng trống theo mùa.
               </p>
               <form
                 className="mx-auto flex max-w-md flex-col gap-3 md:flex-row"

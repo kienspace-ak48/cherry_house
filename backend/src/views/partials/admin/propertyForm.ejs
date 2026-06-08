@@ -1,4 +1,10 @@
 <% const p = typeof property !== 'undefined' ? property : {}; %>
+<% const isCreate = typeof mode !== 'undefined' && mode === 'create'; %>
+<% function numField(val) {
+  if (isCreate && (val === 0 || val === null || val === undefined)) return '';
+  if (val === null || val === undefined) return '';
+  return val;
+} %>
 <form method="POST" action="<%= formAction %>" class="admin-crud-form">
   <% if (typeof formError !== 'undefined' && formError) { %>
   <div class="alert alert-danger"><%= formError %></div>
@@ -12,24 +18,61 @@
           <div class="row g-3">
             <div class="col-md-8">
               <label class="form-label" for="name">Tên cơ sở <span class="text-danger">*</span></label>
-              <input class="form-control" id="name" name="name" value="<%= p.name || '' %>" required>
+              <input
+                class="form-control"
+                id="name"
+                name="name"
+                value="<%= p.name || '' %>"
+                placeholder="Cherry House Đà Lạt"
+                required
+              >
+              <div class="form-text">Tên hiển thị trên web khách — nên có thương hiệu + địa điểm.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label" for="slug">Slug <span class="text-danger">*</span></label>
-              <input class="form-control" id="slug" name="slug" value="<%= p.slug || '' %>" placeholder="cherry-house-da-lat" required>
-              <div class="form-text">Chữ thường, số, gạch ngang</div>
+              <input
+                class="form-control"
+                id="slug"
+                name="slug"
+                value="<%= p.slug || '' %>"
+                placeholder="cherry-house-da-lat"
+                required
+              >
+              <div class="form-text">Đường dẫn URL: <code>/booking?property=slug</code>. Chữ thường, số, gạch ngang — không dấu.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="tagline">Tagline</label>
-              <input class="form-control" id="tagline" name="tagline" value="<%= p.tagline || '' %>">
+              <input
+                class="form-control"
+                id="tagline"
+                name="tagline"
+                value="<%= p.tagline || '' %>"
+                placeholder="Homestay view hồ Xuân Hương — không gian ấm cúng giữa lòng thành phố"
+              >
+              <div class="form-text">Một dòng ngắn dưới tên cơ sở (khoảng 10–15 từ). Tùy chọn nhưng nên có để thu hút khách.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="description">Mô tả <span class="text-danger">*</span></label>
-              <textarea class="form-control" id="description" name="description" rows="4" required><%= p.description || '' %></textarea>
+              <textarea
+                class="form-control"
+                id="description"
+                name="description"
+                rows="4"
+                placeholder="Cherry House Đà Lạt — homestay tiện nghi gần trung tâm, phù hợp nghỉ dưỡng cuối tuần và công tác ngắn ngày. Mô tả không gian, vị trí và đối tượng khách phù hợp."
+                required
+              ><%= p.description || '' %></textarea>
+              <div class="form-text">Đoạn giới thiệu đầy đủ (2–4 câu): vị trí, phong cách, đối tượng khách (gia đình, cặp đôi, công tác…).</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="highlights">Điểm nổi bật</label>
-              <textarea class="form-control" id="highlights" name="highlights" rows="3" placeholder="Mỗi dòng một ý"><%= typeof highlightsText !== 'undefined' ? highlightsText : '' %></textarea>
+              <textarea
+                class="form-control"
+                id="highlights"
+                name="highlights"
+                rows="3"
+                placeholder="Gần Hồ Xuân Hương&#10;Check-in linh hoạt 24/7&#10;Bữa sáng địa phương&#10;Phù hợp công tác ngắn ngày"
+              ><%= typeof highlightsText !== 'undefined' ? highlightsText : '' %></textarea>
+              <div class="form-text">Mỗi dòng một ưu điểm (3–6 dòng). Hiển thị dạng bullet trên trang chi tiết.</div>
             </div>
           </div>
         </div>
@@ -41,11 +84,39 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="city">Thành phố <span class="text-danger">*</span></label>
-              <input class="form-control" id="city" name="city" value="<%= p.city || '' %>" required>
+              <input
+                class="form-control"
+                id="city"
+                name="city"
+                value="<%= p.city || '' %>"
+                placeholder="Đà Lạt"
+                list="city-suggestions"
+                required
+              >
+              <datalist id="city-suggestions">
+                <option value="Hà Nội"></option>
+                <option value="Sa Pa"></option>
+                <option value="Ninh Bình"></option>
+                <option value="Đà Nẵng"></option>
+                <option value="Huế"></option>
+                <option value="Hội An"></option>
+                <option value="Đà Lạt"></option>
+                <option value="Vũng Tàu"></option>
+                <option value="Phú Quốc"></option>
+                <option value="TP. Hồ Chí Minh"></option>
+              </datalist>
+              <div class="form-text">Tên thành phố/tỉnh — dùng để <strong>lọc tìm kiếm</strong> trên web. Viết đúng dấu.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label" for="region">Khu vực <span class="text-danger">*</span></label>
-              <input class="form-control" id="region" name="region" value="<%= p.region || '' %>" required>
+              <input
+                class="form-control"
+                id="region"
+                name="region"
+                value="<%= p.region || '' %>"
+                placeholder="Lâm Đồng"
+              >
+              <div class="form-text">Tỉnh/vùng miền (vd: <em>Lâm Đồng</em>, <em>Quảng Nam</em>). Có thể trùng tên thành phố nếu là thành phố trực thuộc TW.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label" for="kind">Loại hình <span class="text-danger">*</span></label>
@@ -54,10 +125,18 @@
                 <option value="<%= k.value %>" <%= p.kind === k.value ? 'selected' : '' %>><%= k.label %></option>
                 <% }); %>
               </select>
+              <div class="form-text">Phân loại trên bộ lọc web: Homestay, Mini hotel, Villa, Căn hộ dịch vụ.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="address">Địa chỉ <span class="text-danger">*</span></label>
-              <input class="form-control" id="address" name="address" value="<%= p.address || '' %>" required>
+              <input
+                class="form-control"
+                id="address"
+                name="address"
+                value="<%= p.address || '' %>"
+                placeholder="Phường 1, TP. Đà Lạt, Lâm Đồng"
+              >
+              <div class="form-text">Địa chỉ tổng quát của cơ sở (không cần số nhà chi tiết). Địa chỉ từng chi nhánh khai báo ở màn Chi nhánh.</div>
             </div>
           </div>
         </div>
@@ -70,24 +149,73 @@
         <div class="card-body">
           <div class="mb-3">
             <label class="form-label" for="priceFromVnd">Giá từ (VND) <span class="text-danger">*</span></label>
-            <input class="form-control" type="number" min="0" step="1000" id="priceFromVnd" name="priceFromVnd" value="<%= p.priceFromVnd ?? 0 %>" required>
+            <input
+              class="form-control"
+              type="number"
+              min="0"
+              step="1000"
+              id="priceFromVnd"
+              name="priceFromVnd"
+              value="<%= numField(p.priceFromVnd) %>"
+              placeholder="890000"
+              required
+            >
+            <div class="form-text">Giá thấp nhất/đêm (số nguyên, không dấu chấm). Hiển thị dạng <em>từ 890.000đ/đêm</em> trên thẻ cơ sở.</div>
           </div>
           <div class="row g-3">
             <div class="col-6">
               <label class="form-label" for="branchCount">Số chi nhánh</label>
-              <input class="form-control" type="number" min="0" id="branchCount" name="branchCount" value="<%= p.branchCount ?? 0 %>">
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                id="branchCount"
+                name="branchCount"
+                value="<%= numField(p.branchCount) %>"
+                placeholder="0"
+              >
+              <div class="form-text">Có thể để trống — cập nhật sau khi tạo chi nhánh.</div>
             </div>
             <div class="col-6">
               <label class="form-label" for="roomCount">Số phòng</label>
-              <input class="form-control" type="number" min="0" id="roomCount" name="roomCount" value="<%= p.roomCount ?? 0 %>">
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                id="roomCount"
+                name="roomCount"
+                value="<%= numField(p.roomCount) %>"
+                placeholder="0"
+              >
+              <div class="form-text">Tổng phòng toàn cơ sở. Cập nhật khi đã thêm phòng.</div>
             </div>
             <div class="col-6">
               <label class="form-label" for="rating">Rating</label>
-              <input class="form-control" type="number" min="0" max="5" step="0.1" id="rating" name="rating" value="<%= p.rating ?? 0 %>">
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                id="rating"
+                name="rating"
+                value="<%= numField(p.rating) %>"
+                placeholder="4.8"
+              >
+              <div class="form-text">Thang 0–5 (vd: 4.7). Tùy chọn.</div>
             </div>
             <div class="col-6">
               <label class="form-label" for="reviewCount">Số review</label>
-              <input class="form-control" type="number" min="0" id="reviewCount" name="reviewCount" value="<%= p.reviewCount ?? 0 %>">
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                id="reviewCount"
+                name="reviewCount"
+                value="<%= numField(p.reviewCount) %>"
+                placeholder="128"
+              >
+              <div class="form-text">Số đánh giá hiển thị. Tùy chọn.</div>
             </div>
           </div>
         </div>
@@ -103,11 +231,13 @@
               value: p.heroImageUrl || '',
               label: 'Ảnh đại diện',
             }) %>
+            <div class="form-text mt-1">Ảnh ngang, tối thiểu 1200px — dùng làm ảnh bìa thẻ cơ sở. Chọn từ Gallery hoặc upload trước tại <a href="/admin/gallery" target="_blank" rel="noopener">Thư viện ảnh</a>.</div>
           </div>
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= p.isActive !== false ? 'checked' : '' %>>
             <label class="form-check-label" for="isActive">Đang hiển thị (Active)</label>
           </div>
+          <div class="form-text">Tắt để ẩn cơ sở khỏi web khách — vẫn giữ trong admin để chỉnh sửa.</div>
         </div>
       </div>
 

@@ -1,49 +1,51 @@
 const prisma = require('../config/prisma.config');
+const adminAuthService = require('./adminAuth.service');
 const { hashPassword, comparePassword } = require('../utils/hashPassword.util');
-const { generateJWT } = require('../utils/generateJWT.util');
+const tokenService = require('./token.service');
 const { httpError } = require('../utils/http');
-
-const ADMIN_ROLES = new Set(['admin', 'super_admin']);
-
-function assertAdminUser(user) {
-  if (!user) throw httpError('User not found', 404);
-  if (!user.isActive) throw httpError('Account is disabled', 403);
-  if (!ADMIN_ROLES.has(user.role)) {
-    throw httpError('Not an admin account', 403);
-  }
-}
 
 function sanitizeUser(user) {
   const { passwordHash, ...safe } = user;
   return safe;
 }
 
-async function register(data) {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email },
-  });
+async function registerClient(data) {
+  const email = String(data.email || '').trim().toLowerCase();
+  const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     throw httpError('User already exists', 409);
   }
+
+  const adminExists = await adminAuthService.findByEmail(email);
+  if (adminExists) {
+    throw httpError('Email reserved for admin account', 409);
+  }
+
   const hashedPassword = await hashPassword(data.password);
   const user = await prisma.user.create({
     data: {
-      email: data.email,
+      email,
       passwordHash: hashedPassword,
       fullName: data.fullName,
       phone: data.phone,
       membershipTier: data.membershipTier,
-      isActive: data.isActive,
-      role: data.role,
+      isActive: data.isActive ?? true,
+      authProvider: 'local',
+      emailVerified: true,
     },
   });
   return sanitizeUser(user);
 }
 
-async function login(email, password) {
+async function loginClient(email, password) {
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (!normalizedEmail || !password) {
     throw httpError('email and password are required');
+  }
+
+  const adminAccount = await adminAuthService.findByEmail(normalizedEmail);
+  if (adminAccount) {
+    throw httpError('Tài khoản quản trị — vui lòng đăng nhập tại cổng admin', 403);
   }
 
   const user = await prisma.user.findUnique({
@@ -57,40 +59,59 @@ async function login(email, password) {
   if (!isValid) {
     throw httpError('Invalid email or password', 401);
   }
-
   if (!user.isActive) {
     throw httpError('Account is disabled', 403);
   }
 
-  return user;
+  const tokens = await tokenService.createClientSession(user);
+  return {
+    ...tokens,
+    user: sanitizeUser(user),
+  };
 }
 
-async function issueToken(user) {
-  const token = await generateJWT({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-  });
-  return { user: sanitizeUser(user), token };
+async function refreshClientSession(rawRefreshToken) {
+  if (!rawRefreshToken) {
+    throw httpError('refreshToken is required', 400);
+  }
+
+  const userId = await tokenService.rotateClientRefresh(rawRefreshToken);
+  if (!userId) {
+    throw httpError('Refresh token không hợp lệ hoặc đã hết hạn', 401);
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.isActive) {
+    throw httpError('User not found', 404);
+  }
+
+  const tokens = await tokenService.createClientSession(user);
+  return {
+    ...tokens,
+    user: sanitizeUser(user),
+  };
 }
 
-/** Login client (React) — trả JWT, client tự lưu localStorage */
-async function loginClient(email, password) {
-  const user = await login(email, password);
-  return issueToken(user);
+async function logoutClient(rawRefreshToken) {
+  if (rawRefreshToken) {
+    await tokenService.revokeClientRefresh(rawRefreshToken);
+  }
+  return { ok: true };
 }
 
-/** Login admin — trả JWT, admin panel lưu localStorage riêng */
-async function loginAdmin(email, password) {
-  const user = await login(email, password);
-  assertAdminUser(user);
-  return issueToken(user);
+async function issueClientSession(user) {
+  const tokens = await tokenService.createClientSession(user);
+  return {
+    ...tokens,
+    user: sanitizeUser(user),
+  };
 }
 
 module.exports = {
-  register,
-  login,
+  registerClient,
   loginClient,
-  loginAdmin,
+  refreshClientSession,
+  logoutClient,
+  issueClientSession,
   sanitizeUser,
 };

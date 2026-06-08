@@ -6,7 +6,16 @@
   <a href="/admin/properties" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
 </div>
 
+<% if (mode !== 'edit') { %>
+<div class="alert alert-info small mb-4" role="note">
+  <strong>Gợi ý khi tạo mới:</strong> Điền tên và thành phố trước — slug sẽ tự gợi ý khi rời ô tên.
+  Sau khi lưu, vào <strong>Chi nhánh</strong> và <strong>Phòng</strong> để bổ sung chi tiết vận hành.
+  Các ô có <span class="text-danger">*</span> là bắt buộc.
+</div>
+<% } %>
+
 <%- include('../../partials/admin/propertyForm', {
   formAction: mode === 'edit' ? '/admin/properties/' + property.id : '/admin/properties',
   submitLabel: mode === 'edit' ? 'Cập nhật' : 'Tạo mới',
+  mode: mode,
 }) %>

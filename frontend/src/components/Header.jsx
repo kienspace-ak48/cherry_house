@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
 import { DEFAULT_HEADER_NAV_LINKS } from '../constants/headerNavLinks';
 import { getHeaderBookingHref } from '../lib/bookingContext';
+import { getClientUser, isClientLoggedIn } from '../lib/authStorage';
 
 const linkClass = (isActive) =>
   [
@@ -35,9 +36,18 @@ function isNavItemActive(location, item) {
   return pathname === pathOnly || pathname.startsWith(`${pathOnly}/`);
 }
 
+function shortName(fullName) {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'Thành viên';
+  if (parts.length === 1) return parts[0];
+  return parts[parts.length - 1];
+}
+
 function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const loggedIn = isClientLoggedIn();
+  const clientUser = getClientUser();
 
   const closeMenu = () => setMenuOpen(false);
   const bookingHref = getHeaderBookingHref();
@@ -81,13 +91,32 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
           </div>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Link
-              to="/profile"
-              className="hidden rounded-lg px-4 py-2 font-bold text-primary transition-all hover:bg-primary/5 lg:block"
-              onClick={closeMenu}
-            >
-              Thành viên
-            </Link>
+            {loggedIn ? (
+              <Link
+                to="/profile"
+                className="hidden rounded-lg px-4 py-2 font-bold text-primary transition-all hover:bg-primary/5 lg:block"
+                onClick={closeMenu}
+              >
+                {shortName(clientUser?.fullName)}
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-on-surface-variant transition-all hover:text-primary lg:block"
+                  onClick={closeMenu}
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  to="/register"
+                  className="hidden rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:brightness-110 lg:block"
+                  onClick={closeMenu}
+                >
+                  Đăng ký
+                </Link>
+              </>
+            )}
             <button
               type="button"
               className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface hover:bg-black/5 lg:hidden"
@@ -136,17 +165,44 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
                   </li>
                   );
                 })}
-                <li>
-                  <NavLink
-                    to="/profile"
-                    className={() =>
-                      linkClass(isNavItemActive(location, { to: '/profile' }))
-                    }
-                    onClick={closeMenu}
-                  >
-                    Tài khoản
-                  </NavLink>
-                </li>
+                {loggedIn ? (
+                  <li>
+                    <NavLink
+                      to="/profile"
+                      className={() =>
+                        linkClass(isNavItemActive(location, { to: '/profile' }))
+                      }
+                      onClick={closeMenu}
+                    >
+                      Tài khoản
+                    </NavLink>
+                  </li>
+                ) : (
+                  <>
+                    <li>
+                      <NavLink
+                        to="/login"
+                        className={() =>
+                          linkClass(isNavItemActive(location, { to: '/login' }))
+                        }
+                        onClick={closeMenu}
+                      >
+                        Đăng nhập
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/register"
+                        className={() =>
+                          linkClass(isNavItemActive(location, { to: '/register' }))
+                        }
+                        onClick={closeMenu}
+                      >
+                        Đăng ký
+                      </NavLink>
+                    </li>
+                  </>
+                )}
               </ul>
             </div>
           </div>

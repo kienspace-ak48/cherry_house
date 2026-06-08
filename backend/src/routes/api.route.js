@@ -28,7 +28,9 @@ const promoCodeRoute = require('./promo-code.route');
 const bookingRoute = require('./booking.route');
 
 const paymentRoute = require('./payment.route');
+const checkoutRoute = require('../modules/checkout/checkout.routes');
 const catalogRoute = require('./catalog.route');
+const clientAuthRoute = require('./clientAuth.route');
 const prisma = require('../config/prisma.config');
 const { isDbConnectionError } = require('../utils/http');
 
@@ -60,6 +62,9 @@ router.get('/tests', (req, res) => {
   res.json({ success: true, message: 'API is running' });
 });
 
+/** Auth khách (React) — đăng ký OTP, Google, đăng nhập */
+router.use('/auth', clientAuthRoute);
+
 /** Catalog public API — format chuẩn cho React (ưu tiên dùng prefix /catalog) */
 router.use('/catalog', catalogRoute);
 
@@ -88,6 +93,8 @@ router.use('/users', userRoute);
 router.use('/promo-codes', promoCodeRoute);
 
 router.use('/bookings', bookingRoute);
+
+router.use('/checkout', checkoutRoute);
 
 router.use('/payments', paymentRoute);
 

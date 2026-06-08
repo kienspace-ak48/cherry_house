@@ -1,12 +1,26 @@
 <div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div>
     <h2><%= mode === 'edit' ? 'Sửa phòng' : 'Thêm phòng' %></h2>
-    <p class="text-body-secondary mb-0 small">Form CRUD · bảng <code>rooms</code> (inventory)</p>
+    <p class="text-body-secondary mb-0 small">
+      Phòng vật lý (mã <code>HXH-101</code>) gắn với <strong>chi nhánh</strong> và <strong>loại phòng</strong> — khách đặt theo từng phòng cụ thể.
+    </p>
   </div>
-  <a href="/admin/rooms" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+  <a
+    href="/admin/rooms<%= typeof preselectBranchId !== 'undefined' && preselectBranchId ? '?branchId=' + preselectBranchId : (typeof preselectPropertyId !== 'undefined' && preselectPropertyId ? '?propertyId=' + preselectPropertyId : '') %>"
+    class="btn btn-outline-secondary btn-sm"
+  >← Danh sách</a>
 </div>
+
+<% if (mode !== 'edit') { %>
+<div class="alert alert-info small mb-4" role="note">
+  <strong>Bước 1:</strong> Chọn <strong>cơ sở</strong> rồi <strong>chi nhánh</strong> mà phòng thuộc về.
+  <strong>Bước 2:</strong> Chọn <strong>loại phòng</strong> (Standard, Deluxe…).
+  <strong>Bước 3:</strong> Đặt <strong>mã phòng</strong> duy nhất trong chi nhánh (vd: <code>HXH-101</code>).
+</div>
+<% } %>
 
 <%- include('../../partials/admin/roomForm', {
   formAction: mode === 'edit' ? '/admin/rooms/' + room.id : '/admin/rooms',
   submitLabel: mode === 'edit' ? 'Cập nhật' : 'Tạo mới',
+  mode: mode,
 }) %>

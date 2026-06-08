@@ -1,0 +1,5 @@
+{
+  "FLUTTER_ENV": "production",
+  "API_BASE_URL": "https://api.cherryhouse.vn/api",
+  "GOOGLE_WEB_CLIENT_ID": "PASTE_PRODUCTION_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+}

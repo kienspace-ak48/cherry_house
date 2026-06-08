@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import BookingBreadcrumbs from '../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../components/booking/BookingProgress';
 import BookingSearchBar from '../components/booking/BookingSearchBar';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
@@ -9,6 +10,7 @@ import {
   CTA,
   buildUrl,
   formatContextSummary,
+  getBookingStepHref,
   getBranchStepHref,
   getDiscoveryHref,
   parseBookingContext,
@@ -230,27 +232,29 @@ function RoomDetailPage() {
   return (
     <div className="pb-28 lg:pb-16">
       <div className={[LAYOUT_CONTAINER, 'pt-24'].join(' ')}>
-        {inBookingFlow && <BookingProgress current="rooms" />}
+        {inBookingFlow ? (
+          <BookingProgress
+            current="rooms"
+            context={context}
+            extra={{ slug: detail.slug, guests }}
+          />
+        ) : null}
 
-        {inBookingFlow && branchCtx && (
-          <nav className="mb-4 text-sm text-on-surface-variant">
-            <Link to={getDiscoveryHref(context)} className="hover:text-primary">
-              Cơ sở
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to={getBranchStepHref(context)} className="hover:text-primary">
-              {branchCtx.property.name}
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to={bookingBackHref} className="hover:text-primary">
-              Phòng
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="font-semibold text-on-surface">
-              {listingRoom?.code ?? detail.title}
-            </span>
-          </nav>
-        )}
+        {inBookingFlow && branchCtx ? (
+          <BookingBreadcrumbs
+            className="mb-4"
+            items={[
+              { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
+              { label: 'Cơ sở', href: getBookingStepHref('property', context) },
+              {
+                label: branchCtx.property.name,
+                href: getBookingStepHref('branch', context),
+              },
+              { label: branchCtx.branch.name, href: bookingBackHref },
+              { label: listingRoom?.code ?? detail.title, current: true },
+            ]}
+          />
+        ) : null}
 
         {inBookingFlow && (
           <div className="mb-6">

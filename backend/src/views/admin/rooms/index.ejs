@@ -1,50 +1,97 @@
+<% const newRoomLink = '/admin/rooms/new' + (filterBranchId
+  ? '?branchId=' + filterBranchId
+  : (filterPropertyId ? '?propertyId=' + filterPropertyId : '')); %>
+<% const hasFilters = filterPropertyId || filterBranchId || filterRoomTypeId || filterStatus || searchQ;
+  const groupedQuery = { ...listQueryBase, view: 'grouped' };
+  const tableQuery = { ...listQueryBase, view: 'table', page: 1 };
+  const collapseProperties = propertyGroups.length > 0;
+%>
+
 <div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div>
     <h2>Phòng (inventory)</h2>
-    <p class="text-body-secondary mb-0 small">Quản lý bảng <code>rooms</code> — phòng vật lý theo chi nhánh &amp; loại phòng</p>
+    <p class="text-body-secondary mb-0 small">
+      Mỗi phòng thuộc <strong>chi nhánh</strong> → <strong>cơ sở</strong>.
+      <% if (rooms.length > groupedThreshold) { %>
+      Nhiều phòng — nên dùng <strong>Bảng</strong> + lọc/tìm kiếm.
+      <% } %>
+    </p>
   </div>
-  <a href="/admin/rooms/new" class="btn btn-primary btn-sm">
-    <i class="fa-solid fa-plus me-1"></i> Thêm phòng
+  <a href="<%= newRoomLink %>" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-plus me-1"></i>
+    <% if (filterBranchId && selectedBranch) { %>Thêm phòng · <%= selectedBranch.name %>
+    <% } else if (filterPropertyId && selectedProperty) { %>Thêm phòng · <%= selectedProperty.name %>
+    <% } else { %>Thêm phòng<% } %>
   </a>
 </div>
 
-<% if (flash === 'created') { %>
-<div class="alert alert-success">Đã tạo phòng mới.</div>
-<% } else if (flash === 'updated') { %>
-<div class="alert alert-success">Đã cập nhật phòng.</div>
-<% } else if (flash === 'deleted') { %>
-<div class="alert alert-success">Đã xóa phòng.</div>
-<% } else if (flash === 'notfound') { %>
-<div class="alert alert-warning">Không tìm thấy phòng.</div>
-<% } else if (flash === 'error') { %>
-<div class="alert alert-danger"><%= typeof msg !== 'undefined' ? msg : 'Có lỗi xảy ra' %></div>
+<div class="admin-hierarchy-hint card admin-card mb-4">
+  <div class="card-body py-3 d-flex flex-wrap align-items-center gap-3">
+    <div class="admin-hierarchy-chain d-flex flex-wrap align-items-center gap-2 small">
+      <span class="admin-hierarchy-step"><i class="fa-solid fa-building text-body-secondary"></i> <strong>Cơ sở</strong></span>
+      <i class="fa-solid fa-chevron-right text-body-secondary admin-hierarchy-arrow"></i>
+      <span class="admin-hierarchy-step"><i class="fa-solid fa-store text-body-secondary"></i> <strong>Chi nhánh</strong></span>
+      <i class="fa-solid fa-chevron-right text-body-secondary admin-hierarchy-arrow"></i>
+      <span class="admin-hierarchy-step admin-hierarchy-step--active"><i class="fa-solid fa-door-open text-primary"></i> <strong>Phòng</strong></span>
+    </div>
+    <div class="ms-md-auto text-body-secondary small">
+      <strong><%= rooms.length %></strong> phòng<% if (searchQ) { %> (đã tìm)<% } %>
+    </div>
+  </div>
+</div>
+
+<% if (flash === 'created') { %><div class="alert alert-success">Đã tạo phòng mới.</div>
+<% } else if (flash === 'updated') { %><div class="alert alert-success">Đã cập nhật phòng.</div>
+<% } else if (flash === 'deleted') { %><div class="alert alert-success">Đã xóa phòng.</div>
+<% } else if (flash === 'notfound') { %><div class="alert alert-warning">Không tìm thấy phòng.</div>
+<% } else if (flash === 'error') { %><div class="alert alert-danger"><%= typeof msg !== 'undefined' ? msg : 'Có lỗi xảy ra' %></div>
 <% } %>
-<% if (typeof formError !== 'undefined' && formError) { %>
-<div class="alert alert-danger"><%= formError %></div>
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<% if (rooms.length > groupedThreshold && useGroupedView) { %>
+<div class="alert alert-warning small py-2 mb-3" role="note">
+  Có <strong><%= rooms.length %></strong> phòng — chế độ <strong>Nhóm</strong> có thể rất dài.
+  <a href="/admin/rooms<%= buildRoomsListQuery(tableQuery) %>" class="alert-link">Chuyển sang Bảng</a> (phân trang, gọn hơn).
+</div>
 <% } %>
 
 <div class="card admin-card mb-3">
   <div class="card-body py-3">
-    <form method="GET" action="/admin/rooms" class="row g-2 align-items-end">
-      <div class="col-md-4">
-        <label class="form-label small mb-1" for="filterBranchId">Chi nhánh</label>
-        <select class="form-select form-select-sm" id="filterBranchId" name="branchId">
+    <form method="GET" action="/admin/rooms" class="row g-2 align-items-end" id="roomsFilterForm">
+      <input type="hidden" name="view" value="<%= viewMode %>">
+      <div class="col-md-2 col-lg-2">
+        <label class="form-label small mb-1" for="filterPropertyId">Cơ sở</label>
+        <select class="form-select form-select-sm" id="filterPropertyId" name="propertyId">
           <option value="">— Tất cả —</option>
-          <% branches.forEach(function(br) { %>
-          <option value="<%= br.id %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %> (<%= br.code %>)</option>
+          <% properties.forEach(function(prop) { %>
+          <option value="<%= prop.id %>" <%= filterPropertyId === String(prop.id) ? 'selected' : '' %>><%= prop.name %></option>
           <% }); %>
         </select>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-2 col-lg-2">
+        <label class="form-label small mb-1" for="filterBranchId">Chi nhánh</label>
+        <select class="form-select form-select-sm" id="filterBranchId" name="branchId">
+          <option value="">— Tất cả —</option>
+          <% filterBranches.forEach(function(br) { %>
+          <option value="<%= br.id %>" data-property-id="<%= br.propertyId %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2 col-lg-2">
+        <label class="form-label small mb-1" for="searchQ">Tìm mã phòng</label>
+        <input class="form-control form-control-sm" type="search" id="searchQ" name="q" value="<%= searchQ %>" placeholder="HXH-101">
+      </div>
+      <div class="col-md-2 col-lg-2">
         <label class="form-label small mb-1" for="filterRoomTypeId">Loại phòng</label>
         <select class="form-select form-select-sm" id="filterRoomTypeId" name="roomTypeId">
           <option value="">— Tất cả —</option>
           <% roomTypes.forEach(function(rt) { %>
-          <option value="<%= rt.id %>" <%= filterRoomTypeId === String(rt.id) ? 'selected' : '' %>><%= rt.title %> · <%= rt.category %></option>
+          <option value="<%= rt.id %>" <%= filterRoomTypeId === String(rt.id) ? 'selected' : '' %>><%= rt.title %></option>
           <% }); %>
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2 col-lg-2">
         <label class="form-label small mb-1" for="filterStatus">Trạng thái</label>
         <select class="form-select form-select-sm" id="filterStatus" name="status">
           <option value="">— Tất cả —</option>
@@ -53,68 +100,92 @@
           <% }); %>
         </select>
       </div>
-      <div class="col-auto">
+      <div class="col-auto d-flex flex-wrap gap-1">
         <button type="submit" class="btn btn-sm btn-outline-primary">Lọc</button>
-        <% if (filterBranchId || filterRoomTypeId || filterStatus) { %>
-        <a href="/admin/rooms" class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
-        <% } %>
+        <% if (hasFilters) { %><a href="/admin/rooms?view=<%= viewMode %>" class="btn btn-sm btn-outline-secondary">Xóa lọc</a><% } %>
       </div>
     </form>
   </div>
 </div>
 
-<div class="card admin-card">
-  <div class="card-header d-flex align-items-center justify-content-between">
-    <strong>Danh sách</strong>
-    <span class="badge text-bg-secondary"><%= rooms.length %> mục</span>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div class="btn-group btn-group-sm" role="group" aria-label="Chế độ hiển thị">
+    <a href="/admin/rooms<%= buildRoomsListQuery(groupedQuery) %>" class="btn <%= useGroupedView ? 'btn-primary' : 'btn-outline-primary' %>">
+      <i class="fa-solid fa-sitemap me-1"></i>Nhóm
+    </a>
+    <a href="/admin/rooms<%= buildRoomsListQuery(tableQuery) %>" class="btn <%= !useGroupedView ? 'btn-primary' : 'btn-outline-primary' %>">
+      <i class="fa-solid fa-table me-1"></i>Bảng
+    </a>
   </div>
+  <span class="small text-body-secondary">
+    <% if (useGroupedView) { %>Theo cơ sở → chi nhánh<% } else { %>Trang <%= page %>/<%= totalPages %> · <%= pageSize %>/trang<% } %>
+  </span>
+</div>
+
+<% if (selectedBranch) { %>
+<div class="card admin-card admin-property-context mb-4">
+  <div class="card-body py-3">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <div class="flex-grow-1">
+        <div class="small text-body-secondary mb-1">
+          <% if (selectedProperty) { %><%= selectedProperty.name %> <i class="fa-solid fa-chevron-right mx-1"></i><% } %>
+          Chi nhánh đang lọc
+        </div>
+        <strong><%= selectedBranch.name %></strong> <code class="ms-1"><%= selectedBranch.code %></code>
+      </div>
+      <a href="/admin/rooms/new?branchId=<%= selectedBranch.id %>" class="btn btn-sm btn-primary">+ Phòng</a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<% if (!rooms.length) { %>
+<div class="card admin-card">
+  <div class="card-body text-center py-5 text-body-secondary">
+    <p class="mb-2"><%= hasFilters ? 'Không có phòng khớp bộ lọc.' : 'Chưa có phòng.' %></p>
+    <% if (hasFilters) { %><a href="/admin/rooms?view=<%= viewMode %>" class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
+    <% } else { %><a href="<%= newRoomLink %>" class="btn btn-sm btn-primary">Thêm phòng</a><% } %>
+  </div>
+</div>
+
+<% } else if (!useGroupedView) { %>
+<div class="card admin-card admin-rooms-table-view">
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover table-striped mb-0 align-middle">
-        <thead class="table-light">
+      <table class="table table-hover table-sm mb-0 align-middle">
+        <thead class="table-light sticky-top">
           <tr>
-            <th>ID</th>
-            <th>Ảnh</th>
-            <th>Mã</th>
+            <th>Cơ sở</th>
             <th>Chi nhánh</th>
-            <th>Loại phòng</th>
+            <th>Mã</th>
+            <th>Loại</th>
             <th>Giá/đêm</th>
-            <th>Trạng thái</th>
-            <th>Hiển thị</th>
+            <th>TT</th>
             <th class="text-end">Thao tác</th>
           </tr>
         </thead>
         <tbody>
-          <% if (!rooms.length) { %>
-          <tr><td colspan="9" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
-          <% } %>
-          <% rooms.forEach(function(r) { %>
+          <% tableRows.forEach(function(row) {
+            const r = row.room;
+            const br = row.branch;
+            const prop = row.property;
+          %>
           <tr>
-            <td><%= r.id %></td>
-            <td>
-              <% if (r.imageUrl) { %>
-              <img src="<%= r.imageUrl %>" alt="<%= r.altText || '' %>" class="admin-table-thumb">
-              <% } else { %>—<% } %>
+            <td class="small">
+              <span class="d-block text-truncate" style="max-width:10rem" title="<%= prop?.name || '' %>"><%= prop?.name || '—' %></span>
+              <span class="text-body-secondary"><%= prop?.city || '' %></span>
+            </td>
+            <td class="small">
+              <a href="/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'table', branchId: br?.id, page: 1 }) %>" class="text-decoration-none">
+                <%= br?.name || '—' %>
+              </a><br><code><%= br?.code || '' %></code>
             </td>
             <td><code><%= r.code %></code></td>
-            <td>
-              <%= r.branch?.name ?? r.branchId %><br>
-              <small class="text-body-secondary"><%= r.branch?.code ?? '' %></small>
-            </td>
-            <td>
-              <%= r.roomType?.title ?? r.roomTypeId %><br>
-              <small class="text-body-secondary"><%= r.roomType?.category ?? '' %></small>
-            </td>
-            <td><%= formatPriceVnd(r.priceVnd) %> ₫</td>
+            <td class="small"><%= r.roomType?.title || '—' %></td>
+            <td class="text-nowrap small"><%= formatPriceVnd(r.priceVnd) %> ₫</td>
             <td><span class="badge bg-<%= statusBadgeClass(r.status) %>"><%= statusLabel(r.status) %></span></td>
-            <td>
-              <% if (r.isActive) { %><span class="badge bg-success">On</span><% } else { %><span class="badge bg-secondary">Off</span><% } %>
-            </td>
             <td class="text-end text-nowrap">
-              <a href="/admin/rooms/<%= r.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
-              <form method="POST" action="/admin/rooms/<%= r.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa phòng <%= r.code %>?');">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
-              </form>
+              <a href="/admin/rooms/<%= r.id %>/edit" class="btn btn-sm btn-outline-primary py-0">Sửa</a>
             </td>
           </tr>
           <% }); %>
@@ -122,4 +193,183 @@
       </table>
     </div>
   </div>
+  <% if (totalPages > 1) { %>
+  <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+    <span class="small text-body-secondary"><%= tableTotalRows %> phòng</span>
+    <nav aria-label="Phân trang phòng">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'table', page: page - 1 }) %>">‹</a>
+        </li>
+        <% for (let p = Math.max(1, page - 2); p <= Math.min(totalPages, page + 2); p++) { %>
+        <li class="page-item <%= p === page ? 'active' : '' %>">
+          <a class="page-link" href="/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'table', page: p }) %>"><%= p %></a>
+        </li>
+        <% } %>
+        <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'table', page: page + 1 }) %>">›</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  <% } %>
 </div>
+
+<% } else { %>
+<% propertyGroups.forEach(function(propGroup, propIdx) {
+  const prop = propGroup.property;
+  const propRoomCount = propGroup.branchGroups.reduce((n, bg) => n + bg.rooms.length, 0);
+  const propExpanded = Boolean(filterPropertyId) || propIdx === 0;
+  const propCollapseId = 'prop-rooms-' + prop.id;
+%>
+<div class="card admin-card admin-room-property-group mb-3">
+  <% if (collapseProperties) { %>
+  <button
+    type="button"
+    class="card-header admin-branch-group-header py-2 admin-collapse-toggle w-100 border-0 text-start"
+    data-admin-collapse="#<%= propCollapseId %>"
+    aria-expanded="<%= propExpanded ? 'true' : 'false' %>"
+    aria-controls="<%= propCollapseId %>"
+  >
+    <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <div class="flex-grow-1 min-w-0">
+        <span class="h6 mb-0"><%= prop.name %></span>
+        <span class="badge text-bg-light border ms-2"><%= propRoomCount %> phòng</span>
+        <span class="text-body-secondary small ms-2"><%= prop.city %></span>
+      </div>
+      <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+      <span
+        role="link"
+        class="btn btn-sm btn-outline-secondary"
+        onclick="event.stopPropagation(); window.location.href='/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'grouped', propertyId: prop.id }) %>';"
+      >Lọc</span>
+    </div>
+  </button>
+  <% } else { %>
+  <div class="card-header admin-branch-group-header py-2">
+    <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <div class="flex-grow-1 min-w-0">
+        <span class="h6 mb-0"><%= prop.name %></span>
+        <span class="badge text-bg-light border ms-2"><%= propRoomCount %> phòng</span>
+        <span class="text-body-secondary small ms-2"><%= prop.city %></span>
+      </div>
+      <a href="/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'grouped', propertyId: prop.id }) %>" class="btn btn-sm btn-outline-secondary">Lọc</a>
+    </div>
+  </div>
+  <% } %>
+  <div class="collapse <%= propExpanded ? 'show' : '' %>" id="<%= propCollapseId %>">
+    <div class="card-body p-0">
+      <% propGroup.branchGroups.forEach(function(bg, idx) {
+        const br = bg.branch;
+        const branchRooms = bg.rooms;
+        const branchCollapseId = 'branch-rooms-' + br.id;
+        const hasMoreRooms = branchRooms.length > branchPreviewLimit;
+        const branchExpanded = !hasMoreRooms || Boolean(filterBranchId);
+        const previewRooms = hasMoreRooms ? branchRooms.slice(0, branchPreviewLimit) : branchRooms;
+        const moreRooms = hasMoreRooms ? branchRooms.slice(branchPreviewLimit) : [];
+      %>
+      <div class="admin-room-branch-block <%= idx > 0 ? 'border-top' : '' %>">
+        <div class="admin-room-branch-header px-3 py-2 d-flex flex-wrap gap-2 align-items-center">
+          <span class="admin-room-branch-icon text-primary"><i class="fa-solid fa-store"></i></span>
+          <div class="flex-grow-1 min-w-0">
+            <strong><%= br.name %></strong> <code class="small"><%= br.code %></code>
+          </div>
+          <span class="badge text-bg-light border"><%= branchRooms.length %> phòng</span>
+          <a href="/admin/rooms<%= buildRoomsListQuery({ ...listQueryBase, view: 'grouped', branchId: br.id }) %>" class="btn btn-sm btn-link">Lọc</a>
+          <a href="/admin/rooms/new?branchId=<%= br.id %>" class="btn btn-sm btn-outline-primary py-0">+</a>
+        </div>
+        <% if (!branchRooms.length) { %>
+        <div class="px-3 pb-2 small text-body-secondary">Chưa có phòng. <a href="/admin/rooms/new?branchId=<%= br.id %>">Thêm</a></div>
+        <% } else { %>
+        <%- include('../../partials/admin/roomRowsTable', {
+          rooms: previewRooms,
+          formatPriceVnd, statusLabel, statusBadgeClass,
+          tableClass: 'mb-0',
+        }) %>
+        <% if (moreRooms.length) { %>
+        <div class="collapse <%= branchExpanded ? 'show' : '' %>" id="<%= branchCollapseId %>">
+          <%- include('../../partials/admin/roomRowsTable', {
+            rooms: moreRooms,
+            formatPriceVnd, statusLabel, statusBadgeClass,
+            tableClass: 'mb-0 border-top',
+          }) %>
+        </div>
+        <div class="px-3 py-2 border-top admin-room-more-toggle">
+          <button
+            class="btn btn-sm btn-link text-decoration-none p-0 admin-room-more-btn"
+            type="button"
+            data-admin-collapse="#<%= branchCollapseId %>"
+            aria-expanded="<%= branchExpanded ? 'true' : 'false' %>"
+            aria-controls="<%= branchCollapseId %>"
+            data-more-count="<%= moreRooms.length %>"
+          >
+            Hiện thêm <%= moreRooms.length %> phòng
+          </button>
+        </div>
+        <% } %>
+        <% } %>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+<% }); %>
+<% } %>
+
+<script>
+  (function roomsFilterCascade() {
+    const form = document.getElementById('roomsFilterForm');
+    const propertySelect = document.getElementById('filterPropertyId');
+    const branchSelect = document.getElementById('filterBranchId');
+    if (!propertySelect || !branchSelect) return;
+    const allBranchOptions = Array.from(branchSelect.options).slice(1);
+    function syncBranchOptions() {
+      const propertyId = propertySelect.value;
+      const currentBranch = branchSelect.value;
+      branchSelect.innerHTML = '<option value="">— Tất cả —</option>';
+      allBranchOptions.forEach((opt) => {
+        if (!propertyId || opt.dataset.propertyId === propertyId) branchSelect.appendChild(opt.cloneNode(true));
+      });
+      const ok = Array.from(branchSelect.options).some((o) => o.value === currentBranch);
+      branchSelect.value = ok ? currentBranch : '';
+    }
+    propertySelect.addEventListener('change', () => { syncBranchOptions(); form.submit(); });
+    syncBranchOptions();
+  })();
+
+  (function adminCollapsePanels() {
+    function syncMoreBtn(btn, target) {
+      const count = btn.dataset.moreCount || '';
+      btn.textContent = target.classList.contains('show')
+        ? 'Thu gọn'
+        : `Hiện thêm ${count} phòng`;
+      btn.setAttribute('aria-expanded', target.classList.contains('show') ? 'true' : 'false');
+    }
+
+    function syncPropBtn(btn, target) {
+      btn.setAttribute('aria-expanded', target.classList.contains('show') ? 'true' : 'false');
+    }
+
+    document.querySelectorAll('[data-admin-collapse]').forEach((trigger) => {
+      const selector = trigger.getAttribute('data-admin-collapse');
+      const target = selector ? document.querySelector(selector) : null;
+      if (!target) return;
+
+      if (trigger.classList.contains('admin-room-more-btn')) {
+        syncMoreBtn(trigger, target);
+      } else if (trigger.classList.contains('admin-collapse-toggle')) {
+        syncPropBtn(trigger, target);
+      }
+
+      trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        target.classList.toggle('show');
+        if (trigger.classList.contains('admin-room-more-btn')) {
+          syncMoreBtn(trigger, target);
+        } else if (trigger.classList.contains('admin-collapse-toggle')) {
+          syncPropBtn(trigger, target);
+        }
+      });
+    });
+  })();
+</script>

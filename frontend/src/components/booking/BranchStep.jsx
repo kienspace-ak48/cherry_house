@@ -4,10 +4,12 @@ import BookingProgress from './BookingProgress';
 import BookingSearchBar from './BookingSearchBar';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import { formatPriceFrom, propertyBranchesPath } from '../../data/properties';
+import BookingBreadcrumbs from './BookingBreadcrumbs';
 import {
   CTA,
   buildUrl,
-  getDiscoveryHref,
+  getBookingStepHref,
+  getDiscoveryListHref,
 } from '../../lib/bookingContext';
 
 function branchLabel(name) {
@@ -27,14 +29,15 @@ export default function BranchStep({ property, context, onSearch }) {
     <div className="bg-surface pb-20">
       <section className="border-b border-black/5 bg-surface-container-low/80">
         <div className={[LAYOUT_CONTAINER, 'pt-24 pb-10 md:pt-28 md:pb-12'].join(' ')}>
-          <BookingProgress current="branch" />
-          <Link
-            to={getDiscoveryHref(context)}
-            className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
-          >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
-            Chọn cơ sở khác
-          </Link>
+          <BookingProgress current="branch" context={context} />
+          <BookingBreadcrumbs
+            className="mb-4"
+            items={[
+              { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
+              { label: 'Cơ sở', href: getBookingStepHref('property', context) },
+              { label: property.name, current: true },
+            ]}
+          />
           <h1 className="font-headline text-3xl font-extrabold text-on-surface md:text-4xl">
             Chọn chi nhánh
           </h1>

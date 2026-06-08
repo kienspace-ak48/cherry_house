@@ -1,12 +1,23 @@
 <div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div>
     <h2><%= mode === 'edit' ? 'Sửa chi nhánh' : 'Thêm chi nhánh' %></h2>
-    <p class="text-body-secondary mb-0 small">Form CRUD · bảng <code>branches</code> &amp; <code>branch_map_pins</code></p>
+    <p class="text-body-secondary mb-0 small">
+      Chi nhánh là <strong>đơn vị vật lý</strong> thuộc một cơ sở — mỗi chi nhánh có mã riêng, địa chỉ và danh sách phòng.
+    </p>
   </div>
-  <a href="/admin/branches" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+  <a href="/admin/branches<%= typeof preselectPropertyId !== 'undefined' && preselectPropertyId ? '?propertyId=' + preselectPropertyId : '' %>" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
 </div>
+
+<% if (mode !== 'edit') { %>
+<div class="alert alert-info small mb-4" role="note">
+  <strong>Bước 1:</strong> Chọn <strong>cơ sở lưu trú</strong> mà chi nhánh này thuộc về.
+  <strong>Bước 2:</strong> Đặt <strong>mã chi nhánh</strong> (dùng trên web, vd: <code>dl-hxh</code>).
+  Sau khi lưu, thêm <strong>phòng</strong> cho chi nhánh tại màn Phòng.
+</div>
+<% } %>
 
 <%- include('../../partials/admin/branchForm', {
   formAction: mode === 'edit' ? '/admin/branches/' + branch.id : '/admin/branches',
   submitLabel: mode === 'edit' ? 'Cập nhật' : 'Tạo mới',
+  mode: mode,
 }) %>

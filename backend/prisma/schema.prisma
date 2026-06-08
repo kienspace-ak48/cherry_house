@@ -56,10 +56,19 @@ enum MembershipTier {
   diamond
 }
 
-enum UserRole {
-  user
+enum AdminRole {
   admin
   super_admin
+}
+
+enum TokenSubject {
+  client
+  admin
+}
+
+enum AuthProvider {
+  local
+  google
 }
 
 // 1. properties
@@ -240,21 +249,74 @@ model InventoryRoom {
   @@map("rooms")
 }
 
-// 11. users
+// 11. users — chỉ khách (đặt phòng, React app)
 model User {
   id             Int            @id @default(autoincrement())
-  role           UserRole       @default(user)
   email          String         @unique @db.VarChar(255)
   passwordHash   String?        @map("password_hash") @db.VarChar(255)
   fullName       String         @map("full_name") @db.VarChar(255)
+  avatarUrl      String?        @map("avatar_url") @db.VarChar(500)
   phone          String?        @db.VarChar(30)
   membershipTier MembershipTier @default(standard) @map("membership_tier")
+  authProvider   AuthProvider   @default(local) @map("auth_provider")
+  googleId       String?        @unique @map("google_id") @db.VarChar(120)
+  emailVerified  Boolean        @default(false) @map("email_verified")
   isActive       Boolean        @default(true) @map("is_active")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   bookings       Booking[]
+  refreshTokens  RefreshToken[]
 
   @@map("users")
+}
+
+// Quản trị viên — tách bảng, đăng nhập /admin
+model Admin {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique @db.VarChar(255)
+  passwordHash  String         @map("password_hash") @db.VarChar(255)
+  fullName      String         @map("full_name") @db.VarChar(255)
+  role          AdminRole      @default(admin)
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  refreshTokens RefreshToken[]
+
+  @@map("admins")
+}
+
+// Refresh token (client hoặc admin) — lưu hash, có thể revoke
+model RefreshToken {
+  id          Int          @id @default(autoincrement())
+  tokenHash   String       @unique @map("token_hash") @db.VarChar(64)
+  subjectType TokenSubject @map("subject_type")
+  userId      Int?         @map("user_id")
+  adminId     Int?         @map("admin_id")
+  expiresAt   DateTime     @map("expires_at")
+  revokedAt   DateTime?    @map("revoked_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin       Admin?       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// Đăng ký email — OTP tạm (chưa tạo user cho đến khi verify)
+model RegistrationOtp {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  otpHash      String   @map("otp_hash") @db.VarChar(255)
+  fullName     String   @map("full_name") @db.VarChar(255)
+  phone        String?  @db.VarChar(30)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  expiresAt    DateTime @map("expires_at")
+  attempts     Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("registration_otps")
 }
 
 // 12. bookings

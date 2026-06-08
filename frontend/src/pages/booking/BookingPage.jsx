@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import bookingApi from '../../api/bookingApi';
 import propertyApi from '../../api/propertyApi';
 import roomApi from '../../api/roomApi';
+import BookingBreadcrumbs from '../../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../../components/booking/BookingProgress';
 import BookingSearchBar from '../../components/booking/BookingSearchBar';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
@@ -11,8 +13,10 @@ import { mapPropertyFromApi, mapRoomFromApi } from '../../lib/mapProperty';
 import {
   CTA,
   buildUrl,
+  getBookingStepHref,
   getBranchStepHref,
   getDiscoveryHref,
+  getDiscoveryListHref,
   getRoomDetailHref,
   parseBookingContext,
   resolveSearchDestination,
@@ -184,31 +188,62 @@ function BookingPage() {
     setCatalogLoading(true);
     setCatalogError(null);
 
-    roomApi.list({
-      propertySlug: context.property,
-      branchCode: context.branch,
-      isActive: 'true',
-    })
-      .then((res) => {
+    async function loadRooms() {
+      try {
+        const res = await roomApi.list({
+          propertySlug: context.property,
+          branchCode: context.branch,
+          isActive: 'true',
+        });
         if (cancelled) return;
         if (!res?.success) {
           throw new Error(res?.message || 'Không tải được phòng');
         }
-        setScopeRooms((res.data ?? []).map(mapRoomFromApi));
-      })
-      .catch((err) => {
+
+        let rooms = (res.data ?? []).map(mapRoomFromApi);
+
+        if (context.checkIn && context.checkOut) {
+          try {
+            const occ = await bookingApi.getOccupancy({
+              propertySlug: context.property,
+              branchCode: context.branch,
+              from: context.checkIn,
+              to: context.checkOut,
+            });
+            if (!cancelled && occ?.rooms?.length) {
+              const bySlug = new Map(
+                occ.rooms.map((r) => [r.detailSlug, r.occupancy]),
+              );
+              const byCode = new Map(occ.rooms.map((r) => [r.code, r.occupancy]));
+              rooms = rooms.map((room) => {
+                const occStatus = bySlug.get(room.detailSlug) ?? byCode.get(room.code);
+                if (occStatus === 'held') return { ...room, status: 'pending' };
+                if (occStatus === 'booked') return { ...room, status: 'booked' };
+                if (occStatus === 'available') return { ...room, status: 'available' };
+                return room;
+              });
+            }
+          } catch {
+            // Giữ trạng thái catalog nếu occupancy lỗi
+          }
+        }
+
+        if (!cancelled) setScopeRooms(rooms);
+      } catch (err) {
         if (cancelled) return;
         setScopeRooms([]);
         setCatalogError(err instanceof Error ? err.message : 'Lỗi tải phòng');
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setCatalogLoading(false);
-      });
+      }
+    }
+
+    loadRooms();
 
     return () => {
       cancelled = true;
     };
-  }, [context.property, context.branch]);
+  }, [context.property, context.branch, context.checkIn, context.checkOut]);
 
   const selectedBranchCtx = useMemo(() => {
     if (!propertyOnly || !context.branch) return null;
@@ -287,14 +322,14 @@ function BookingPage() {
       return (
         <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16 text-center'].join(' ')}>
           <p className="font-semibold text-red-800">{catalogError}</p>
-          <Link to={getDiscoveryHref(context)} className="mt-4 inline-block text-sm font-bold text-primary hover:underline">
+          <Link to={getDiscoveryListHref(context)} className="mt-4 inline-block text-sm font-bold text-primary hover:underline">
             Quay lại danh sách cơ sở
           </Link>
         </div>
       );
     }
     if (!propertyOnly) {
-      return <Navigate to={getDiscoveryHref(context)} replace />;
+      return <Navigate to={getDiscoveryListHref(context)} replace />;
     }
     if (propertyOnly.subBranches.length > 1) {
       return (
@@ -316,26 +351,24 @@ function BookingPage() {
 
   return (
     <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16'].join(' ')}>
-      <BookingProgress current="rooms" />
+      <BookingProgress current="rooms" context={context} />
 
       <header className="mb-6 max-w-3xl md:mb-8">
-        {selectedBranchCtx && (
-          <nav className="mb-2 text-sm text-on-surface-variant">
-            <Link to={getDiscoveryHref(context)} className="hover:text-primary">
-              Cơ sở
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to={branchStepHref} className="hover:text-primary">
-              {selectedBranchCtx.property.name}
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to={branchStepHref} className="hover:text-primary">
-              {selectedBranchCtx.branch.name}
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="font-semibold text-on-surface">Phòng</span>
-          </nav>
-        )}
+        {selectedBranchCtx ? (
+          <BookingBreadcrumbs
+            className="mb-2"
+            items={[
+              { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
+              { label: 'Cơ sở', href: getBookingStepHref('property', context) },
+              {
+                label: selectedBranchCtx.property.name,
+                href: getBookingStepHref('branch', context),
+              },
+              { label: selectedBranchCtx.branch.name, href: branchStepHref },
+              { label: 'Phòng', current: true },
+            ]}
+          />
+        ) : null}
         <h1 className="font-headline text-2xl font-bold text-on-surface sm:text-3xl md:text-4xl">
           {selectedBranchCtx
             ? `Phòng tại ${selectedBranchCtx.branch.name}`

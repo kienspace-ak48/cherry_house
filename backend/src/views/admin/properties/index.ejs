@@ -39,13 +39,14 @@
             <th>Địa điểm</th>
             <th>Loại</th>
             <th>Giá từ</th>
+            <th>Chi nhánh</th>
             <th>TT</th>
             <th class="text-end">Thao tác</th>
           </tr>
         </thead>
         <tbody>
           <% if (!properties.length) { %>
-          <tr><td colspan="8" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
+          <tr><td colspan="9" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
           <% } %>
           <% properties.forEach(function(p) { %>
           <tr>
@@ -63,9 +64,16 @@
             <td><span class="badge badge-kind-<%= p.kind %>"><%= kindLabel(p.kind) %></span></td>
             <td><%= Number(p.priceFromVnd).toLocaleString('vi-VN') %> ₫</td>
             <td>
+              <a href="/admin/branches?propertyId=<%= p.id %>" class="badge text-bg-light border text-decoration-none">
+                <%= p.branchCount ?? 0 %> CN
+              </a>
+            </td>
+            <td>
               <% if (p.isActive) { %><span class="badge bg-success">On</span><% } else { %><span class="badge bg-secondary">Off</span><% } %>
             </td>
             <td class="text-end text-nowrap">
+              <a href="/admin/branches?propertyId=<%= p.id %>" class="btn btn-sm btn-outline-secondary" title="Chi nhánh thuộc cơ sở này">CN</a>
+              <a href="/admin/branches/new?propertyId=<%= p.id %>" class="btn btn-sm btn-outline-secondary" title="Thêm chi nhánh">+</a>
               <a href="/admin/properties/<%= p.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
               <form method="POST" action="/admin/properties/<%= p.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa cơ sở này?');">
                 <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>

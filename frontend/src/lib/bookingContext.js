@@ -134,6 +134,11 @@ export function getDiscoveryHref(ctx = {}, extra = {}) {
   return buildUrl('/booking', discoveryContext(ctx), extra);
 }
 
+/** Quay lại danh sách cơ sở — không tự nhảy bước dù chỉ 1 kết quả. */
+export function getDiscoveryListHref(ctx = {}, extra = {}) {
+  return getDiscoveryHref(ctx, { ...extra, list: '1' });
+}
+
 /** Header / footer 「Đặt phòng」— luôn vào bước chọn cơ sở, không khôi phục lịch sử. */
 export function getHeaderBookingHref() {
   return '/booking';
@@ -234,7 +239,91 @@ export function getPropertyContinueHref(property, ctx) {
   return buildUrl('/booking', next);
 }
 
-/** Sau tìm kiếm — luôn về danh sách cơ sở (params trên URL), không tự nhảy bước. */
+/**
+ * Sau submit tìm kiếm — về discovery với bộ lọc mới.
+ * Bỏ property/branch/list; nếu chỉ 1 cơ sở PropertyDiscovery sẽ auto-advance.
+ */
 export function resolveSearchDestination(ctx) {
-  return buildUrl('/booking', ctx);
+  return buildUrl('/booking', discoveryContext(ctx), { list: '' });
+}
+
+/**
+ * @param {number} count
+ * @param {URLSearchParams | string} searchParams
+ */
+export function shouldAutoAdvanceProperty(count, searchParams) {
+  const params =
+    searchParams instanceof URLSearchParams
+      ? searchParams
+      : new URLSearchParams(typeof searchParams === 'string' ? searchParams : '');
+  return count === 1 && !params.get('list') && !params.get('property');
+}
+
+export const BOOKING_STEP_ORDER = ['search', 'property', 'branch', 'rooms', 'checkout'];
+
+/** Giữ ngày / địa điểm khi nhảy bước */
+function stepContextBase(ctx = {}) {
+  return {
+    city: ctx.city,
+    checkIn: ctx.checkIn,
+    checkOut: ctx.checkOut,
+    kind: ctx.kind,
+    q: ctx.q,
+  };
+}
+
+/**
+ * URL cho từng bước tiến trình (giữ checkIn/checkOut/property/branch).
+ *
+ * @param {'search'|'property'|'branch'|'rooms'|'checkout'} stepId
+ * @param {BookingContext} [ctx]
+ * @param {{ slug?: string; guests?: string }} [extra]
+ */
+export function getBookingStepHref(stepId, ctx = {}, extra = {}) {
+  const base = stepContextBase(ctx);
+
+  switch (stepId) {
+    case 'search':
+      return buildUrl('/booking', base, { focus: 'search', list: '1' });
+    case 'property':
+      return buildUrl('/booking', base, { list: '1' });
+    case 'branch':
+      if (!ctx.property) return getBookingStepHref('property', ctx, extra);
+      return buildUrl('/booking', { ...base, property: ctx.property });
+    case 'rooms':
+      if (!ctx.property || !ctx.branch) {
+        return ctx.property
+          ? getBookingStepHref('branch', ctx, extra)
+          : getBookingStepHref('property', ctx, extra);
+      }
+      return buildUrl('/booking', {
+        ...base,
+        property: ctx.property,
+        branch: ctx.branch,
+      });
+    case 'checkout':
+      if (!extra.slug) return getBookingStepHref('rooms', ctx, extra);
+      return buildUrl(
+        '/checkout',
+        { ...base, property: ctx.property, branch: ctx.branch },
+        { slug: extra.slug, guests: extra.guests },
+      );
+    default:
+      return '/booking';
+  }
+}
+
+/**
+ * Bước có thể mở (đủ dữ liệu trong context).
+ *
+ * @param {'search'|'property'|'branch'|'rooms'|'checkout'} stepId
+ * @param {BookingContext} [ctx]
+ * @param {{ slug?: string }} [extra]
+ */
+export function isBookingStepReachable(stepId, ctx = {}, extra = {}) {
+  if (stepId === 'search' || stepId === 'property') return true;
+  if (stepId === 'branch') return Boolean(ctx.property);
+  if (stepId === 'rooms') return Boolean(ctx.property && ctx.branch);
+  if (stepId === 'checkout') return Boolean(ctx.property && ctx.branch && extra.slug);
+  return false;
 }

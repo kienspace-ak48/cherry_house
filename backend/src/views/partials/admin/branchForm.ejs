@@ -1,9 +1,11 @@
 <% const b = typeof branch !== 'undefined' ? branch : {}; %>
 <% const pin = typeof mapPin !== 'undefined' ? mapPin : {}; %>
 <% const props = typeof properties !== 'undefined' ? properties : []; %>
+<% const isCreate = typeof mode !== 'undefined' && mode === 'create'; %>
 <% const selectedPropertyId = b.propertyId || (typeof preselectPropertyId !== 'undefined' ? preselectPropertyId : ''); %>
+<% const selectedProperty = props.find(function(p) { return String(p.id) === String(selectedPropertyId); }); %>
 
-<form method="POST" action="<%= formAction %>" class="admin-crud-form">
+<form method="POST" action="<%= formAction %>" class="admin-crud-form" id="branchForm">
   <% if (typeof formError !== 'undefined' && formError) { %>
   <div class="alert alert-danger"><%= formError %></div>
   <% } %>
@@ -11,42 +13,139 @@
   <div class="row g-4">
     <div class="col-lg-8">
       <div class="card admin-card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <strong>Thuộc cơ sở nào?</strong>
+          <span class="badge text-bg-light text-body-secondary fw-normal">Bắt buộc</span>
+        </div>
+        <div class="card-body">
+          <label class="form-label" for="propertyId">Cơ sở lưu trú <span class="text-danger">*</span></label>
+          <select class="form-select form-select-lg mb-3" id="propertyId" name="propertyId" required>
+            <option value="">— Chọn cơ sở —</option>
+            <% props.forEach(function(prop) { %>
+            <option
+              value="<%= prop.id %>"
+              data-slug="<%= prop.slug %>"
+              data-city="<%= prop.city %>"
+              data-kind="<%= prop.kind %>"
+              data-hero="<%= prop.heroImageUrl || '' %>"
+              <%= String(selectedPropertyId) === String(prop.id) ? 'selected' : '' %>
+            ><%= prop.name %> · <%= prop.city %></option>
+            <% }); %>
+          </select>
+          <div class="form-text mb-3">
+            Một cơ sở có thể có nhiều chi nhánh (vd: Cherry House Đà Lạt → Hồ Xuân Hương, Trung tâm…).
+            <a href="/admin/properties/new" target="_blank" rel="noopener">Tạo cơ sở mới</a> nếu chưa có trong danh sách.
+          </div>
+
+          <div
+            id="propertyPreview"
+            class="admin-branch-property-preview rounded p-3 <%= selectedProperty ? '' : 'd-none' %>"
+          >
+            <div class="d-flex gap-3 align-items-start">
+              <img
+                id="propertyPreviewImg"
+                src="<%= selectedProperty?.heroImageUrl || '' %>"
+                alt=""
+                class="admin-property-context-thumb rounded <%= selectedProperty?.heroImageUrl ? '' : 'd-none' %>"
+              >
+              <div class="flex-grow-1 min-w-0">
+                <div class="small text-body-secondary mb-1">Chi nhánh sẽ thuộc cơ sở</div>
+                <div class="fw-semibold" id="propertyPreviewName"><%= selectedProperty?.name || '' %></div>
+                <div class="small text-body-secondary mt-1">
+                  <span id="propertyPreviewCity"><%= selectedProperty?.city || '' %></span>
+                  · <code id="propertyPreviewSlug"><%= selectedProperty?.slug || '' %></code>
+                </div>
+                <a
+                  id="propertyPreviewLink"
+                  href="<%= selectedProperty ? '/admin/properties/' + selectedProperty.id + '/edit' : '#' %>"
+                  class="small"
+                  target="_blank"
+                  rel="noopener"
+                >Xem / sửa cơ sở</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
         <div class="card-header"><strong>Thông tin chi nhánh</strong></div>
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label" for="propertyId">Cơ sở lưu trú <span class="text-danger">*</span></label>
-              <select class="form-select" id="propertyId" name="propertyId" required>
-                <option value="">— Chọn cơ sở —</option>
-                <% props.forEach(function(prop) { %>
-                <option value="<%= prop.id %>" <%= String(selectedPropertyId) === String(prop.id) ? 'selected' : '' %>><%= prop.name %> · <%= prop.city %></option>
-                <% }); %>
-              </select>
+              <label class="form-label" for="code">Mã chi nhánh <span class="text-danger">*</span></label>
+              <input
+                class="form-control"
+                id="code"
+                name="code"
+                value="<%= b.code || '' %>"
+                placeholder="dl-hxh"
+                required
+              >
+              <div class="form-text">Dùng trên web/API (<code>?branch=dl-hxh</code>). Chữ thường, số, gạch ngang — unique trong cùng cơ sở.</div>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="code">Mã chi nhánh <span class="text-danger">*</span></label>
-              <input class="form-control" id="code" name="code" value="<%= b.code || '' %>" placeholder="dl-hxh" required>
-              <div class="form-text">Chữ thường, số, gạch ngang hoặc gạch dưới</div>
-            </div>
-            <div class="col-md-8">
-              <label class="form-label" for="name">Tên chi nhánh <span class="text-danger">*</span></label>
-              <input class="form-control" id="name" name="name" value="<%= b.name || '' %>" required>
-            </div>
-            <div class="col-md-4">
               <label class="form-label" for="roomCount">Số phòng</label>
-              <input class="form-control" type="number" min="0" id="roomCount" name="roomCount" value="<%= b.roomCount ?? 0 %>">
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                id="roomCount"
+                name="roomCount"
+                value="<%= isCreate && (b.roomCount === 0 || !b.roomCount) ? '' : (b.roomCount ?? '') %>"
+                placeholder="8"
+              >
+              <div class="form-text">Tổng phòng tại chi nhánh — cập nhật sau khi thêm phòng cũng được.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="name">Tên chi nhánh <span class="text-danger">*</span></label>
+              <input
+                class="form-control"
+                id="name"
+                name="name"
+                value="<%= b.name || '' %>"
+                placeholder="Chi nhánh Hồ Xuân Hương"
+                required
+              >
+              <div class="form-text">Tên hiển thị khi khách chọn chi nhánh (vd: <em>Chi nhánh Hồ Xuân Hương</em>).</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="tagline">Tagline</label>
-              <input class="form-control" id="tagline" name="tagline" value="<%= b.tagline || '' %>" placeholder="Mô tả ngắn hiển thị dưới tên">
+              <input
+                class="form-control"
+                id="tagline"
+                name="tagline"
+                value="<%= b.tagline || '' %>"
+                placeholder="Gần hồ Xuân Hương, đi bộ tới chợ Đà Lạt"
+              >
+              <div class="form-text">Một dòng mô tả ngắn dưới tên chi nhánh.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="address">Địa chỉ <span class="text-danger">*</span></label>
-              <input class="form-control" id="address" name="address" value="<%= b.address || '' %>" required>
+              <input
+                class="form-control"
+                id="address"
+                name="address"
+                value="<%= b.address || '' %>"
+                placeholder="Số 12, đường Trần Phú, Phường 1, TP. Đà Lạt"
+                required
+              >
+              <div class="form-text">Địa chỉ cụ thể của chi nhánh này (khác với địa chỉ tổng quát của cơ sở).</div>
             </div>
             <div class="col-md-6">
               <label class="form-label" for="price">Giá từ (VND) <span class="text-danger">*</span></label>
-              <input class="form-control" type="number" min="0" step="1000" id="price" name="price" value="<%= b.price ?? 0 %>" required>
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                step="1000"
+                id="price"
+                name="price"
+                value="<%= isCreate && (b.price === 0 || !b.price) ? '' : (b.price ?? '') %>"
+                placeholder="890000"
+                required
+              >
+              <div class="form-text">Giá thấp nhất/đêm tại chi nhánh này.</div>
             </div>
           </div>
         </div>
@@ -74,11 +173,13 @@
               value: b.imgUrl || '',
               label: 'Ảnh chi nhánh',
             }) %>
+            <div class="form-text mt-1">Ảnh đại diện riêng cho chi nhánh — khác ảnh bìa cơ sở.</div>
           </div>
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= b.isActive !== false ? 'checked' : '' %>>
             <label class="form-check-label" for="isActive">Đang hiển thị (Active)</label>
           </div>
+          <div class="form-text">Tắt để ẩn chi nhánh khỏi web khách.</div>
         </div>
       </div>
 
@@ -107,4 +208,41 @@
     });
   })();
 
+  (function propertyPreview() {
+    const select = document.getElementById('propertyId');
+    const preview = document.getElementById('propertyPreview');
+    if (!select || !preview) return;
+
+    const img = document.getElementById('propertyPreviewImg');
+    const nameEl = document.getElementById('propertyPreviewName');
+    const cityEl = document.getElementById('propertyPreviewCity');
+    const slugEl = document.getElementById('propertyPreviewSlug');
+    const linkEl = document.getElementById('propertyPreviewLink');
+
+    function updatePreview() {
+      const opt = select.options[select.selectedIndex];
+      if (!opt || !opt.value) {
+        preview.classList.add('d-none');
+        return;
+      }
+
+      preview.classList.remove('d-none');
+      const hero = opt.dataset.hero || '';
+      if (img) {
+        if (hero) {
+          img.src = hero;
+          img.classList.remove('d-none');
+        } else {
+          img.classList.add('d-none');
+        }
+      }
+      if (nameEl) nameEl.textContent = opt.textContent.split('·')[0].trim();
+      if (cityEl) cityEl.textContent = opt.dataset.city || '';
+      if (slugEl) slugEl.textContent = opt.dataset.slug || '';
+      if (linkEl) linkEl.href = '/admin/properties/' + opt.value + '/edit';
+    }
+
+    select.addEventListener('change', updatePreview);
+    updatePreview();
+  })();
 </script>

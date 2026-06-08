@@ -1,0 +1,37 @@
+<div class="table-responsive">
+  <table class="table table-hover align-middle admin-branch-group-table <%= typeof tableClass !== 'undefined' ? tableClass : '' %>">
+    <thead class="table-light">
+      <tr>
+        <th style="width:2.5rem"></th>
+        <th>Mã</th>
+        <th>Loại</th>
+        <th>Giá/đêm</th>
+        <th>TT</th>
+        <th class="text-end">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% rooms.forEach(function(r) { %>
+      <tr>
+        <td class="ps-3">
+          <% if (r.imageUrl) { %>
+          <img src="<%= r.imageUrl %>" alt="" class="admin-table-thumb">
+          <% } else { %>
+          <span class="admin-branch-row-icon text-body-secondary"><i class="fa-solid fa-door-open"></i></span>
+          <% } %>
+        </td>
+        <td><code><%= r.code %></code></td>
+        <td class="small"><%= r.roomType?.title ?? '—' %></td>
+        <td class="text-nowrap small"><%= formatPriceVnd(r.priceVnd) %> ₫</td>
+        <td><span class="badge bg-<%= statusBadgeClass(r.status) %>"><%= statusLabel(r.status) %></span></td>
+        <td class="text-end text-nowrap pe-3">
+          <a href="/admin/rooms/<%= r.id %>/edit" class="btn btn-sm btn-outline-primary py-0">Sửa</a>
+          <form method="POST" action="/admin/rooms/<%= r.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa phòng <%= r.code %>?');">
+            <button type="submit" class="btn btn-sm btn-outline-danger py-0">Xóa</button>
+          </form>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

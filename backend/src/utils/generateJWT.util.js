@@ -1,24 +1,23 @@
-const CNAME ="generateJWT.util.js ";
 const jwt = require('jsonwebtoken');
 
 const secret = process.env.JWT_SECRET;
 
-async function generateJWT(payload){
-    const expiresIn = process.env.JWT_EXPIRES_IN;
-    const token =await jwt.sign(
-        payload,
-        secret,
-        {
-            expiresIn: expiresIn,
-        }
-    );
-    return token;
+async function generateJWT(payload, expiresInOverride) {
+  const expiresIn =
+    expiresInOverride
+    || process.env.JWT_ACCESS_EXPIRES_IN
+    || process.env.JWT_EXPIRES_IN
+    || '15m';
+  const token = await jwt.sign(payload, secret, { expiresIn });
+  return token;
 }
-async function verifyJWT(token){
-    const decoded = await jwt.verify(token, secret);
-    return decoded;
+
+async function verifyJWT(token) {
+  const decoded = await jwt.verify(token, secret);
+  return decoded;
 }
+
 module.exports = {
-    generateJWT,
-    verifyJWT,
-}
+  generateJWT,
+  verifyJWT,
+};

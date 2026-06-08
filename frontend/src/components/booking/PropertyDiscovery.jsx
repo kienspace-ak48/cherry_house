@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import propertyApi from '../../api/propertyApi';
+import BookingBreadcrumbs from './BookingBreadcrumbs';
 import BookingProgress from './BookingProgress';
 import BookingSearchBar from './BookingSearchBar';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
@@ -12,9 +13,11 @@ import {
 import {
   CTA,
   formatContextSummary,
+  getBookingStepHref,
   getPropertyContinueHref,
   parseBookingContext,
   resolveSearchDestination,
+  shouldAutoAdvanceProperty,
 } from '../../lib/bookingContext';
 
 function PropertyCard({ property, context }) {
@@ -122,6 +125,13 @@ export default function PropertyDiscovery() {
     return filterPropertyList(properties, { q: context.q });
   }, [properties, context.q]);
 
+  useEffect(() => {
+    if (loading || error) return;
+    if (!shouldAutoAdvanceProperty(filtered.length, searchParams)) return;
+    const property = filtered[0];
+    navigate(getPropertyContinueHref(property, context), { replace: true });
+  }, [loading, error, filtered, searchParams, context, navigate]);
+
   const handleSearch = (ctx) => {
     navigate(resolveSearchDestination(ctx));
   };
@@ -132,7 +142,14 @@ export default function PropertyDiscovery() {
     <div className="bg-surface pb-20">
       <section className="border-b border-black/5 bg-surface-container-low/80">
         <div className={[LAYOUT_CONTAINER, 'pt-24 pb-10 md:pt-28 md:pb-12'].join(' ')}>
-          <BookingProgress current="property" />
+          <BookingProgress current="property" context={context} />
+          <BookingBreadcrumbs
+            className="mb-4"
+            items={[
+              { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },
+              { label: 'Chọn cơ sở', current: true },
+            ]}
+          />
           <p className="font-headline text-xs font-bold tracking-[0.2em] text-primary uppercase">
             Đặt phòng Cherry House
           </p>

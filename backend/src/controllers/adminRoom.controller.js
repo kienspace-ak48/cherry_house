@@ -1,7 +1,8 @@
 const inventoryRoomService = require('../services/inventoryRoom.service');
 const branchService = require('../services/branch.service');
 const roomTypeService = require('../services/roomType.service');
-const { renderAdminPage } = require('../utils/adminRender');
+const propertyService = require('../services/property.service');
+const { renderAdminPage, kindLabel } = require('../utils/adminRender');
 
 const ROOM_STATUSES = [
   { value: 'available', label: 'Còn phòng (available)' },
@@ -60,6 +61,91 @@ function formatPriceVnd(amount) {
   return Number(amount || 0).toLocaleString('vi-VN');
 }
 
+const ROOMS_GROUPED_THRESHOLD = 30;
+const TABLE_PAGE_SIZE = 25;
+const BRANCH_PREVIEW_LIMIT = 5;
+
+function filterRoomsBySearch(rooms, searchQ) {
+  const q = typeof searchQ === 'string' ? searchQ.trim().toLowerCase() : '';
+  if (!q) return rooms;
+  return rooms.filter((room) => {
+    const code = String(room.code || '').toLowerCase();
+    const desc = String(room.description || '').toLowerCase();
+    return code.includes(q) || desc.includes(q);
+  });
+}
+
+function enrichRoomsForTable(rooms, branches, properties) {
+  const branchById = new Map(branches.map((b) => [b.id, b]));
+  const propertyById = new Map(properties.map((p) => [p.id, p]));
+
+  return rooms
+    .map((room) => {
+      const branch = branchById.get(room.branchId);
+      const property = branch ? propertyById.get(branch.propertyId) : null;
+      return { room, branch, property };
+    })
+    .sort((a, b) => {
+      const byProperty = (a.property?.name || '').localeCompare(b.property?.name || '', 'vi');
+      if (byProperty !== 0) return byProperty;
+      const byBranch = (a.branch?.name || '').localeCompare(b.branch?.name || '', 'vi');
+      if (byBranch !== 0) return byBranch;
+      return (a.room.code || '').localeCompare(b.room.code || '', 'vi');
+    });
+}
+
+function buildRoomsListQuery(parts = {}) {
+  const params = new URLSearchParams();
+  Object.entries(parts).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
+  });
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+/**
+ * Nhóm phòng theo cơ sở → chi nhánh (giữ cấu trúc phân cấp trên UI admin)
+ */
+function groupRoomsForDisplay(rooms, branches, properties, options = {}) {
+  const { filterPropertyId = '', filterBranchId = '', hideEmptyBranches = false } = options;
+
+  const roomsByBranch = new Map();
+  for (const room of rooms) {
+    const list = roomsByBranch.get(room.branchId) || [];
+    list.push(room);
+    roomsByBranch.set(room.branchId, list);
+  }
+
+  let visibleProperties = properties;
+  if (filterPropertyId) {
+    visibleProperties = properties.filter((p) => String(p.id) === filterPropertyId);
+  }
+
+  return visibleProperties
+    .map((property) => {
+      let propertyBranches = branches.filter((b) => b.propertyId === property.id);
+      if (filterBranchId) {
+        propertyBranches = propertyBranches.filter((b) => String(b.id) === filterBranchId);
+      }
+
+      const branchGroups = propertyBranches
+        .map((branch) => ({
+          branch,
+          rooms: roomsByBranch.get(branch.id) || [],
+        }))
+        .filter((group) => {
+          if (filterBranchId) return true;
+          if (hideEmptyBranches) return group.rooms.length > 0;
+          return true;
+        });
+
+      return { property, branchGroups };
+    })
+    .filter((group) => group.branchGroups.length > 0);
+}
+
 async function list(req, res) {
   try {
     const filters = {};
@@ -67,11 +153,68 @@ async function list(req, res) {
     if (req.query.roomTypeId) filters.roomTypeId = req.query.roomTypeId;
     if (req.query.status) filters.status = req.query.status;
 
-    const [rooms, branches, roomTypes] = await Promise.all([
+    const filterPropertyId = req.query.propertyId ? String(req.query.propertyId) : '';
+    const filterBranchId = req.query.branchId ? String(req.query.branchId) : '';
+    const filterRoomTypeId = req.query.roomTypeId ? String(req.query.roomTypeId) : '';
+    const filterStatus = req.query.status ? String(req.query.status) : '';
+    const searchQ = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    const hasRoomFilters = Boolean(filterRoomTypeId || filterStatus || searchQ);
+
+    const [allRooms, branches, roomTypes, properties] = await Promise.all([
       inventoryRoomService.list(filters),
       branchService.listBranches(),
       roomTypeService.list(),
+      propertyService.listProperties(),
     ]);
+
+    const filterBranches = filterPropertyId
+      ? branches.filter((b) => String(b.propertyId) === filterPropertyId)
+      : branches;
+
+    let rooms = allRooms;
+    if (filterPropertyId && !filterBranchId) {
+      const branchIds = new Set(filterBranches.map((b) => b.id));
+      rooms = allRooms.filter((room) => branchIds.has(room.branchId));
+    }
+    rooms = filterRoomsBySearch(rooms, searchQ);
+
+    const requestedView = req.query.view === 'table' || req.query.view === 'grouped'
+      ? req.query.view
+      : '';
+    const viewMode = requestedView || (rooms.length > ROOMS_GROUPED_THRESHOLD ? 'table' : 'grouped');
+    const useGroupedView = viewMode === 'grouped';
+
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const tableRows = enrichRoomsForTable(rooms, branches, properties);
+    const totalPages = Math.max(1, Math.ceil(tableRows.length / TABLE_PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const paginatedTableRows = tableRows.slice(
+      (safePage - 1) * TABLE_PAGE_SIZE,
+      safePage * TABLE_PAGE_SIZE,
+    );
+
+    const listQueryBase = {
+      propertyId: filterPropertyId,
+      branchId: filterBranchId,
+      roomTypeId: filterRoomTypeId,
+      status: filterStatus,
+      q: searchQ,
+    };
+
+    const selectedBranch = filterBranchId
+      ? branches.find((b) => String(b.id) === filterBranchId) || null
+      : null;
+    const selectedProperty = filterPropertyId
+      ? properties.find((p) => String(p.id) === filterPropertyId) || null
+      : selectedBranch
+        ? properties.find((p) => p.id === selectedBranch.propertyId) || null
+        : null;
+
+    const propertyGroups = groupRoomsForDisplay(rooms, branches, properties, {
+      filterPropertyId,
+      filterBranchId,
+      hideEmptyBranches: hasRoomFilters,
+    });
 
     renderAdminPage(req, res, 'admin/rooms/index', {
       pageTitle: 'Phòng',
@@ -82,13 +225,33 @@ async function list(req, res) {
       ],
       rooms,
       branches,
+      filterBranches,
       roomTypes,
-      filterBranchId: req.query.branchId ? String(req.query.branchId) : '',
-      filterRoomTypeId: req.query.roomTypeId ? String(req.query.roomTypeId) : '',
-      filterStatus: req.query.status ? String(req.query.status) : '',
+      properties,
+      propertyGroups,
+      selectedBranch,
+      selectedProperty,
+      filterPropertyId,
+      filterBranchId,
+      filterRoomTypeId,
+      filterStatus,
+      hasRoomFilters,
+      searchQ,
+      viewMode,
+      useGroupedView,
+      tableRows: paginatedTableRows,
+      tableTotalRows: tableRows.length,
+      page: safePage,
+      totalPages,
+      pageSize: TABLE_PAGE_SIZE,
+      branchPreviewLimit: BRANCH_PREVIEW_LIMIT,
+      groupedThreshold: ROOMS_GROUPED_THRESHOLD,
+      buildRoomsListQuery,
+      listQueryBase,
       formatPriceVnd,
       statusLabel,
       statusBadgeClass,
+      kindLabel,
       roomStatuses: ROOM_STATUSES,
       flash: req.query.flash || null,
       msg: req.query.msg || null,
@@ -103,13 +266,33 @@ async function list(req, res) {
       ],
       rooms: [],
       branches: [],
+      filterBranches: [],
       roomTypes: [],
+      properties: [],
+      propertyGroups: [],
+      selectedBranch: null,
+      selectedProperty: null,
+      filterPropertyId: '',
       filterBranchId: '',
       filterRoomTypeId: '',
       filterStatus: '',
+      hasRoomFilters: false,
+      searchQ: '',
+      viewMode: 'grouped',
+      useGroupedView: true,
+      tableRows: [],
+      tableTotalRows: 0,
+      page: 1,
+      totalPages: 1,
+      pageSize: TABLE_PAGE_SIZE,
+      branchPreviewLimit: BRANCH_PREVIEW_LIMIT,
+      groupedThreshold: ROOMS_GROUPED_THRESHOLD,
+      buildRoomsListQuery,
+      listQueryBase: {},
       formatPriceVnd,
       statusLabel,
       statusBadgeClass,
+      kindLabel,
       roomStatuses: ROOM_STATUSES,
       formError: error.message,
     });
@@ -117,9 +300,10 @@ async function list(req, res) {
 }
 
 async function createForm(req, res) {
-  const [branches, roomTypes] = await Promise.all([
+  const [branches, roomTypes, properties] = await Promise.all([
     branchService.listBranches(),
     roomTypeService.list(),
+    propertyService.listProperties(),
   ]);
 
   renderAdminPage(req, res, 'admin/rooms/form', {
@@ -133,9 +317,11 @@ async function createForm(req, res) {
     mode: 'create',
     room: emptyRoom(),
     branches,
+    properties,
     roomTypes,
     roomStatuses: ROOM_STATUSES,
     preselectBranchId: req.query.branchId || '',
+    preselectPropertyId: req.query.propertyId || '',
     preselectRoomTypeId: req.query.roomTypeId || '',
   });
 }
@@ -145,9 +331,10 @@ async function create(req, res) {
     await inventoryRoomService.create(parseRoomFormBody(req.body));
     res.redirect('/admin/rooms?flash=created');
   } catch (error) {
-    const [branches, roomTypes] = await Promise.all([
+    const [branches, roomTypes, properties] = await Promise.all([
       branchService.listBranches(),
       roomTypeService.list(),
+      propertyService.listProperties(),
     ]);
     renderAdminPage(req, res, 'admin/rooms/form', {
       pageTitle: 'Thêm phòng',
@@ -160,6 +347,7 @@ async function create(req, res) {
       mode: 'create',
       room: parseRoomFormBody(req.body),
       branches,
+      properties,
       roomTypes,
       roomStatuses: ROOM_STATUSES,
       formError: error.message,
@@ -173,9 +361,10 @@ async function editForm(req, res) {
     if (!room) {
       return res.redirect('/admin/rooms?flash=notfound');
     }
-    const [branches, roomTypes] = await Promise.all([
+    const [branches, roomTypes, properties] = await Promise.all([
       branchService.listBranches(),
       roomTypeService.list(),
+      propertyService.listProperties(),
     ]);
 
     renderAdminPage(req, res, 'admin/rooms/form', {
@@ -189,6 +378,7 @@ async function editForm(req, res) {
       mode: 'edit',
       room,
       branches,
+      properties,
       roomTypes,
       roomStatuses: ROOM_STATUSES,
     });
@@ -202,9 +392,10 @@ async function update(req, res) {
     await inventoryRoomService.update(req.params.id, parseRoomFormBody(req.body));
     res.redirect('/admin/rooms?flash=updated');
   } catch (error) {
-    const [branches, roomTypes] = await Promise.all([
+    const [branches, roomTypes, properties] = await Promise.all([
       branchService.listBranches(),
       roomTypeService.list(),
+      propertyService.listProperties(),
     ]);
     const body = parseRoomFormBody(req.body);
     renderAdminPage(req, res, 'admin/rooms/form', {
@@ -218,6 +409,7 @@ async function update(req, res) {
       mode: 'edit',
       room: { ...body, id: req.params.id },
       branches,
+      properties,
       roomTypes,
       roomStatuses: ROOM_STATUSES,
       formError: error.message,

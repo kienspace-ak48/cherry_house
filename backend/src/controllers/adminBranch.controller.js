@@ -2,7 +2,7 @@ const branchService = require('../services/branch.service');
 const branchMapPinService = require('../services/branchMapPin.service');
 const branchMapPinRepository = require('../repositories/branchMapPin.repository');
 const propertyService = require('../services/property.service');
-const { renderAdminPage } = require('../utils/adminRender');
+const { renderAdminPage, kindLabel } = require('../utils/adminRender');
 
 function parseBranchFormBody(body) {
   const propertyId = Number.parseInt(body.propertyId, 10);
@@ -116,6 +116,21 @@ function formatPriceVnd(price) {
   return Number(price || 0).toLocaleString('vi-VN');
 }
 
+/** Nhóm chi nhánh theo cơ sở — giữ thứ tự properties, kể cả cơ sở chưa có chi nhánh */
+function groupBranchesByProperty(branches, properties) {
+  const byPropertyId = new Map();
+  for (const branch of branches) {
+    const list = byPropertyId.get(branch.propertyId) || [];
+    list.push(branch);
+    byPropertyId.set(branch.propertyId, list);
+  }
+
+  return properties.map((property) => ({
+    property,
+    branches: byPropertyId.get(property.id) || [],
+  }));
+}
+
 async function list(req, res) {
   try {
     const filters = {};
@@ -124,6 +139,15 @@ async function list(req, res) {
       branchService.listBranches(filters),
       loadProperties(),
     ]);
+
+    const filterPropertyId = req.query.propertyId ? String(req.query.propertyId) : '';
+    const propertyGroups = groupBranchesByProperty(branches, properties);
+    const selectedProperty = filterPropertyId
+      ? properties.find((p) => String(p.id) === filterPropertyId) || null
+      : null;
+    const visibleGroups = filterPropertyId
+      ? propertyGroups.filter((g) => String(g.property.id) === filterPropertyId)
+      : propertyGroups;
 
     renderAdminPage(req, res, 'admin/branches/index', {
       pageTitle: 'Chi nhánh',
@@ -134,8 +158,11 @@ async function list(req, res) {
       ],
       branches,
       properties,
-      filterPropertyId: req.query.propertyId ? String(req.query.propertyId) : '',
+      propertyGroups: visibleGroups,
+      selectedProperty,
+      filterPropertyId,
       formatPriceVnd,
+      kindLabel,
       flash: req.query.flash || null,
       msg: req.query.msg || null,
     });
@@ -149,8 +176,11 @@ async function list(req, res) {
       ],
       branches: [],
       properties: [],
+      propertyGroups: [],
+      selectedProperty: null,
       filterPropertyId: '',
       formatPriceVnd,
+      kindLabel,
       formError: error.message,
     });
   }

@@ -11,7 +11,8 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      '/auth': {
+      // Chỉ proxy admin auth (login/logout), không proxy /oauth/* của React SPA
+      '^/auth/(login|logout|register|admin)': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },

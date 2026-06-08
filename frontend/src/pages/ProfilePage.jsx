@@ -1,7 +1,11 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
-import { DEFAULT_PROFILE_CONTACT, mergeProfileContact, readProfileContact } from '../data/profileContact';
+import { mergeProfileContact } from '../data/profileContact';
+import { isClientLoggedIn } from '../lib/authStorage';
+import { logoutClient, refreshClientProfile } from '../api/authApi';
+import ProfileAvatar from '../components/profile/ProfileAvatar';
+import ProfileBookingsSection from '../components/profile/ProfileBookingsSection';
 
 const LINKED_FB_ICON =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBGKAj9tFjrVNtHuetTn1tT05psaCScaszQwrT8NfC5yR91owVK3aK99Mg5xBVIADDUy11BDyzf-xJzzVLNvyfUVSG0O2jqGalZBDiu17nqaE-aedGBMnbYszZumtfGf6c9my3eezp_nVTK8Mx3Id5a909Kz2YjPav7SeWywQ0uNdt-XUuwYR9CZz39VfqAlrUJmyagxPwIgoad4GiV1p2bnb7yKH8cRIlKIi18fenp7DYdBakuiCZvtPftY1iLDPHzbJAsuGj4iQ';
@@ -26,8 +30,14 @@ const MONTHS = [
 
 const YEARS_BIRTH = Array.from({ length: 60 }, (_, i) => String(1970 + i));
 
+const MEMBERSHIP_LABELS = {
+  standard: 'Tiêu chuẩn',
+  gold: 'Vàng',
+  diamond: 'Kim cương',
+};
+
 const INITIAL_FORM = {
-  fullName: DEFAULT_PROFILE_CONTACT.fullName,
+  fullName: '',
   gender: 'Nam',
   day: '12',
   month: '4',
@@ -48,34 +58,34 @@ function shortDisplayFromFullName(fullName) {
   return p.slice(-2).join(' ');
 }
 
-function initialsFromFullName(fullName) {
-  const p = fullName.trim().split(/\s+/).filter(Boolean);
-  if (p.length >= 2) return `${p[0][0] ?? ''}${p[p.length - 1][0] ?? ''}`.toUpperCase();
-  const s = fullName.trim();
-  return (s.slice(0, 2) || 'CH').toUpperCase();
-}
-
 const SIDEBAR = [
   { id: 'overview', icon: 'dashboard', label: 'Tổng quan' },
   { id: 'account', icon: 'person', label: 'Thông tin tài khoản' },
   { id: 'password', icon: 'lock', label: 'Mật khẩu & Bảo mật' },
-  { id: 'bookings', icon: 'event_available', label: 'Đặt chỗ của tôi', href: '/booking' },
+  { id: 'bookings', icon: 'event_available', label: 'Đặt chỗ của tôi' },
   { id: 'transactions', icon: 'list_alt', label: 'Danh sách giao dịch' },
   { id: 'notifications', icon: 'notifications', label: 'Thông báo' },
   { id: 'settings', icon: 'settings', label: 'Cài đặt', hasDividerBelow: true },
 ];
 
-function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword }) {
+function ProfileOverviewSection({
+  profileContact,
+  membershipLabel,
+  onEditProfile,
+  onEditPassword,
+  onViewBookings,
+}) {
   const greetingName = shortDisplayFromFullName(profileContact.fullName);
-  const initials = initialsFromFullName(profileContact.fullName);
 
   return (
     <div className="space-y-4">
       <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-linear-to-br from-primary/[0.07] via-white to-secondary-container/60 p-5 shadow-sm md:flex md:flex-row-reverse md:items-stretch md:justify-between md:gap-6">
         <div className="flex justify-end md:flex-col md:items-end md:justify-center">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white font-headline text-base font-bold text-primary shadow-inner shadow-black/[0.04] ring-2 ring-primary/15">
-            {initials}
-          </div>
+          <ProfileAvatar
+            fullName={profileContact.fullName}
+            avatarUrl={profileContact.avatarUrl}
+            size="lg"
+          />
         </div>
         <div className="mt-4 min-w-0 md:mt-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant/90">
@@ -99,13 +109,14 @@ function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword 
               <span className="material-symbols-outlined text-[16px]">edit_square</span>
               Chỉnh sửa hồ sơ
             </button>
-            <Link
-              to="/booking"
+            <button
+              type="button"
+              onClick={onViewBookings}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-white px-4 py-2 text-xs font-bold text-on-surface shadow-sm transition-colors hover:bg-surface-variant/40"
             >
               <span className="material-symbols-outlined text-[16px] text-primary">event_available</span>
               Đặt chỗ của tôi
-            </Link>
+            </button>
             <button
               type="button"
               onClick={onEditPassword}
@@ -129,10 +140,12 @@ function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword 
               <span className="text-[10px] font-bold uppercase tracking-wide opacity-75">Email</span>
               <span className="mt-0.5 break-all font-semibold text-on-surface">{profileContact.email}</span>
             </span>
-            <span className="flex flex-col rounded-lg bg-surface-container-low/70 px-3 py-2">
-              <span className="text-[10px] font-bold uppercase tracking-wide opacity-75">Điện thoại</span>
-              <span className="mt-0.5 font-semibold text-on-surface">{profileContact.phone}</span>
-            </span>
+            {profileContact.phone ? (
+              <span className="flex flex-col rounded-lg bg-surface-container-low/70 px-3 py-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide opacity-75">Điện thoại</span>
+                <span className="mt-0.5 font-semibold text-on-surface">{profileContact.phone}</span>
+              </span>
+            ) : null}
           </div>
           <button
             type="button"
@@ -150,7 +163,7 @@ function ProfileOverviewSection({ profileContact, onEditProfile, onEditPassword 
           </h3>
           <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
             Bạn là thành viên{' '}
-            <strong className="text-on-surface">Kim cương</strong>. Ưu đãi thành viên được tính tự động khi vào&nbsp;
+            <strong className="text-on-surface">{membershipLabel}</strong>. Ưu đãi thành viên được tính tự động khi vào&nbsp;
             <Link className="font-bold text-primary hover:underline" to="/booking">
               cơ sở &amp; phòng
             </Link>
@@ -197,13 +210,49 @@ function SidebarItem({ item, active, onSelect }) {
 }
 
 function ProfilePage() {
+  const navigate = useNavigate();
   const [section, setSection] = useState('overview');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(INITIAL_FORM);
-  const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(INITIAL_FORM), [form]);
-  const profileContact = readProfileContact();
+  const [formBaseline, setFormBaseline] = useState(INITIAL_FORM);
 
+  useEffect(() => {
+    if (!isClientLoggedIn()) {
+      navigate('/login', { replace: true });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await refreshClientProfile();
+        if (cancelled) return;
+        setUser(data);
+        const nextForm = { ...INITIAL_FORM, fullName: data.fullName || '' };
+        setForm(nextForm);
+        setFormBaseline(nextForm);
+      } catch {
+        if (!cancelled) navigate('/login', { replace: true });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const profileContact = {
+    fullName: user?.fullName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    avatarUrl: user?.avatarUrl || '',
+  };
+  const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(formBaseline), [form, formBaseline]);
+
+  const authLabel = user?.authProvider === 'google' ? 'Google' : 'Email';
+  const membershipLabel = MEMBERSHIP_LABELS[user?.membershipTier] || MEMBERSHIP_LABELS.standard;
   const sidebarName = shortDisplayFromFullName(profileContact.fullName);
-  const sidebarInitials = initialsFromFullName(profileContact.fullName);
 
   const placeholderSection = section in PLACEHOLDER_LABELS;
   const mainTab = section === 'password' ? 'password' : 'profile';
@@ -213,8 +262,17 @@ function ProfilePage() {
     if (placeholderSection) return 'Cài đặt';
     if (section === 'overview') return 'Tài khoản của bạn';
     if (section === 'password') return 'Mật khẩu & bảo mật';
+    if (section === 'bookings') return 'Đặt chỗ của tôi';
     return 'Thông tin tài khoản';
   })();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-surface pt-24">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[60vh] bg-surface pb-24 font-body text-sm lg:pb-14">
@@ -227,12 +285,14 @@ function ProfilePage() {
             <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
               <div className="border-b border-outline-variant/30 p-4">
                 <div className="mb-3 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-headline text-base font-bold text-primary">
-                    {sidebarInitials}
-                  </div>
+                  <ProfileAvatar
+                    fullName={profileContact.fullName}
+                    avatarUrl={profileContact.avatarUrl}
+                    size="sm"
+                  />
                   <div className="min-w-0">
                     <h3 className="truncate font-headline text-sm font-bold text-on-surface">{sidebarName}</h3>
-                    <p className="text-[11px] text-on-surface-variant">Google</p>
+                    <p className="text-[11px] text-on-surface-variant">{authLabel}</p>
                   </div>
                 </div>
                 <button
@@ -241,7 +301,7 @@ function ProfilePage() {
                 >
                   <div className="flex min-w-0 items-center gap-1.5 font-medium text-secondary">
                     <span className="material-symbols-outlined text-[16px] shrink-0">workspace_premium</span>
-                    <span className="truncate">Thành viên Kim cương</span>
+                    <span className="truncate">Thành viên {membershipLabel}</span>
                   </div>
                   <span className="material-symbols-outlined shrink-0 text-[16px] text-secondary">
                     chevron_right
@@ -264,7 +324,10 @@ function ProfilePage() {
                 <button
                   type="button"
                   className="mt-1 flex w-full items-center gap-2.5 px-5 py-2.5 text-sm text-on-surface-variant transition-colors hover:bg-surface-variant/50"
-                  onClick={() => console.info('Đăng xuất — demo')}
+                  onClick={() => {
+                    logoutClient();
+                    navigate('/', { replace: true });
+                  }}
                 >
                   <span className="material-symbols-outlined text-[18px]">logout</span>
                   <span>Đăng xuất</span>
@@ -299,11 +362,15 @@ function ProfilePage() {
 
             {placeholderSection ? (
               <ProfilePlaceholderCard title={PLACEHOLDER_LABELS[section]} />
+            ) : section === 'bookings' ? (
+              <ProfileBookingsSection />
             ) : section === 'overview' ? (
               <ProfileOverviewSection
                 profileContact={profileContact}
+                membershipLabel={membershipLabel}
                 onEditProfile={() => setSection('account')}
                 onEditPassword={() => setSection('password')}
+                onViewBookings={() => setSection('bookings')}
               />
             ) : mainTab === 'password' ? (
               <PasswordSection />
@@ -405,7 +472,7 @@ function ProfilePage() {
                       <button
                         type="button"
                         className="rounded-lg px-4 py-2 text-xs font-bold text-on-surface-variant transition-colors hover:bg-surface-variant/50"
-                        onClick={() => setForm(INITIAL_FORM)}
+                        onClick={() => setForm(formBaseline)}
                       >
                         Có lẽ để sau
                       </button>
@@ -413,7 +480,10 @@ function ProfilePage() {
                         type="button"
                         disabled={!dirty}
                         className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => mergeProfileContact({ fullName: form.fullName.trim() })}
+                        onClick={() => {
+                          mergeProfileContact({ fullName: form.fullName.trim() });
+                          setFormBaseline((b) => ({ ...b, fullName: form.fullName.trim() }));
+                        }}
                       >
                         Lưu
                       </button>
@@ -466,7 +536,9 @@ function ProfilePage() {
                       </button>
                     </div>
                     <div className="flex items-center justify-between rounded-lg bg-surface-container-low/50 p-3">
-                      <span className="text-sm font-semibold text-on-surface">{profileContact.phone}</span>
+                      <span className="text-sm font-semibold text-on-surface">
+                        {profileContact.phone || '—'}
+                      </span>
                       <span className="material-symbols-outlined cursor-pointer text-on-surface-variant">
                         more_vert
                       </span>
@@ -497,15 +569,19 @@ function ProfilePage() {
                           <img src={LINKED_GOOGLE_ICON} alt="" className="h-5 w-5" />
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm font-semibold text-on-surface">Google</span>
-                            <span
-                              className="material-symbols-outlined text-base text-tertiary"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              check_circle
-                            </span>
+                            {user?.authProvider === 'google' ? (
+                              <span
+                                className="material-symbols-outlined text-base text-tertiary"
+                                style={{ fontVariationSettings: "'FILL' 1" }}
+                              >
+                                check_circle
+                              </span>
+                            ) : null}
                           </div>
                         </div>
-                        <span className="text-xs font-medium text-on-surface-variant">Đã liên kết</span>
+                        <span className="text-xs font-medium text-on-surface-variant">
+                          {user?.authProvider === 'google' ? 'Đã liên kết' : 'Liên kết'}
+                        </span>
                       </div>
                     </div>
                   </div>

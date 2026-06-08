@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import DateRangePicker from './DateRangePicker';
 import {
   CTA,
-  buildUrl,
   discoveryContext,
   formValuesToContext,
   formatContextSummary,
@@ -50,6 +50,11 @@ export default function BookingSearchBar({
     onSubmit?.(merged);
   };
 
+  const handleRangeChange = ({ checkIn: inVal, checkOut: outVal }) => {
+    setCheckIn(inVal ?? '');
+    setCheckOut(outVal ?? '');
+  };
+
   if (variant === 'summary') {
     const summary = formatContextSummary(initialContext);
     return (
@@ -79,11 +84,11 @@ export default function BookingSearchBar({
 
   const isHero = variant === 'hero';
   const shellClass = isHero
-    ? 'mx-auto flex max-w-5xl flex-col gap-2 rounded-xl border border-outline-variant/15 bg-white p-2 shadow-2xl md:flex-row md:items-center md:rounded-full'
+    ? 'mx-auto flex max-w-5xl flex-col gap-2 rounded-2xl border border-white/20 bg-white/95 p-2 shadow-2xl backdrop-blur-md md:flex-row md:items-stretch md:rounded-full md:p-2'
     : 'flex flex-col gap-3 rounded-2xl border border-black/5 bg-white p-4 shadow-sm md:flex-row md:flex-wrap md:items-end';
 
   const fieldShell = isHero
-    ? 'flex flex-1 flex-col items-start px-6 py-3 text-left'
+    ? 'flex flex-1 flex-col items-start justify-center px-5 py-3 text-left md:px-6'
     : 'min-w-0 flex-1 md:min-w-[140px]';
 
   const labelClass = isHero
@@ -99,7 +104,7 @@ export default function BookingSearchBar({
     : 'min-w-0 flex-1 border-none bg-transparent text-sm font-medium text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0';
 
   const btnClass = isHero
-    ? 'rounded-xl bg-primary px-10 py-4 text-center font-headline text-sm font-bold tracking-widest text-on-primary uppercase transition-all hover:bg-primary-container active:scale-95 md:rounded-full'
+    ? 'rounded-xl bg-primary px-8 py-4 text-center font-headline text-sm font-bold tracking-widest text-on-primary uppercase shadow-lg shadow-primary/25 transition-all hover:bg-primary-container active:scale-[0.98] md:my-1.5 md:mr-1.5 md:rounded-full md:px-10'
     : 'rounded-xl bg-primary px-6 py-3 font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 md:shrink-0';
 
   return (
@@ -134,83 +139,51 @@ export default function BookingSearchBar({
         </div>
       </div>
 
-      {isHero && <div className="hidden h-10 w-px bg-surface-variant md:block" aria-hidden />}
+      {isHero && <div className="hidden w-px self-stretch bg-outline-variant/25 md:block" aria-hidden />}
 
-      <div className={fieldShell}>
-        <label className={labelClass} htmlFor={`${id}-check-in`}>
-          Ngày nhận phòng
-        </label>
-        <div className={inputWrapClass}>
-          <span
-            className={[
-              'material-symbols-outlined text-primary',
-              isHero ? 'text-xl' : '',
-            ].join(' ')}
-          >
-            calendar_today
-          </span>
-          <input
-            id={`${id}-check-in`}
-            className={inputClass}
-            type="date"
-            value={checkIn}
-            onChange={(e) => setCheckIn(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {isHero && <div className="hidden h-10 w-px bg-surface-variant md:block" aria-hidden />}
-
-      <div className={fieldShell}>
-        <label className={labelClass} htmlFor={`${id}-check-out`}>
-          Ngày trả phòng
-        </label>
-        <div className={inputWrapClass}>
-          <span
-            className={[
-              'material-symbols-outlined text-primary',
-              isHero ? 'text-xl' : '',
-            ].join(' ')}
-          >
-            event_busy
-          </span>
-          <input
-            id={`${id}-check-out`}
-            className={inputClass}
-            type="date"
-            value={checkOut}
-            onChange={(e) => setCheckOut(e.target.value)}
-          />
-        </div>
+      <div className={[fieldShell, isHero ? 'min-w-[220px] md:min-w-[280px]' : 'md:min-w-[200px]'].join(' ')}>
+        <DateRangePicker
+          checkIn={checkIn}
+          checkOut={checkOut}
+          onChange={handleRangeChange}
+          variant={isHero ? 'hero' : 'default'}
+          label="Ngày ở"
+          placeholder="Chọn ngày nhận – trả phòng"
+        />
       </div>
 
       {showKind && (
-        <div className={[fieldShell, isHero ? '' : 'md:max-w-[180px]'].join(' ')}>
-          <label className={labelClass} htmlFor={`${id}-kind`}>
-            Loại hình
-          </label>
-          <select
-            id={`${id}-kind`}
-            value={kind}
-            onChange={(e) => setKind(e.target.value)}
-            className={
-              isHero
-                ? 'w-full border-none bg-transparent p-0 text-sm font-medium text-on-surface focus:ring-0'
-                : 'w-full rounded-xl border border-black/10 bg-white px-3 py-3 text-sm font-medium text-on-surface'
-            }
-          >
-            {KIND_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <>
+          {isHero && <div className="hidden w-px self-stretch bg-outline-variant/25 md:block" aria-hidden />}
+          <div className={[fieldShell, isHero ? '' : 'md:max-w-[180px]'].join(' ')}>
+            <label className={labelClass} htmlFor={`${id}-kind`}>
+              Loại hình
+            </label>
+            <select
+              id={`${id}-kind`}
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              className={
+                isHero
+                  ? 'w-full border-none bg-transparent p-0 text-sm font-medium text-on-surface focus:ring-0'
+                  : 'w-full rounded-xl border border-black/10 bg-white px-3 py-3 text-sm font-medium text-on-surface'
+              }
+            >
+              {KIND_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
       )}
 
       <button type="submit" className={btnClass}>
-        {CTA.searchSubmit}
+        <span className="material-symbols-outlined align-middle text-lg md:hidden">search</span>
+        <span className={isHero ? '' : ''}>{CTA.searchSubmit}</span>
       </button>
     </form>
   );
 }
+

@@ -1,11 +1,22 @@
 <% const r = typeof room !== 'undefined' ? room : {}; %>
 <% const brs = typeof branches !== 'undefined' ? branches : []; %>
+<% const props = typeof properties !== 'undefined' ? properties : []; %>
 <% const rts = typeof roomTypes !== 'undefined' ? roomTypes : []; %>
 <% const statuses = typeof roomStatuses !== 'undefined' ? roomStatuses : []; %>
+<% const isCreate = typeof mode !== 'undefined' && mode === 'create'; %>
 <% const selectedBranchId = r.branchId || (typeof preselectBranchId !== 'undefined' ? preselectBranchId : ''); %>
+<% const selectedBranch = brs.find(function(b) { return String(b.id) === String(selectedBranchId); }); %>
+<% const selectedPropertyId = selectedBranch
+  ? selectedBranch.propertyId
+  : (typeof preselectPropertyId !== 'undefined' ? preselectPropertyId : ''); %>
 <% const selectedRoomTypeId = r.roomTypeId || (typeof preselectRoomTypeId !== 'undefined' ? preselectRoomTypeId : ''); %>
+<% function numField(val) {
+  if (isCreate && (val === 0 || val === null || val === undefined)) return '';
+  if (val === null || val === undefined) return '';
+  return val;
+} %>
 
-<form method="POST" action="<%= formAction %>" class="admin-crud-form">
+<form method="POST" action="<%= formAction %>" class="admin-crud-form" id="roomForm">
   <% if (typeof formError !== 'undefined' && formError) { %>
   <div class="alert alert-danger"><%= formError %></div>
   <% } %>
@@ -13,18 +24,62 @@
   <div class="row g-4">
     <div class="col-lg-8">
       <div class="card admin-card mb-4">
-        <div class="card-header"><strong>Thông tin phòng</strong></div>
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <strong>Thuộc chi nhánh nào?</strong>
+          <span class="badge text-bg-light text-body-secondary fw-normal">Bắt buộc</span>
+        </div>
         <div class="card-body">
           <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="filterPropertyId">Cơ sở lưu trú</label>
+              <select class="form-select" id="filterPropertyId">
+                <option value="">— Chọn cơ sở trước —</option>
+                <% props.forEach(function(prop) { %>
+                <option value="<%= prop.id %>" <%= String(selectedPropertyId) === String(prop.id) ? 'selected' : '' %>>
+                  <%= prop.name %> · <%= prop.city %>
+                </option>
+                <% }); %>
+              </select>
+              <div class="form-text">Lọc danh sách chi nhánh bên dưới.</div>
+            </div>
             <div class="col-md-6">
               <label class="form-label" for="branchId">Chi nhánh <span class="text-danger">*</span></label>
               <select class="form-select" id="branchId" name="branchId" required>
                 <option value="">— Chọn chi nhánh —</option>
                 <% brs.forEach(function(br) { %>
-                <option value="<%= br.id %>" <%= String(selectedBranchId) === String(br.id) ? 'selected' : '' %>><%= br.name %> · <%= br.code %></option>
+                <option
+                  value="<%= br.id %>"
+                  data-property-id="<%= br.propertyId %>"
+                  data-code="<%= br.code %>"
+                  data-name="<%= br.name %>"
+                  data-property-name="<%= br.property?.name || '' %>"
+                  <%= String(selectedBranchId) === String(br.id) ? 'selected' : '' %>
+                ><%= br.property?.name ? br.property.name + ' → ' : '' %><%= br.name %> · <%= br.code %></option>
                 <% }); %>
               </select>
+              <div class="form-text">
+                Phòng thuộc đúng một chi nhánh. Chưa có chi nhánh?
+                <a href="/admin/branches/new" target="_blank" rel="noopener">Tạo chi nhánh</a>
+              </div>
             </div>
+          </div>
+
+          <div id="branchPreview" class="admin-branch-property-preview rounded p-3 mt-3 <%= selectedBranch ? '' : 'd-none' %>">
+            <div class="small text-body-secondary mb-1">Phòng sẽ thuộc</div>
+            <div class="fw-semibold" id="branchPreviewPath">
+              <% if (selectedBranch) { %>
+              <%= selectedBranch.property?.name || 'Cơ sở' %> → <%= selectedBranch.name %>
+              <% } %>
+            </div>
+            <code id="branchPreviewCode"><%= selectedBranch?.code || '' %></code>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin phòng</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="roomTypeId">Loại phòng <span class="text-danger">*</span></label>
               <select class="form-select" id="roomTypeId" name="roomTypeId" required>
@@ -33,15 +88,33 @@
                 <option value="<%= rt.id %>" <%= String(selectedRoomTypeId) === String(rt.id) ? 'selected' : '' %>><%= rt.title %> (<%= rt.category %>)</option>
                 <% }); %>
               </select>
+              <div class="form-text">Mẫu phòng (Standard, Deluxe…) — mô tả chung, dùng chung nhiều phòng vật lý.</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label" for="code">Mã phòng <span class="text-danger">*</span></label>
-              <input class="form-control" id="code" name="code" value="<%= r.code || '' %>" placeholder="HXH-101" required>
-              <div class="form-text">Viết hoa, duy nhất trong chi nhánh</div>
+              <input
+                class="form-control"
+                id="code"
+                name="code"
+                value="<%= r.code || '' %>"
+                placeholder="HXH-101"
+                required
+              >
+              <div class="form-text">Duy nhất trong chi nhánh. Thường: mã CN + số phòng (vd: <code>dl-hxh-101</code> hoặc <code>HXH-101</code>).</div>
             </div>
             <div class="col-md-4">
               <label class="form-label" for="priceVnd">Giá/đêm (VND) <span class="text-danger">*</span></label>
-              <input class="form-control" type="number" min="0" step="1000" id="priceVnd" name="priceVnd" value="<%= r.priceVnd ?? 0 %>" required>
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                step="1000"
+                id="priceVnd"
+                name="priceVnd"
+                value="<%= numField(r.priceVnd) %>"
+                placeholder="890000"
+                required
+              >
             </div>
             <div class="col-md-4">
               <label class="form-label" for="status">Trạng thái đặt</label>
@@ -50,22 +123,30 @@
                 <option value="<%= s.value %>" <%= (r.status || 'available') === s.value ? 'selected' : '' %>><%= s.label %></option>
                 <% }); %>
               </select>
+              <div class="form-text">Trạng thái vận hành nhanh — booking thật sẽ cập nhật tự động sau.</div>
             </div>
-            <div class="col-12">
-              <label class="form-label" for="description">Mô tả <span class="text-danger">*</span></label>
-              <textarea class="form-control" id="description" name="description" rows="3" required placeholder="VD: Phòng 101 — tầng 1, view vườn"><%= r.description || '' %></textarea>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label" for="maxAdults">Số người lớn tối đa</label>
               <input class="form-control" type="number" min="1" id="maxAdults" name="maxAdults" value="<%= r.maxAdults ?? 2 %>">
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label" for="maxChildren">Số trẻ em tối đa</label>
               <input class="form-control" type="number" min="0" id="maxChildren" name="maxChildren" value="<%= r.maxChildren ?? 0 %>">
             </div>
             <div class="col-12">
+              <label class="form-label" for="description">Mô tả <span class="text-danger">*</span></label>
+              <textarea
+                class="form-control"
+                id="description"
+                name="description"
+                rows="3"
+                required
+                placeholder="Phòng 101 — tầng 1, view vườn, giường đôi, ban công nhỏ"
+              ><%= r.description || '' %></textarea>
+            </div>
+            <div class="col-12">
               <label class="form-label" for="altText">Alt text ảnh (SEO / accessibility)</label>
-              <input class="form-control" id="altText" name="altText" value="<%= r.altText || '' %>" placeholder="Mô tả ngắn cho ảnh phòng">
+              <input class="form-control" id="altText" name="altText" value="<%= r.altText || '' %>" placeholder="Phòng Standard view vườn — Cherry House Đà Lạt">
             </div>
           </div>
         </div>
@@ -83,11 +164,13 @@
               value: r.imageUrl || '',
               label: 'Ảnh phòng',
             }) %>
+            <div class="form-text mt-1">Ảnh riêng cho phòng này — hiển thị khi khách chọn phòng.</div>
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= r.isActive !== false ? 'checked' : '' %>>
             <label class="form-check-label" for="isActive">Hiển thị trên website (Active)</label>
           </div>
+          <div class="form-text">Tắt để ẩn phòng khỏi web khách.</div>
         </div>
       </div>
 
@@ -100,15 +183,49 @@
 </form>
 
 <script>
-  (function suggestCodeFromBranch() {
-    const branchEl = document.getElementById('branchId');
-    const codeEl = document.getElementById('code');
-    if (!branchEl || !codeEl || codeEl.value.trim()) return;
-    branchEl.addEventListener('change', () => {
-      if (codeEl.value.trim()) return;
-      const opt = branchEl.selectedOptions[0];
-      const m = opt?.textContent?.match(/·\s*([a-z0-9_-]+)\s*$/i);
-      if (m) codeEl.placeholder = m[1].toUpperCase().replace(/-/g, '') + '-101';
-    });
+  (function roomFormBranchCascade() {
+    const propertySelect = document.getElementById('filterPropertyId');
+    const branchSelect = document.getElementById('branchId');
+    const preview = document.getElementById('branchPreview');
+    const pathEl = document.getElementById('branchPreviewPath');
+    const codeEl = document.getElementById('branchPreviewCode');
+    const codeInput = document.getElementById('code');
+    if (!branchSelect) return;
+
+    const allBranchOptions = Array.from(branchSelect.options).slice(1);
+
+    function updateBranchPreview() {
+      const opt = branchSelect.selectedOptions[0];
+      if (!opt || !opt.value) {
+        preview?.classList.add('d-none');
+        return;
+      }
+      preview?.classList.remove('d-none');
+      const propName = opt.dataset.propertyName || 'Cơ sở';
+      if (pathEl) pathEl.textContent = propName + ' → ' + (opt.dataset.name || opt.textContent);
+      if (codeEl) codeEl.textContent = opt.dataset.code || '';
+      if (codeInput && !codeInput.value.trim() && opt.dataset.code) {
+        const prefix = opt.dataset.code.toUpperCase().replace(/-/g, '');
+        codeInput.placeholder = prefix + '-101';
+      }
+    }
+
+    function syncBranches() {
+      const propertyId = propertySelect?.value || '';
+      const current = branchSelect.value;
+      branchSelect.innerHTML = '<option value="">— Chọn chi nhánh —</option>';
+      allBranchOptions.forEach((opt) => {
+        if (!propertyId || opt.dataset.propertyId === propertyId) {
+          branchSelect.appendChild(opt.cloneNode(true));
+        }
+      });
+      const stillValid = Array.from(branchSelect.options).some((o) => o.value === current);
+      branchSelect.value = stillValid ? current : '';
+      updateBranchPreview();
+    }
+
+    propertySelect?.addEventListener('change', syncBranches);
+    branchSelect.addEventListener('change', updateBranchPreview);
+    syncBranches();
   })();
 </script>

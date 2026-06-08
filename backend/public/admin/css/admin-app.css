@@ -229,5 +229,146 @@ body > .wrapper > .body .admin-view-root {
   max-height: 70vh;
 }
 
+/* Branch list — property ↔ branch hierarchy */
+.admin-hierarchy-chain {
+  line-height: 1.4;
+}
+
+.admin-hierarchy-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: var(--cui-tertiary-bg);
+}
+
+.admin-hierarchy-step--active {
+  background: rgba(var(--cui-primary-rgb), 0.1);
+  color: var(--cherry-brand);
+}
+
+.admin-hierarchy-arrow {
+  font-size: 0.65rem;
+}
+
+.admin-property-context-thumb {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+}
+
+.admin-branch-group {
+  overflow: hidden;
+}
+
+.admin-branch-group-header {
+  background: var(--cui-tertiary-bg);
+  border-bottom: 1px solid var(--cui-border-color);
+}
+
+.admin-branch-group-thumb {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.admin-branch-group-thumb--placeholder {
+  width: 56px;
+  height: 42px;
+  background: var(--cui-body-bg);
+  border: 1px dashed var(--cui-border-color);
+}
+
+.admin-branch-group-title {
+  color: inherit;
+}
+
+.admin-branch-group-title:hover {
+  color: var(--cherry-brand);
+}
+
+.admin-branch-group-table thead th {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.admin-branch-row-icon {
+  display: inline-flex;
+  width: 48px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  background: var(--cui-tertiary-bg);
+  border-radius: 4px;
+}
+
+.admin-branch-property-preview {
+  border-left: 3px solid var(--cherry-brand);
+  background: rgba(var(--cui-primary-rgb), 0.04);
+}
+
+/* Room list — property → branch → room */
+.admin-room-property-group .card-body {
+  background: var(--cui-body-bg);
+}
+
+.admin-room-branch-block {
+  background: var(--cui-body-bg);
+}
+
+.admin-room-branch-header {
+  background: rgba(var(--cui-primary-rgb), 0.04);
+  border-bottom: 1px solid var(--cui-border-color);
+}
+
+.admin-room-branch-icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  background: var(--cui-body-bg);
+  border-radius: 6px;
+  border: 1px solid var(--cui-border-color);
+}
+
+.admin-rooms-table-view thead.sticky-top {
+  top: 0;
+  z-index: 2;
+}
+
+.admin-rooms-table-view .table-sm td,
+.admin-rooms-table-view .table-sm th {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.admin-collapse-toggle {
+  cursor: pointer;
+  user-select: none;
+  background: var(--cui-tertiary-bg);
+}
+
+button.admin-collapse-toggle:hover {
+  background: var(--cui-tertiary-bg);
+  filter: brightness(0.98);
+}
+
+.admin-room-property-group .collapse:not(.show) {
+  display: none;
+}
+
+.admin-collapse-toggle .admin-collapse-chevron {
+  transition: transform 0.2s ease;
+  opacity: 0.5;
+}
+
+.admin-collapse-toggle[aria-expanded="true"] .admin-collapse-chevron {
+  transform: rotate(180deg);
+}
+
+
 .admin-top-2 { top: 0.5rem; }
 .admin-right-5 { right: 1.25rem; }
