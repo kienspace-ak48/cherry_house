@@ -52,18 +52,18 @@ async function logout(req, res) {
   }
 }
 
-function googleStart(_req, res) {
+function googleStart(req, res) {
   try {
     const url = clientAuthService.getGoogleAuthUrl();
     res.redirect(url);
   } catch (error) {
-    const frontend = clientAuthService.getFrontendUrl();
+    const frontend = clientAuthService.getFrontendUrl(req);
     res.redirect(`${frontend}/register?error=${encodeURIComponent(error.message)}`);
   }
 }
 
 async function googleCallback(req, res) {
-  const frontend = clientAuthService.getFrontendUrl();
+  const frontend = clientAuthService.getFrontendUrl(req);
   try {
     const code = req.query.code;
     if (!code) throw new Error('Thiếu mã xác thực Google');

@@ -15,8 +15,32 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
-function getFrontendUrl() {
-  return process.env.CLIENT_APP_URL || 'http://localhost:5173';
+function isLocalhostUrl(url) {
+  return /localhost|127\.0\.0\.1/i.test(String(url || ''));
+}
+
+/**
+ * URL React sau OAuth. Prod: ưu tiên CLIENT_APP_URL; nếu thiếu/localhost thì suy từ Host (cùng domain VPS).
+ * @param {import('express').Request} [req]
+ */
+function getFrontendUrl(req) {
+  const fromEnv = String(process.env.CLIENT_APP_URL || '').trim().replace(/\/$/, '');
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (fromEnv && !(isProd && isLocalhostUrl(fromEnv))) {
+    return fromEnv;
+  }
+
+  if (req) {
+    const forwardedHost = String(req.get('x-forwarded-host') || '').trim();
+    const host = forwardedHost || String(req.get('host') || '').trim();
+    const proto = String(req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http')).trim();
+    if (host && !isLocalhostUrl(host)) {
+      return `${proto}://${host}`.replace(/\/$/, '');
+    }
+  }
+
+  return fromEnv || 'http://localhost:5173';
 }
 
 function getGoogleRedirectUri() {

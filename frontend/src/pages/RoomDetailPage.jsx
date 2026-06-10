@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { usePageSeo } from '../hooks/usePageSeo';
 import BookingBreadcrumbs from '../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../components/booking/BookingProgress';
 import BookingSearchBar from '../components/booking/BookingSearchBar';
@@ -197,6 +198,40 @@ function RoomDetailPage() {
 
   const inBookingFlow = Boolean(context.property && context.branch);
   const branchCtx = resolveBranch(context.property, context.branch);
+
+  const seoVars = useMemo(() => {
+    if (!detail) return {};
+    const roomDescription = Array.isArray(detail.paragraphs) && detail.paragraphs[0]
+      ? String(detail.paragraphs[0])
+      : (listingRoom?.description || '');
+    return {
+      roomName: detail.title,
+      roomCode: listingRoom?.code || detail.slug,
+      roomDescription: roomDescription.slice(0, 160),
+      price: formatPriceVnd(detail.priceVnd),
+      branchName: branchCtx?.branch.name || '',
+      propertyName: branchCtx?.property.name || '',
+      city: branchCtx?.property.city || '',
+    };
+  }, [detail, listingRoom, branchCtx]);
+
+  const seoBreadcrumbs = useMemo(() => {
+    if (!detail) return [];
+    if (branchCtx) {
+      return [
+        { name: 'Cơ sở lưu trú', path: '/properties' },
+        { name: branchCtx.property.name, path: `/properties/${branchCtx.property.slug}` },
+        {
+          name: branchCtx.branch.name,
+          path: `/properties/${branchCtx.property.slug}/branches/${branchCtx.branch.id}`,
+        },
+        { name: detail.title, path: `/room/${detail.slug}` },
+      ];
+    }
+    return [{ name: detail.title, path: `/room/${detail.slug}` }];
+  }, [detail, branchCtx]);
+
+  usePageSeo(seoVars, seoBreadcrumbs);
 
   if (!detail) {
     return (

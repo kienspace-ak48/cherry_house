@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { usePageSeo } from '../../hooks/usePageSeo';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import {
   formatPriceFrom,
@@ -19,6 +20,33 @@ export default function BranchDetailPage() {
   const [searchParams] = useSearchParams();
   const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
   const resolved = resolveBranch(propertySlug, branchId);
+
+  const seoVars = useMemo(
+    () => (resolved
+      ? {
+          propertyName: resolved.property.name,
+          branchName: resolved.branch.name,
+          city: resolved.property.city,
+          region: resolved.property.region,
+          tagline: resolved.branch.tagline || resolved.property.tagline || '',
+        }
+      : {}),
+    [resolved],
+  );
+  const seoBreadcrumbs = useMemo(
+    () => (resolved
+      ? [
+          { name: 'Cơ sở lưu trú', path: '/properties' },
+          { name: resolved.property.name, path: `/properties/${resolved.property.slug}` },
+          {
+            name: resolved.branch.name,
+            path: `/properties/${resolved.property.slug}/branches/${resolved.branch.id}`,
+          },
+        ]
+      : []),
+    [resolved],
+  );
+  usePageSeo(seoVars, seoBreadcrumbs);
 
   if (!resolved) {
     return (

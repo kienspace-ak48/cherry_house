@@ -407,7 +407,46 @@ model MediaImage {
   @@map("media_images")
 }
 
-// 16. promo_codes (bonus — thường đi kèm booking)
+// 16. seo_global_settings — cấu hình SEO toàn site (singleton id=1)
+model SeoGlobalSettings {
+  id                      Int      @id @default(1)
+  siteName                String   @map("site_name") @db.VarChar(120)
+  siteUrl                 String   @map("site_url") @db.VarChar(500)
+  defaultTitle            String   @map("default_title") @db.VarChar(255)
+  defaultDescription      String   @map("default_description") @db.Text
+  defaultKeywords         String?  @map("default_keywords") @db.VarChar(500)
+  ogImageUrl              String?  @map("og_image_url") @db.VarChar(500)
+  twitterSite             String?  @map("twitter_site") @db.VarChar(120)
+  themeColor              String?  @map("theme_color") @db.VarChar(20)
+  organizationName        String?  @map("organization_name") @db.VarChar(255)
+  organizationDescription String?  @map("organization_description") @db.Text
+  organizationPhone       String?  @map("organization_phone") @db.VarChar(30)
+  organizationEmail       String?  @map("organization_email") @db.VarChar(255)
+  organizationAddress     String?  @map("organization_address") @db.VarChar(500)
+  allowIndexing           Boolean  @default(true) @map("allow_indexing")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("seo_global_settings")
+}
+
+// 17. seo_page_templates — title/description theo từng loại trang
+model SeoPageTemplate {
+  id                  Int      @id @default(autoincrement())
+  pageKey             String   @unique @map("page_key") @db.VarChar(60)
+  label               String   @db.VarChar(120)
+  titleTemplate       String   @map("title_template") @db.VarChar(255)
+  descriptionTemplate String   @map("description_template") @db.Text
+  keywordsTemplate    String?  @map("keywords_template") @db.VarChar(500)
+  robots              String   @default("index, follow") @db.VarChar(40)
+  ogImageUrl          String?  @map("og_image_url") @db.VarChar(500)
+  sortOrder           Int      @default(0) @map("sort_order")
+  isActive            Boolean  @default(true) @map("is_active")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("seo_page_templates")
+}
+
+// 18. promo_codes (bonus — thường đi kèm booking)
 model PromoCode {
   id              Int      @id @default(autoincrement())
   code            String   @unique @db.VarChar(40)

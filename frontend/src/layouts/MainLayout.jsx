@@ -1,16 +1,23 @@
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import { Outlet } from 'react-router-dom'
+import { SeoProvider } from '../seo/SeoContext'
+import PageSeo from '../seo/PageSeo'
+import ChatBotWidget from '../components/chat/ChatBotWidget'
 
 function MainLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-surface">
-        <Header />
-        <main className="flex-1 pt-[4.25rem] md:pt-[4.75rem]">
-            <Outlet />
-        </main>
-        <Footer/>
-    </div>
+    <SeoProvider>
+      <PageSeo />
+      <div className="flex min-h-screen flex-col bg-surface">
+          <Header />
+          <main className="flex-1 pt-[4.25rem] md:pt-[4.75rem]">
+              <Outlet />
+          </main>
+          <Footer/>
+          <ChatBotWidget />
+      </div>
+    </SeoProvider>
   )
 }
 

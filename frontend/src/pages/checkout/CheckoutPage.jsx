@@ -7,7 +7,9 @@ import BookingBreadcrumbs from '../../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../../components/booking/BookingProgress';
 import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
-import { readProfileContact } from '../../data/profileContact';
+import { readProfileContact, syncProfileContactFromUser } from '../../data/profileContact';
+import { isClientLoggedIn } from '../../lib/authStorage';
+import { refreshClientProfile } from '../../api/authApi';
 import { resolveBranch } from '../../data/properties';
 import {
   buildUrl,
@@ -152,6 +154,23 @@ export default function CheckoutPage() {
 
   const checkInIso = searchParams.get('checkIn') || context.checkIn || '';
   const checkOutIso = searchParams.get('checkOut') || context.checkOut || '';
+
+  /** Đã đăng nhập → lấy họ tên / email / SĐT từ tài khoản (không dùng demo). */
+  useEffect(() => {
+    if (!isClientLoggedIn()) return undefined;
+    let cancelled = false;
+    refreshClientProfile()
+      .then((user) => {
+        if (cancelled || !user) return;
+        const contact = syncProfileContactFromUser(user);
+        setContactDraft(contact);
+        setProfileLocked(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Đồng bộ ngày từ URL context (trang chủ → booking → checkout) */
   useEffect(() => {

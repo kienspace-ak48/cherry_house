@@ -29,6 +29,7 @@ import {
   countByStatus,
   formatPriceVnd,
 } from './bookingData';
+import { usePageSeo } from '../../hooks/usePageSeo';
 
 const STATUS_LABEL = {
   available: 'Sẵn sàng',
@@ -267,6 +268,30 @@ function BookingPage() {
   }, [propertyOnly, context.branch]);
 
   const canShowRooms = Boolean(context.property && context.branch);
+
+  usePageSeo(
+    selectedBranchCtx
+      ? {
+          branchName: selectedBranchCtx.branch.name,
+          propertyName: selectedBranchCtx.property.name,
+          city: selectedBranchCtx.property.city,
+          region: selectedBranchCtx.property.region,
+        }
+      : propertyOnly
+        ? {
+            propertyName: propertyOnly.name,
+            city: propertyOnly.city,
+            region: propertyOnly.region,
+          }
+        : {},
+    selectedBranchCtx
+      ? [
+          { name: 'Cơ sở lưu trú', path: '/properties' },
+          { name: selectedBranchCtx.property.name, path: `/properties/${selectedBranchCtx.property.slug}` },
+          { name: selectedBranchCtx.branch.name, path: '/booking' },
+        ]
+      : [],
+  );
 
   useEffect(() => {
     if (

@@ -8,6 +8,8 @@ const vnpayPayService = require('../../services/vnpayPay.service');
 // const sepayPgService = require('../../services/sepayPg.service'); // SePay tạm tắt
 const bookingRepository = require('../booking/booking.repository');
 const { assertUserCanBook } = require('../../services/userBookingGuard.service');
+const { sendBookingConfirmationEmail } = require('../../services/bookingEmail.service');
+const clientAuthService = require('../../auth/clientAuth.service');
 
 /** Tạm tắt SePay — bỏ `bank` khỏi set cho đến khi bật lại */
 const PAYMENT_METHODS = new Set(['card', 'wallet']);
@@ -191,9 +193,18 @@ async function startCheckout(req, body = {}) {
     throw httpError('checkIn and checkOut are required');
   }
 
-  const guestName = typeof body.guestName === 'string' ? body.guestName.trim() : '';
-  const guestPhone = typeof body.guestPhone === 'string' ? body.guestPhone.trim() : '';
-  const guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : '';
+  let guestName = typeof body.guestName === 'string' ? body.guestName.trim() : '';
+  let guestPhone = typeof body.guestPhone === 'string' ? body.guestPhone.trim() : '';
+  let guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : '';
+
+  const userId = req.user?.id ? Number(req.user.id) : null;
+  if (Number.isInteger(userId) && userId > 0) {
+    const account = await clientAuthService.getMe(userId);
+    guestEmail = account.email || guestEmail;
+    guestName = guestName || account.fullName || '';
+    guestPhone = guestPhone || account.phone || '';
+  }
+
   if (!guestName || !guestPhone || !guestEmail) {
     throw httpError('guestName, guestPhone and guestEmail are required');
   }
@@ -216,7 +227,6 @@ async function startCheckout(req, body = {}) {
   );
   const pricing = calculatePricing(room.priceVnd, nights);
 
-  const userId = req.user?.id ? Number(req.user.id) : null;
   await assertUserCanBook({
     userId: Number.isInteger(userId) ? userId : null,
     guestEmail,
@@ -335,7 +345,13 @@ async function markBookingPaid(bookingCode, providerRef, providerDetail = '') {
     }
   });
 
-  return bookingRepository.findById(booking.id);
+  const confirmed = await bookingRepository.findById(booking.id);
+
+  sendBookingConfirmationEmail(confirmed).catch((err) => {
+    console.error('[checkout] booking confirmation email failed:', err?.message || err);
+  });
+
+  return confirmed;
 }
 
 async function handleSepayIpn(payload = {}) {

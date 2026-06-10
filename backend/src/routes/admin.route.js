@@ -9,6 +9,7 @@ const adminBookingController = require('../controllers/adminBooking.controller')
 const adminUserController = require('../controllers/adminUser.controller');
 const adminGalleryController = require('../controllers/adminGallery.controller');
 const adminBackupController = require('../controllers/adminBackup.controller');
+const adminSeoController = require('../controllers/adminSeo.controller');
 const requireSuperAdmin = require('../middleware/requireSuperAdmin.middleware');
 const { uploadImage } = require('../config/multer.config');
 
@@ -53,6 +54,10 @@ router.get('/backups', requireSuperAdmin, adminBackupController.index);
 router.post('/backups/create', requireSuperAdmin, adminBackupController.create);
 router.get('/backups/download/:filename', requireSuperAdmin, adminBackupController.download);
 router.post('/backups/delete/:filename', requireSuperAdmin, adminBackupController.remove);
+
+router.get('/seo', adminSeoController.index);
+router.post('/seo/global', adminSeoController.updateGlobal);
+router.post('/seo/pages/:pageKey', adminSeoController.updatePage);
 
 router.get('/gallery', adminGalleryController.page);
 router.get('/gallery/images', adminGalleryController.listImagesAjax);

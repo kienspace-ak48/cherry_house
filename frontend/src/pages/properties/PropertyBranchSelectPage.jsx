@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { usePageSeo } from '../../hooks/usePageSeo';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import { formatPriceFrom, resolveProperty } from '../../data/properties';
 import {
@@ -74,6 +75,29 @@ export default function PropertyBranchSelectPage() {
   const [searchParams] = useSearchParams();
   const property = resolveProperty(propertySlug);
   const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
+
+  const seoVars = useMemo(
+    () => (property
+      ? {
+          propertyName: property.name,
+          city: property.city,
+          region: property.region,
+          tagline: property.tagline || '',
+        }
+      : {}),
+    [property],
+  );
+  const seoBreadcrumbs = useMemo(
+    () => (property
+      ? [
+          { name: 'Cơ sở lưu trú', path: '/properties' },
+          { name: property.name, path: `/properties/${property.slug}` },
+          { name: 'Chọn chi nhánh', path: `/properties/${property.slug}/branches` },
+        ]
+      : []),
+    [property],
+  );
+  usePageSeo(seoVars, seoBreadcrumbs);
 
   if (!property) {
     return (

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { saveClientSession } from '../../lib/authStorage';
+import { syncProfileContactFromUser } from '../../data/profileContact';
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function AuthCallbackPage() {
     try {
       const user = JSON.parse(userRaw);
       saveClientSession({ token, refreshToken: refreshToken || undefined, user });
+      syncProfileContactFromUser(user);
       navigate('/profile', { replace: true });
     } catch {
       setError('Dữ liệu đăng nhập không hợp lệ');

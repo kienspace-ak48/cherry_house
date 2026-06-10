@@ -6,6 +6,7 @@ import {
   getClientToken,
   getClientRefreshToken,
 } from '../lib/authStorage';
+import { syncProfileContactFromUser } from '../data/profileContact';
 
 const VITE_ENV = import.meta.env.VITE_ENV;
 const API_BASE =
@@ -23,6 +24,7 @@ export async function verifyRegisterOtp(payload) {
   const { data } = await axiosClient.post('/auth/register/verify-otp', payload);
   if (!data.success) throw new Error(data.message || 'Xác thực thất bại');
   saveClientSession(data.data);
+  if (data.data?.user) syncProfileContactFromUser(data.data.user);
   return data.data;
 }
 
@@ -31,6 +33,7 @@ export async function loginClient({ email, password }) {
   const { data } = await axiosClient.post('/auth/login', { email, password });
   if (!data.success) throw new Error(data.message || 'Đăng nhập thất bại');
   saveClientSession(data.data);
+  if (data.data?.user) syncProfileContactFromUser(data.data.user);
   return data.data;
 }
 
@@ -61,6 +64,7 @@ export async function refreshClientProfile() {
   if (token || refreshToken) {
     saveClientSession({ token, refreshToken, user });
   }
+  syncProfileContactFromUser(user);
   return user;
 }
 

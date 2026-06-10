@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "nodemon --inspect server.js",
-    "build:client": "npm run build --prefix ../frontend",
+    "build:client": "npm install --prefix ../frontend && npm run build --prefix ../frontend",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",

@@ -82,11 +82,17 @@
     <li class="nav-divider"></li>
     <li class="nav-title admin-nav-section-heading">Site</li>
     <li class="nav-item">
+      <a class="nav-link<%= currentPage === 'seo' ? ' active' : '' %>" href="/admin/seo">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-search"></use></svg>
+        SEO &amp; Meta
+      </a>
+    </li>
+    <!-- <li class="nav-item">
       <a class="nav-link" href="/" target="_blank" rel="noopener">
         <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-external-link"></use></svg>
         Mở website
       </a>
-    </li>
+    </li> -->
   </ul>
   <div class="sidebar-footer border-top d-none d-md-flex">
     <button class="sidebar-toggler" type="button" data-coreui-toggle="unfoldable"></button>
