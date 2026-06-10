@@ -1,0 +1,101 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Chatbot AI — Prompt</h2>
+    <p class="text-body-secondary mb-0 small">
+      Tùy chỉnh system prompt (hướng dẫn Gemini), tên bot và lời chào. Dùng biến
+      <code>{{today}}</code>, <code>{{cities}}</code>, <code>{{assistantName}}</code> — tự thay khi chat.
+    </p>
+  </div>
+  <a class="btn btn-outline-primary btn-sm" href="/" target="_blank" rel="noopener">Mở website</a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'saved') { %>
+<div class="alert alert-success">Đã lưu cấu hình chatbot.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'reset') { %>
+<div class="alert alert-success">Đã khôi phục prompt mặc định.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="POST" action="/admin/chatbot" class="admin-crud-form">
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <strong>Hiển thị &amp; lời chào</strong>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="isEnabled" name="isEnabled" value="1" <%= settings.isEnabled ? 'checked' : '' %>>
+            <label class="form-check-label small" for="isEnabled">Bật chatbot</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="assistantName">Tên trợ lý</label>
+            <input class="form-control" id="assistantName" name="assistantName" value="<%= settings.assistantName %>" required maxlength="120">
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="welcomeMessage">Lời chào (tin nhắn đầu trên widget)</label>
+            <textarea class="form-control" id="welcomeMessage" name="welcomeMessage" rows="3" required><%= settings.welcomeMessage %></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3"><strong>System prompt (training)</strong></div>
+        <div class="card-body">
+          <div class="alert alert-light border small mb-3">
+            Biến tự động thay khi gửi chat:
+            <% placeholders.forEach(function(ph, idx) { %>
+            <code class="me-1"><%= ph %></code><%= idx < placeholders.length - 1 ? ',' : '' %>
+            <% }); %>
+          </div>
+          <label class="form-label" for="systemPrompt">Nội dung prompt</label>
+          <textarea
+            class="form-control font-monospace small"
+            id="systemPrompt"
+            name="systemPrompt"
+            rows="22"
+            required
+            spellcheck="false"
+          ><%= settings.systemPrompt %></textarea>
+          <div class="form-text mt-2">
+            Gợi ý: chỉ yêu cầu <strong>gọi tool</strong> khi hỏi phòng/giá — chào hỏi thì trả lời trực tiếp, không tra DB.
+          </div>
+        </div>
+        <div class="card-footer d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card mb-3">
+      <div class="card-header py-3"><strong>Mặc định</strong></div>
+      <div class="card-body small text-body-secondary">
+        <p class="mb-2">Khôi phục prompt + lời chào mặc định (có rule chỉ gọi tool khi cần dữ liệu phòng).</p>
+        <form method="POST" action="/admin/chatbot/reset" onsubmit="return confirm('Khôi phục prompt mặc định?');">
+          <button type="submit" class="btn btn-outline-warning btn-sm">Reset mặc định</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card admin-card">
+      <div class="card-header py-3"><strong>Tham khảo prompt mặc định</strong></div>
+      <div class="card-body p-0">
+        <pre class="small mb-0 p-3 bg-light border-0 rounded-bottom" style="max-height: 420px; overflow: auto; white-space: pre-wrap;"><%= defaultPrompt %></pre>
+      </div>
+    </div>
+
+    <div class="card admin-card mt-3">
+      <div class="card-header py-3"><strong>Kỹ thuật</strong></div>
+      <div class="card-body small text-body-secondary">
+        <ul class="mb-0 ps-3">
+          <li>API key: <code>GOOGLE_AI_STUDIO_API_KEY</code> trong <code>.env</code></li>
+          <li>Model: <code>GOOGLE_AI_MODEL</code> (khuyến nghị <code>gemini-2.5-flash-lite</code>)</li>
+          <li>Sau khi lưu — không cần restart server</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

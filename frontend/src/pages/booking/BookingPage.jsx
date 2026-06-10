@@ -9,6 +9,11 @@ import BookingSearchBar from '../../components/booking/BookingSearchBar';
 import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import BranchStep from '../../components/booking/BranchStep';
+import {
+  BookingInlineLoading,
+  BookingPageLoading,
+  awaitMinLoadingDelay,
+} from '../../components/booking/BookingLoading';
 import PropertyDiscovery from '../../components/booking/PropertyDiscovery';
 import RoomPickerGrid from '../../components/booking/RoomPickerGrid';
 import { mapPropertyFromApi, mapRoomFromApi } from '../../lib/mapProperty';
@@ -151,7 +156,8 @@ function BookingPage() {
 
   const [propertyOnly, setPropertyOnly] = useState(null);
   const [scopeRooms, setScopeRooms] = useState([]);
-  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [propertyLoading, setPropertyLoading] = useState(false);
+  const [roomsLoading, setRoomsLoading] = useState(false);
   const [catalogError, setCatalogError] = useState(null);
 
   const roomType = searchParams.get('type') || 'all';
@@ -168,7 +174,8 @@ function BookingPage() {
     }
 
     let cancelled = false;
-    setCatalogLoading(true);
+    const startedAt = Date.now();
+    setPropertyLoading(true);
     setCatalogError(null);
 
     propertyApi.getBySlug(context.property)
@@ -184,8 +191,10 @@ function BookingPage() {
         setPropertyOnly(null);
         setCatalogError(err instanceof Error ? err.message : 'Lỗi tải cơ sở');
       })
-      .finally(() => {
-        if (!cancelled) setCatalogLoading(false);
+      .finally(async () => {
+        if (cancelled) return;
+        await awaitMinLoadingDelay(startedAt);
+        if (!cancelled) setPropertyLoading(false);
       });
 
     return () => {
@@ -194,13 +203,18 @@ function BookingPage() {
   }, [context.property]);
 
   useEffect(() => {
+    setScopeRooms([]);
+  }, [context.property, context.branch]);
+
+  useEffect(() => {
     if (!context.property || !context.branch) {
-      setScopeRooms([]);
+      setRoomsLoading(false);
       return undefined;
     }
 
     let cancelled = false;
-    setCatalogLoading(true);
+    const startedAt = Date.now();
+    setRoomsLoading(true);
     setCatalogError(null);
 
     async function loadRooms() {
@@ -249,7 +263,10 @@ function BookingPage() {
         setScopeRooms([]);
         setCatalogError(err instanceof Error ? err.message : 'Lỗi tải phòng');
       } finally {
-        if (!cancelled) setCatalogLoading(false);
+        if (!cancelled) {
+          await awaitMinLoadingDelay(startedAt);
+          if (!cancelled) setRoomsLoading(false);
+        }
       }
     }
 
@@ -393,12 +410,8 @@ function BookingPage() {
   };
 
   if (context.property && !context.branch) {
-    if (catalogLoading && !propertyOnly) {
-      return (
-        <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16 text-center text-sm text-on-surface-variant'].join(' ')}>
-          Đang tải cơ sở từ API…
-        </div>
-      );
+    if (propertyLoading && !propertyOnly) {
+      return <BookingPageLoading title="Đang tải" message="Đang tải thông tin cơ sở…" />;
     }
     if (catalogError && !propertyOnly) {
       return (
@@ -422,7 +435,7 @@ function BookingPage() {
         />
       );
     }
-    return null;
+    return <BookingPageLoading title="Đang tải" message="Đang chuyển tới chi nhánh…" />;
   }
 
   if (!canShowRooms) {
@@ -430,6 +443,21 @@ function BookingPage() {
   }
 
   const branchStepHref = getBranchStepHref(context);
+
+  if (propertyLoading || (roomsLoading && scopeRooms.length === 0)) {
+    return <BookingPageLoading title="Đang tải" message="Đang tải phòng và trạng thái trống…" />;
+  }
+
+  if (catalogError && scopeRooms.length === 0) {
+    return (
+      <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16 text-center'].join(' ')}>
+        <p className="font-semibold text-red-800">{catalogError}</p>
+        <Link to={getDiscoveryListHref(context)} className="mt-4 inline-block text-sm font-bold text-primary hover:underline">
+          Quay lại danh sách cơ sở
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className={[LAYOUT_CONTAINER, 'pt-24 pb-16'].join(' ')}>
@@ -586,6 +614,12 @@ function BookingPage() {
           ))}
         </div>
       </div>
+
+      {roomsLoading && scopeRooms.length > 0 ? (
+        <div className="mb-4">
+          <BookingInlineLoading message="Đang cập nhật trạng thái phòng theo ngày đã chọn…" />
+        </div>
+      ) : null}
 
       {viewMode === 'picker' ? (
         <RoomPickerGrid

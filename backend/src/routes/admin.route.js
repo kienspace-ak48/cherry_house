@@ -10,6 +10,7 @@ const adminUserController = require('../controllers/adminUser.controller');
 const adminGalleryController = require('../controllers/adminGallery.controller');
 const adminBackupController = require('../controllers/adminBackup.controller');
 const adminSeoController = require('../controllers/adminSeo.controller');
+const adminChatBotController = require('../controllers/adminChatBot.controller');
 const requireSuperAdmin = require('../middleware/requireSuperAdmin.middleware');
 const { uploadImage } = require('../config/multer.config');
 
@@ -58,6 +59,10 @@ router.post('/backups/delete/:filename', requireSuperAdmin, adminBackupControlle
 router.get('/seo', adminSeoController.index);
 router.post('/seo/global', adminSeoController.updateGlobal);
 router.post('/seo/pages/:pageKey', adminSeoController.updatePage);
+
+router.get('/chatbot', adminChatBotController.index);
+router.post('/chatbot', adminChatBotController.update);
+router.post('/chatbot/reset', adminChatBotController.reset);
 
 router.get('/gallery', adminGalleryController.page);
 router.get('/gallery/images', adminGalleryController.listImagesAjax);

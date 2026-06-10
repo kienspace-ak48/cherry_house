@@ -1,5 +1,11 @@
 import axiosClient from './axiosClient';
 
+export async function fetchChatConfig() {
+  const { data } = await axiosClient.get('/chat/config');
+  if (!data?.success || !data?.data) return null;
+  return data.data;
+}
+
 /**
  * @param {{ message: string; history?: Array<{ role: 'user' | 'assistant'; content: string }> }} payload
  */

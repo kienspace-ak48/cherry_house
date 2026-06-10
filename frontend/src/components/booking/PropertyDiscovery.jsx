@@ -10,6 +10,7 @@ import {
   mapPropertyFromApi,
   propertyApiQueryFromContext,
 } from '../../lib/mapProperty';
+import { BookingPageLoading, awaitMinLoadingDelay } from './BookingLoading';
 import {
   CTA,
   formatContextSummary,
@@ -78,6 +79,7 @@ export default function PropertyDiscovery() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
+  const searchKey = searchParams.toString();
 
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,10 +97,14 @@ export default function PropertyDiscovery() {
     let cancelled = false;
 
     async function loadProperties() {
+      const startedAt = Date.now();
       setLoading(true);
       setError(null);
+      setProperties([]);
       try {
-        const res = await propertyApi.list(propertyApiQueryFromContext(context));
+        const res = await propertyApi.list(
+          propertyApiQueryFromContext({ city: context.city, kind: context.kind }),
+        );
         if (cancelled) return;
 
         if (!res?.success) {
@@ -112,7 +118,10 @@ export default function PropertyDiscovery() {
         setError(message);
         setProperties([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          await awaitMinLoadingDelay(startedAt);
+          if (!cancelled) setLoading(false);
+        }
       }
     }
 
@@ -120,25 +129,37 @@ export default function PropertyDiscovery() {
     return () => {
       cancelled = true;
     };
-  }, [context.city, context.kind]);
+  }, [context.city, context.kind, searchKey]);
 
   const filtered = useMemo(() => {
     if (!context.q) return properties;
     return filterPropertyList(properties, { q: context.q });
   }, [properties, context.q]);
 
+  const autoAdvance = !loading
+    && !error
+    && shouldAutoAdvanceProperty(filtered.length, searchParams);
+
   useEffect(() => {
-    if (loading || error) return;
-    if (!shouldAutoAdvanceProperty(filtered.length, searchParams)) return;
+    if (!autoAdvance) return;
     const property = filtered[0];
     navigate(getPropertyContinueHref(property, context), { replace: true });
-  }, [loading, error, filtered, searchParams, context, navigate]);
+  }, [autoAdvance, filtered, searchParams, context, navigate]);
 
   const handleSearch = (ctx) => {
     navigate(resolveSearchDestination(ctx));
   };
 
   const summary = formatContextSummary(context);
+
+  if (autoAdvance) {
+    return (
+      <BookingPageLoading
+        title="Đang tải"
+        message="Đang mở cơ sở phù hợp…"
+      />
+    );
+  }
 
   return (
     <div className="bg-surface pb-20">
@@ -188,23 +209,27 @@ export default function PropertyDiscovery() {
           </p>
         ) : null}
 
-        {summary ? (
+        {!loading && summary ? (
           <p className="mb-4 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-on-surface-variant">
             <span className="font-semibold text-on-surface">{summary}</span>
             <span className="mx-2">·</span>
             <span className="font-semibold text-on-surface">{filtered.length}</span> cơ sở phù hợp
           </p>
-        ) : (
+        ) : null}
+
+        {!loading && !summary ? (
           <p className="mb-6 text-sm text-on-surface-variant">
             <span className="font-semibold text-on-surface">{filtered.length}</span> cơ sở
           </p>
-        )}
+        ) : null}
 
-        {loading && (
-          <p className="rounded-xl border border-black/5 bg-white py-12 text-center text-sm text-on-surface-variant">
-            Đang tải cơ sở từ database…
-          </p>
-        )}
+        {loading ? (
+          <BookingPageLoading
+            variant="embedded"
+            title="Đang tải"
+            message="Đang tải danh sách cơ sở từ hệ thống…"
+          />
+        ) : null}
 
         {!loading && error && (
           <div className="rounded-2xl border border-dashed border-red-200 bg-red-50 py-12 text-center">

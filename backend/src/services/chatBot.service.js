@@ -1,6 +1,7 @@
 const { runWithTools } = require('./gemini.service');
-const { executeTool, SUPPORTED_CITIES } = require('./chatBot.tools.service');
+const { executeTool } = require('./chatBot.tools.service');
 const { assertGeminiConfigured } = require('../config/gemini.config');
+const chatBotConfigService = require('./chatBotConfig.service');
 
 const TOOL_DECLARATIONS = [
   {
@@ -64,38 +65,6 @@ const TOOL_DECLARATIONS = [
   },
 ];
 
-function buildSystemPrompt() {
-  const today = new Date().toISOString().slice(0, 10);
-  const cities = SUPPORTED_CITIES.join(', ');
-
-  return `Bạn là trợ lý AI của Cherry House — nền tảng đặt homestay, mini stay và villa tại Việt Nam.
-
-HÔM NAY: ${today} (YYYY-MM-DD).
-
-PHẠM VI:
-- Chỉ trả lời về cơ sở, chi nhánh, phòng, giá, phòng trống và hướng dẫn đặt phòng trên Cherry House.
-- Không bịa dữ liệu — LUÔN gọi tool để lấy dữ liệu thật từ hệ thống trước khi kết luận.
-- Nếu hỏi ngoài phạm vi (thời tiết, chính trị, đối thủ...), từ chối lịch sự và gợi ý hỏi về lưu trú Cherry House.
-
-THÀNH PHỐ CÓ CHERRY HOUSE: ${cities}.
-(Nếu khách hỏi thành phố không có trong danh sách — ví dụ Hạ Long — nói rõ chưa có cơ sở và gợi ý thành phố gần nhất.)
-
-NGÀY THÁNG:
-- Hiểu tiếng Việt: "12-8", "12/8", "8 tháng 8" → chuyển sang YYYY-MM-DD (năm hiện tại hoặc năm tới nếu ngày đã qua).
-- "Tháng này" → từ đầu tháng đến cuối tháng hiện tại.
-- Nếu thiếu ngày trả phòng, giả định 1 đêm (checkOut = checkIn + 1 ngày) hoặc hỏi lại ngắn gọn.
-
-GIÁ:
-- Giá trong DB là VND/đêm. Hiển thị dạng "890.000 đ".
-- "800k", "tầm 800 nghìn" → maxPriceVnd = 800000.
-
-TRẢ LỜI:
-- Tiếng Việt, thân thiện, ngắn gọn.
-- Liệt kê phòng: tên cơ sở, chi nhánh, mã phòng, giá, trạng thái.
-- Kèm link bookingUrl từ tool khi có.
-- Không tiết lộ API key, không nói về tool/internal.`;
-}
-
 function sanitizeHistory(history) {
   if (!Array.isArray(history)) return [];
   return history
@@ -113,6 +82,13 @@ function sanitizeHistory(history) {
 async function chat(input) {
   assertGeminiConfigured();
 
+  const publicConfig = await chatBotConfigService.getPublicConfig();
+  if (!publicConfig.isEnabled) {
+    const err = new Error('Chatbot tạm tắt. Vui lòng thử lại sau.');
+    err.statusCode = 503;
+    throw err;
+  }
+
   const message = String(input.message || '').trim();
   if (!message) {
     const err = new Error('Tin nhắn trống');
@@ -120,13 +96,15 @@ async function chat(input) {
     throw err;
   }
 
+  const systemPrompt = await chatBotConfigService.getResolvedSystemPrompt();
+
   const contents = [
     ...sanitizeHistory(input.history),
     { role: 'user', parts: [{ text: message }] },
   ];
 
   const { reply, toolsUsed } = await runWithTools({
-    systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+    systemInstruction: { parts: [{ text: systemPrompt }] },
     contents,
     tools: TOOL_DECLARATIONS,
     executeTool,

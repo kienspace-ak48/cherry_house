@@ -12,10 +12,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const sessionExpired = searchParams.get('session') === 'expired';
+  const nextPath = searchParams.get('next');
+
+  function resolveAfterLoginPath() {
+    if (nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//')) {
+      return nextPath;
+    }
+    return '/profile';
+  }
 
   useEffect(() => {
-    if (isClientLoggedIn()) navigate('/profile', { replace: true });
-  }, [navigate]);
+    if (isClientLoggedIn()) navigate(resolveAfterLoginPath(), { replace: true });
+  }, [navigate, nextPath]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -23,7 +31,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginClient({ email: email.trim(), password });
-      navigate('/profile', { replace: true });
+      navigate(resolveAfterLoginPath(), { replace: true });
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại');
     } finally {

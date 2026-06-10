@@ -1,5 +1,15 @@
 const chatBotService = require('../services/chatBot.service');
+const chatBotConfigService = require('../services/chatBotConfig.service');
 const { sendApiError } = require('../utils/http');
+
+async function getConfig(_req, res) {
+  try {
+    const data = await chatBotConfigService.getPublicConfig();
+    res.json({ success: true, data });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+}
 
 async function sendMessage(req, res) {
   try {
@@ -18,5 +28,6 @@ async function sendMessage(req, res) {
 }
 
 module.exports = {
+  getConfig,
   sendMessage,
 };

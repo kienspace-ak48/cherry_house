@@ -446,7 +446,19 @@ model SeoPageTemplate {
   @@map("seo_page_templates")
 }
 
-// 18. promo_codes (bonus — thường đi kèm booking)
+// 18. chat_bot_settings — prompt & lời chào chatbot (singleton id=1)
+model ChatBotSettings {
+  id             Int      @id @default(1)
+  assistantName  String   @map("assistant_name") @db.VarChar(120)
+  welcomeMessage String   @map("welcome_message") @db.Text
+  systemPrompt   String   @map("system_prompt") @db.LongText
+  isEnabled      Boolean  @default(true) @map("is_enabled")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("chat_bot_settings")
+}
+
+// 19. promo_codes (bonus — thường đi kèm booking)
 model PromoCode {
   id              Int      @id @default(autoincrement())
   code            String   @unique @db.VarChar(40)
