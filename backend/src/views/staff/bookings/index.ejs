@@ -1,0 +1,78 @@
+<div class="staff-page-head">
+  <h2>Danh sách đặt phòng</h2>
+  <p>Booking thuộc cơ sở <strong><%= user.propertyName %></strong></p>
+</div>
+
+<% if (flash === 'ok') { %><div class="staff-alert staff-alert-success"><%= msg || 'Thành công' %></div>
+<% } else if (flash === 'error') { %><div class="staff-alert staff-alert-error"><%= msg || 'Có lỗi' %></div>
+<% } else if (flash === 'notfound') { %><div class="staff-alert staff-alert-warning">Không tìm thấy booking</div>
+<% } %>
+
+<div class="staff-card">
+  <div class="staff-card-body">
+    <form method="GET" action="/staff/bookings" class="staff-grid-2" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end;">
+      <div>
+        <label class="small text-muted">Tìm kiếm</label>
+        <input class="staff-form-control" type="search" name="q" value="<%= searchQ %>" placeholder="Email, SĐT, mã…">
+      </div>
+      <div>
+        <label class="small text-muted">Mã booking</label>
+        <input class="staff-form-control" type="text" name="code" value="<%= filterCode %>" placeholder="CH-…">
+      </div>
+      <div>
+        <label class="small text-muted">Chi nhánh</label>
+        <select class="staff-form-control" name="branchId">
+          <option value="">Tất cả</option>
+          <% branches.forEach(function(br) { %>
+          <option value="<%= br.id %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label class="small text-muted">Trạng thái</label>
+        <select class="staff-form-control" name="status">
+          <option value="">Tất cả</option>
+          <% bookingStatuses.forEach(function(s) { %>
+          <option value="<%= s.value %>" <%= filterStatus === s.value ? 'selected' : '' %>><%= s.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <button type="submit" class="staff-btn staff-btn-primary">Lọc</button>
+        <a href="/staff/bookings" class="staff-btn staff-btn-outline">Xóa</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="staff-card">
+  <div class="staff-card-head">
+    <span>Danh sách</span>
+    <span class="staff-badge staff-badge-secondary"><%= bookingTotal %> mục</span>
+  </div>
+  <div style="overflow:auto;">
+    <table class="staff-table">
+      <thead>
+        <tr>
+          <th>Mã</th><th>Khách</th><th>Chi nhánh</th><th>Phòng</th><th>Nhận → Trả</th><th>Tổng</th><th>TT</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!bookings.length) { %>
+        <tr><td colspan="8" style="text-align:center;color:var(--staff-muted);">Không có booking</td></tr>
+        <% } else { bookings.forEach(function(b) { %>
+        <tr>
+          <td><code><%= b.bookingCode %></code></td>
+          <td><strong><%= b.guestName %></strong><br><small><%= b.guestPhone %></small></td>
+          <td><%= b.branchName %></td>
+          <td><%= b.roomCode %></td>
+          <td><%= formatDateOnly(b.checkIn) %> → <%= formatDateOnly(b.checkOut) %></td>
+          <td><%= formatVnd(b.totalVnd) %></td>
+          <td><span class="staff-badge staff-badge-<%= statusBadgeClass(b.status) %>"><%= statusLabel(b.status) %></span></td>
+          <td><a href="/staff/bookings/<%= b.id %>" class="staff-btn staff-btn-outline" style="padding:4px 10px;">Chi tiết</a></td>
+        </tr>
+        <% }); } %>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,16 +1,5 @@
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 
-/** Tối thiểu hiển thị spinner — tránh nhấp nháy khi API trả về quá nhanh */
-export const MIN_BOOKING_LOADING_MS = 550;
-
-export function awaitMinLoadingDelay(startedAt, minMs = MIN_BOOKING_LOADING_MS) {
-  const remaining = minMs - (Date.now() - startedAt);
-  if (remaining <= 0) return Promise.resolve();
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, remaining);
-  });
-}
-
 export function LoadingRing({ size = 'lg', className = '' }) {
   const sizeClass =
     size === 'sm' ? 'app-loading-ring--sm' : size === 'md' ? 'app-loading-ring--md' : 'app-loading-ring--lg';

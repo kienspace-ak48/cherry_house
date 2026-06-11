@@ -12,12 +12,7 @@ const bookingInclude = {
 /**
  * @param {{ userId?: number; status?: string; propertyId?: number; branchId?: number }} filters
  */
-/**
- * Đơn của khách đăng nhập: theo userId hoặc email khách (đặt khi chưa gắn user).
- *
- * @param {{ userId: number; email?: string }} params
- */
-function findForUser({ userId, email }) {
+function buildUserBookingWhere({ userId, email, filter, todayIso }) {
   const trimmedEmail = typeof email === 'string' ? email.trim() : '';
   /** @type {import('../../generated/prisma').Prisma.BookingWhereInput[]} */
   const or = [{ userId }];
@@ -25,14 +20,54 @@ function findForUser({ userId, email }) {
     or.push({ guestEmail: trimmedEmail });
   }
 
-  return prisma.booking.findMany({
-    where: { OR: or },
+  /** @type {import('../../generated/prisma').Prisma.BookingWhereInput} */
+  let where = { OR: or };
+  const today = todayIso || new Date().toISOString().slice(0, 10);
+
+  if (filter === 'pending') {
+    where = { AND: [where, { status: 'pending_payment' }] };
+  } else if (filter === 'upcoming') {
+    where = {
+      AND: [where, { status: { not: 'cancelled' } }, { checkOut: { gte: today } }],
+    };
+  } else if (filter === 'past') {
+    where = {
+      AND: [
+        where,
+        {
+          OR: [{ status: 'cancelled' }, { checkOut: { lt: today } }],
+        },
+      ],
+    };
+  }
+
+  return where;
+}
+
+/**
+ * Đơn của khách đăng nhập: theo userId hoặc email khách (đặt khi chưa gắn user).
+ *
+ * @param {{ userId: number; email?: string; filter?: string; todayIso?: string }} params
+ * @param {{ skip?: number; take?: number }} [pagination]
+ */
+function findForUser({ userId, email, filter, todayIso }, pagination) {
+  const query = {
+    where: buildUserBookingWhere({ userId, email, filter, todayIso }),
     orderBy: [{ createdAt: 'desc' }],
     include: bookingInclude,
+  };
+  if (pagination?.skip != null) query.skip = pagination.skip;
+  if (pagination?.take != null) query.take = pagination.take;
+  return prisma.booking.findMany(query);
+}
+
+function countForUser({ userId, email, filter, todayIso }) {
+  return prisma.booking.count({
+    where: buildUserBookingWhere({ userId, email, filter, todayIso }),
   });
 }
 
-function findAll(filters = {}) {
+function buildWhere(filters = {}) {
   /** @type {import('../../generated/prisma').Prisma.BookingWhereInput} */
   const where = {};
   if (filters.userId) where.userId = filters.userId;
@@ -40,7 +75,9 @@ function findAll(filters = {}) {
   if (filters.propertyId) where.propertyId = filters.propertyId;
   if (filters.branchId) where.branchId = filters.branchId;
   if (filters.roomId) where.roomId = filters.roomId;
-  if (filters.bookingCode) {
+  if (filters.exactBookingCode) {
+    where.bookingCode = filters.exactBookingCode;
+  } else if (filters.bookingCode) {
     where.bookingCode = { contains: filters.bookingCode };
   }
   if (filters.checkInFrom || filters.checkInTo) {
@@ -62,12 +99,22 @@ function findAll(filters = {}) {
       { roomCode: { contains: filters.q } },
     ];
   }
+  return where;
+}
 
-  return prisma.booking.findMany({
-    where,
+function findAll(filters = {}, pagination) {
+  const query = {
+    where: buildWhere(filters),
     orderBy: [{ createdAt: 'desc' }],
     include: bookingInclude,
-  });
+  };
+  if (pagination?.skip != null) query.skip = pagination.skip;
+  if (pagination?.take != null) query.take = pagination.take;
+  return prisma.booking.findMany(query);
+}
+
+function countAll(filters = {}) {
+  return prisma.booking.count({ where: buildWhere(filters) });
 }
 
 function findById(id) {
@@ -186,7 +233,10 @@ function findActiveByBranch({ branchId, from, to }) {
 
 module.exports = {
   findForUser,
+  countForUser,
+  buildUserBookingWhere,
   findAll,
+  countAll,
   findById,
   create,
   update,

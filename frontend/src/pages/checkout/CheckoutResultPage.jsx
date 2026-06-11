@@ -18,16 +18,47 @@ function buildVnpayQuery(searchParams) {
   return q;
 }
 
+const MOMO_QUERY_KEYS = [
+  'partnerCode',
+  'orderId',
+  'requestId',
+  'amount',
+  'orderInfo',
+  'orderType',
+  'transId',
+  'resultCode',
+  'message',
+  'payType',
+  'responseTime',
+  'extraData',
+  'signature',
+];
+
+function buildMomoQuery(searchParams) {
+  const q = {};
+  for (const key of MOMO_QUERY_KEYS) {
+    const value = searchParams.get(key);
+    if (value != null && value !== '') q[key] = value;
+  }
+  return q;
+}
+
 export default function CheckoutResultPage() {
   const [searchParams] = useSearchParams();
   const context = useMemo(() => parseBookingContext(searchParams), [searchParams]);
   const bookingCode =
-    searchParams.get('bookingCode') || searchParams.get('vnp_TxnRef') || '';
+    searchParams.get('bookingCode')
+    || searchParams.get('orderId')
+    || searchParams.get('vnp_TxnRef')
+    || '';
   const paymentFlag = searchParams.get('payment') || '';
 
   const vnpayQuery = useMemo(() => buildVnpayQuery(searchParams), [searchParams]);
+  const momoQuery = useMemo(() => buildMomoQuery(searchParams), [searchParams]);
   const hasVnpayParams = Object.keys(vnpayQuery).length > 0;
+  const hasMomoParams = Boolean(momoQuery.partnerCode && momoQuery.resultCode != null);
   const vnpResponseCode = vnpayQuery.vnp_ResponseCode || '';
+  const momoResultCode = momoQuery.resultCode || '';
 
   const [status, setStatus] = useState({ loading: true, data: null, error: null });
   const [verifyResult, setVerifyResult] = useState(null);
@@ -44,6 +75,9 @@ export default function CheckoutResultPage() {
       try {
         if (hasVnpayParams) {
           const verified = await checkoutApi.verifyVnpay(vnpayQuery);
+          if (!cancelled) setVerifyResult(verified);
+        } else if (hasMomoParams) {
+          const verified = await checkoutApi.verifyMomo(momoQuery);
           if (!cancelled) setVerifyResult(verified);
         }
         const data = await checkoutApi.getStatus(bookingCode);
@@ -65,20 +99,23 @@ export default function CheckoutResultPage() {
     return () => {
       cancelled = true;
     };
-  }, [bookingCode, hasVnpayParams, vnpayQuery]);
+  }, [bookingCode, hasVnpayParams, hasMomoParams, vnpayQuery, momoQuery]);
 
   const isPaid =
     status.data?.status === 'confirmed' || status.data?.payment?.status === 'paid';
   const isPending = status.data?.status === 'pending_payment';
   const isCancelled = paymentFlag === 'cancel';
 
-  const vnpSucceeded =
+  const gatewaySucceeded =
     verifyResult?.isVerified === true && verifyResult?.isSuccess === true;
-  const vnpFailed =
+  const gatewayFailed =
     verifyResult?.isVerified === true && verifyResult?.isSuccess === false;
-  const showSuccess = isPaid || vnpSucceeded;
+  const showSuccess = isPaid || gatewaySucceeded;
   const showFailure =
-    vnpFailed || paymentFlag === 'error' || (hasVnpayParams && vnpResponseCode && vnpResponseCode !== '00' && !vnpSucceeded);
+    gatewayFailed
+    || paymentFlag === 'error'
+    || (hasVnpayParams && vnpResponseCode && vnpResponseCode !== '00' && !gatewaySucceeded)
+    || (hasMomoParams && momoResultCode && momoResultCode !== '0' && !gatewaySucceeded);
 
   return (
     <div className="bg-surface pb-24 font-body text-sm">
@@ -111,8 +148,23 @@ export default function CheckoutResultPage() {
               {verifyResult?.message ? (
                 <p className="mt-2 text-xs text-on-surface-variant">{verifyResult.message}</p>
               ) : null}
+              {status.data?.qrCodeDataUrl ? (
+                <div className="mx-auto mt-6 max-w-xs rounded-2xl border border-outline-variant/30 bg-surface-container-low p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+                    Mã QR check-in
+                  </p>
+                  <img
+                    src={status.data.qrCodeDataUrl}
+                    alt={`QR đặt phòng ${status.data?.bookingCode || bookingCode}`}
+                    className="mx-auto mt-3 h-44 w-44 rounded-xl border border-outline-variant/20 bg-white p-2"
+                  />
+                  <p className="mt-3 text-xs text-on-surface-variant">
+                    Xuất trình mã QR hoặc mã đặt phòng tại lễ tân khi nhận phòng.
+                  </p>
+                </div>
+              ) : null}
               <p className="mt-3 text-xs text-on-surface-variant">
-                Cherry House đã ghi nhận thanh toán. Bạn sẽ nhận email xác nhận (nếu đã cấu hình).
+                Cherry House đã ghi nhận thanh toán. Email xác nhận kèm mã QR sẽ được gửi đến bạn.
               </p>
             </div>
           ) : null}

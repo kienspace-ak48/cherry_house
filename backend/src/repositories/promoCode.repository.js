@@ -35,4 +35,23 @@ function remove(id) {
   return prisma.promoCode.delete({ where: { id } });
 }
 
-module.exports = { findAll, findById, findByCode, create, update, remove };
+async function incrementUsedCountIfAvailable(code) {
+  const affected = await prisma.$executeRaw`
+    UPDATE promo_codes
+    SET used_count = used_count + 1
+    WHERE code = ${code}
+      AND (max_uses IS NULL OR used_count < max_uses)
+  `;
+  if (!affected) return null;
+  return prisma.promoCode.findUnique({ where: { code } });
+}
+
+module.exports = {
+  findAll,
+  findById,
+  findByCode,
+  create,
+  update,
+  remove,
+  incrementUsedCountIfAvailable,
+};

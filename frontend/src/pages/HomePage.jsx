@@ -1,317 +1,271 @@
-import { useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import BookingSearchBar from '../components/booking/BookingSearchBar';
-import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
-import { ACCOMMODATION_TYPE_CARDS, POPULAR_AREAS } from '../data/homeDiscovery';
-import {
-  PROPERTY_KIND_LABELS,
-  countPropertiesByKind,
-} from '../data/properties';
-import { getDiscoveryHref, resolveSearchDestination } from '../lib/bookingContext';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { fetchHomeHero } from '../api/homeHeroApi';
+import { fetchHomeSections } from '../api/homePageApi';
+import HomeAreasSection from '../components/home/HomeAreasSection';
+import HomeHeroSection from '../components/home/HomeHeroSection';
+import HomeKindsSection from '../components/home/HomeKindsSection';
+import HomeNewsletterSection from '../components/home/HomeNewsletterSection';
+import HomeReviewsSection from '../components/home/HomeReviewsSection';
+import HomeStatsSection from '../components/home/HomeStatsSection';
+import HomeWhySection from '../components/home/HomeWhySection';
+import { resolveSearchDestination } from '../lib/bookingContext';
 
-const HERO_IMG =
-  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80';
+const DEFAULT_HERO = {
+  quickCities: ['Đà Lạt', 'Đà Nẵng', 'Vũng Tàu', 'Hội An', 'Phú Quốc'],
+  slides: [
+    {
+      imageUrl:
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80',
+      alt: 'Cherry House — homestay và mini stay trên khắp Việt Nam',
+      badge: 'Website chính thức Cherry House',
+      titleLine1: 'Trải nghiệm lưu trú',
+      titleLine2: 'ấm áp trên khắp Việt Nam',
+      description:
+        'Homestay, mini stay và villa đồng bộ thương hiệu — tìm theo địa điểm, chọn chi nhánh phù hợp và đặt phòng trực tiếp.',
+    },
+  ],
+  slideIntervalSec: 6,
+  isEnabled: true,
+};
 
-const HERO_QUICK_CITIES = ['Đà Lạt', 'Đà Nẵng', 'Vũng Tàu', 'Hội An', 'Phú Quốc'];
-
-const TRUST_STATS = [
-  { value: '10+', label: 'điểm đến', icon: 'map' },
-  { value: 'Đặt trực tiếp', label: 'không qua sàn', icon: 'verified' },
-  { value: '24/7', label: 'hỗ trợ đặt phòng', icon: 'support_agent' },
-];
-
-const WHY_ITEMS = [
-  {
-    icon: 'savings',
-    title: 'Giá minh bạch',
-    desc: 'Xem giá theo phòng, theo đêm — không phí ẩn từ sàn trung gian.',
-  },
-  {
-    icon: 'domain',
-    title: 'Nhiều chi nhánh',
-    desc: 'Một cơ sở có thể có nhiều điểm — chọn đúng khu vực bạn muốn ở.',
-  },
-  {
-    icon: 'bolt',
-    title: 'Đặt nhanh',
-    desc: 'Chọn địa điểm, ngày ở và phòng trống — hoàn tất trong vài bước.',
-  },
-];
-
-function scrollCarousel(ref, direction) {
-  const el = ref.current;
-  if (!el) return;
-  const delta = Math.round(el.clientWidth * 0.72) || 280;
-  el.scrollBy({ left: direction * delta, behavior: 'smooth' });
-}
-
-function CarouselNavButton({ direction, onClick, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-on-surface shadow-md transition-all hover:border-primary hover:bg-primary hover:text-white"
-    >
-      <span className="material-symbols-outlined">{direction === 'prev' ? 'west' : 'east'}</span>
-    </button>
-  );
-}
+const DEFAULT_HOME_SECTIONS = {
+  statsEnabled: true,
+  stats: [
+    { value: '2,400+', label: 'Lượt đặt phòng thành công' },
+    { value: '120+', label: 'Cơ sở đối tác' },
+    { value: '4.8★', label: 'Đánh giá trung bình' },
+    { value: '12', label: 'Điểm đến trên cả nước' },
+  ],
+  whyEnabled: true,
+  whyEyebrow: 'TẠI SAO CHERRY HOUSE?',
+  whyTitle: 'Đặt trực tiếp — luôn tốt hơn',
+  whyDescription:
+    'Không qua trung gian, giá hiển thị là giá thanh toán, hỗ trợ thực sự từ chủ cơ sở.',
+  whyItems: [
+    {
+      number: '01',
+      title: 'Giá minh bạch',
+      description:
+        'Xem giá phòng đầy đủ trước khi đặt — không có khoản phí nào được cộng vào lúc thanh toán.',
+    },
+    {
+      number: '02',
+      title: 'Nhiều chi nhánh',
+      description:
+        'Một cơ sở thường có nhiều điểm ở cùng khu vực — dễ chọn nơi gần bạn nhất.',
+    },
+    {
+      number: '03',
+      title: 'Đặt nhanh, tức thì',
+      description:
+        'Chọn ngày và phòng trong vài bước — xác nhận ngay, không cần chờ duyệt thủ công.',
+    },
+  ],
+  areasEnabled: true,
+  areasEyebrow: 'KHÁM PHÁ',
+  areasTitle: 'Khu vực phổ biến',
+  areasSeeAllLabel: 'Xem tất cả',
+  areasSeeAllHref: '/booking',
+  areas: [
+    {
+      title: 'Đà Lạt',
+      subtitle: '38 cơ sở · Homestay & Villa',
+      imageUrl:
+        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
+      priceFrom: 'từ 450K/đêm',
+      filterCity: 'Đà Lạt',
+      isFeatured: true,
+      comingSoon: false,
+    },
+    {
+      title: 'Vũng Tàu',
+      subtitle: '24 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=80',
+      priceFrom: 'từ 380K',
+      filterCity: 'Vũng Tàu',
+      isFeatured: false,
+      comingSoon: false,
+    },
+    {
+      title: 'Đà Nẵng',
+      subtitle: '31 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=800&q=80',
+      priceFrom: 'từ 520K',
+      filterCity: 'Đà Nẵng',
+      isFeatured: false,
+      comingSoon: false,
+    },
+    {
+      title: 'Phú Quốc',
+      subtitle: '19 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&w=800&q=80',
+      priceFrom: 'từ 680K',
+      filterCity: 'Phú Quốc',
+      isFeatured: false,
+      comingSoon: false,
+    },
+  ],
+  kindsEnabled: true,
+  kindsEyebrow: 'LOẠI HÌNH',
+  kindsTitle: 'Chọn kiểu lưu trú phù hợp',
+  kindsDescription: 'Từ homestay ấm cúng đến villa riêng tư — đặt theo đúng nhu cầu.',
+  kinds: [
+    {
+      kind: 'homestay',
+      badge: 'PHỔ BIẾN NHẤT',
+      countLabel: '64 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      kind: 'mini_hotel',
+      badge: '',
+      countLabel: '38 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      kind: 'villa',
+      badge: 'CAO CẤP',
+      countLabel: '22 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      kind: 'serviced_apartment',
+      badge: '',
+      countLabel: '15 cơ sở',
+      imageUrl:
+        'https://images.unsplash.com/photo-1560448204-e02f11c45751?auto=format&fit=crop&w=800&q=80',
+    },
+  ],
+  reviewsEnabled: true,
+  reviewsEyebrow: 'ĐÁNH GIÁ TỪ KHÁCH THỰC',
+  reviewsTitle: 'Họ đã nói gì về Cherry House?',
+  reviews: [
+    {
+      quote:
+        'Đặt phòng nhanh, giá y chang trên web, không bị hỏi thêm phí gì. Host phản hồi trong 10 phút — sẽ quay lại Cherry House.',
+      name: 'Lan Nguyễn',
+      meta: 'TP. Hồ Chí Minh · Đặt Homestay Đà Lạt',
+      initials: 'LN',
+      rating: 5,
+    },
+    {
+      quote:
+        'Villa rộng hơn ảnh rất nhiều. Lần đầu đặt qua Cherry House mà thấy tin tưởng hơn hẳn so với app trung gian.',
+      name: 'Minh Tú',
+      meta: 'Hà Nội · Đặt Villa Vũng Tàu',
+      initials: 'MT',
+      rating: 5,
+    },
+    {
+      quote:
+        'Giá tốt hơn 15% so với Booking.com cho cùng phòng. Cherry House là lựa chọn đầu tiên khi đi công tác.',
+      name: 'Hoàng Kim',
+      meta: 'Đà Nẵng · Đặt Mini Hotel Đà Nẵng',
+      initials: 'HK',
+      rating: 5,
+    },
+  ],
+  newsletterEnabled: true,
+  newsletterTitle: 'Nhận deal sớm nhất',
+  newsletterDescription:
+    'Giá ưu đãi và phòng trống mới nhất gửi thẳng vào hộp thư — mỗi tuần một lần, không spam.',
+  newsletterPlaceholder: 'Email của bạn',
+  newsletterButtonLabel: 'Đăng ký ngay',
+  newsletterSuccessMessage: 'Cảm ơn bạn! Cherry House sẽ gửi ưu đãi vào email của bạn.',
+};
 
 function HomePage() {
-  const areasScrollerRef = useRef(null);
   const navigate = useNavigate();
-  const kindCounts = countPropertiesByKind();
+  const [heroConfig, setHeroConfig] = useState(null);
+  const [homeSections, setHomeSections] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchHomeHero()
+      .then((data) => {
+        if (!cancelled && data) setHeroConfig(data);
+      })
+      .catch(() => {});
+    fetchHomeSections()
+      .then((data) => {
+        if (!cancelled && data) setHomeSections(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hero = heroConfig?.isEnabled !== false && heroConfig ? heroConfig : DEFAULT_HERO;
+  const sections = homeSections ?? DEFAULT_HOME_SECTIONS;
 
   const handleSearch = (ctx) => {
     navigate(resolveSearchDestination(ctx));
   };
 
-  const areaHref = (area) => {
-    if (area.comingSoon) return getDiscoveryHref();
-    return getDiscoveryHref({ city: area.filterCity });
-  };
-
-  const kindHref = (kind) => getDiscoveryHref({ kind });
-
   return (
     <div className="bg-surface text-on-surface">
-      <section className="relative flex min-h-[max(620px,calc(100svh-4.25rem))] items-center justify-center md:min-h-[max(760px,calc(100svh-4.75rem))]">
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <img
-            className="h-full w-full scale-105 object-cover animate-hero-zoom"
-            alt="Cherry House — homestay và mini stay trên khắp Việt Nam"
-            src={HERO_IMG}
-          />
-          <div className="hero-home-gradient absolute inset-0" aria-hidden />
-          <div className="hero-home-glow absolute inset-0" aria-hidden />
-        </div>
+      <HomeHeroSection
+        slides={hero.slides}
+        quickCities={hero.quickCities}
+        intervalSec={hero.slideIntervalSec}
+        onSearch={handleSearch}
+      />
 
-        <div className={[LAYOUT_CONTAINER, 'relative z-10 w-full py-12 text-center md:py-16'].join(' ')}>
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-bold tracking-wide text-white/95 uppercase backdrop-blur-sm">
-            <span className="material-symbols-outlined text-base text-primary-container">favorite</span>
-            Website chính thức Cherry House
-          </div>
+      {sections.statsEnabled ? <HomeStatsSection stats={sections.stats} /> : null}
 
-          <h1 className="mx-auto mb-5 max-w-4xl font-headline text-4xl leading-[1.1] font-extrabold text-white sm:text-5xl md:text-7xl">
-            Trải nghiệm lưu trú
-            <span className="mt-2 block font-normal italic text-white/95">ấm áp trên khắp Việt Nam</span>
-          </h1>
+      {sections.whyEnabled ? (
+        <HomeWhySection
+          eyebrow={sections.whyEyebrow}
+          title={sections.whyTitle}
+          description={sections.whyDescription}
+          items={sections.whyItems}
+        />
+      ) : null}
 
-          <p className="mx-auto mb-8 max-w-2xl text-base leading-relaxed text-white/88 md:text-lg">
-            Homestay, mini stay và villa đồng bộ thương hiệu — tìm theo địa điểm, chọn chi nhánh phù hợp
-            và đặt phòng trực tiếp.
-          </p>
+      {sections.areasEnabled ? (
+        <HomeAreasSection
+          eyebrow={sections.areasEyebrow}
+          title={sections.areasTitle}
+          seeAllLabel={sections.areasSeeAllLabel}
+          seeAllHref={sections.areasSeeAllHref}
+          areas={sections.areas}
+        />
+      ) : null}
 
-          <div className="relative z-20">
-            <BookingSearchBar
-              variant="hero"
-              onSubmit={handleSearch}
-              showKind={false}
-              id="home-hero-search"
-            />
-          </div>
+      {sections.kindsEnabled ? (
+        <HomeKindsSection
+          eyebrow={sections.kindsEyebrow}
+          title={sections.kindsTitle}
+          description={sections.kindsDescription}
+          items={sections.kinds}
+        />
+      ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            <span className="text-xs font-semibold text-white/70">Phổ biến:</span>
-            {HERO_QUICK_CITIES.map((city) => (
-              <Link
-                key={city}
-                to={getDiscoveryHref({ city })}
-                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white/20"
-              >
-                {city}
-              </Link>
-            ))}
-          </div>
+      {sections.reviewsEnabled ? (
+        <HomeReviewsSection
+          eyebrow={sections.reviewsEyebrow}
+          title={sections.reviewsTitle}
+          items={sections.reviews}
+        />
+      ) : null}
 
-          <div className="relative z-0 mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-            {TRUST_STATS.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-black/20 px-4 py-3 backdrop-blur-sm"
-              >
-                <span className="material-symbols-outlined text-xl text-primary-container">{item.icon}</span>
-                <div className="text-left">
-                  <p className="font-headline text-sm font-bold text-white">{item.value}</p>
-                  <p className="text-[11px] text-white/75">{item.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-b border-black/5 bg-white py-12 md:py-14">
-        <div className={LAYOUT_CONTAINER}>
-          <div className="mb-8 text-center">
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
-              Vì sao đặt trên Cherry House?
-            </h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm text-on-surface-variant md:text-base">
-              Trải nghiệm đặt phòng được thiết kế cho khách Việt — rõ ràng, nhanh và đúng thương hiệu.
-            </p>
-          </div>
-          <div className="grid gap-5 md:grid-cols-3">
-            {WHY_ITEMS.map((item) => (
-              <div
-                key={item.title}
-                className="home-feature-card rounded-2xl border border-black/5 bg-surface-container-low p-6 text-center md:text-left"
-              >
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary md:mx-0">
-                  <span className="material-symbols-outlined text-2xl">{item.icon}</span>
-                </div>
-                <h3 className="font-headline text-lg font-bold text-on-surface">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="khu-vuc-pho-bien" className="scroll-mt-28 bg-white py-16 md:py-20">
-        <div className={LAYOUT_CONTAINER}>
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold tracking-widest text-primary uppercase">Khám phá</p>
-              <h2 className="mt-1 font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
-                Khu vực phổ biến
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-on-surface-variant md:text-base">
-                Chọn điểm đến — xem cơ sở Cherry House và chi nhánh tương ứng.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <CarouselNavButton
-                direction="prev"
-                label="Cuộn khu vực sang trái"
-                onClick={() => scrollCarousel(areasScrollerRef, -1)}
-              />
-              <CarouselNavButton
-                direction="next"
-                label="Cuộn khu vực sang phải"
-                onClick={() => scrollCarousel(areasScrollerRef, 1)}
-              />
-            </div>
-          </div>
-
-          <div
-            ref={areasScrollerRef}
-            className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 md:gap-5"
-            tabIndex={0}
-          >
-            {POPULAR_AREAS.map((area) => (
-              <Link
-                key={area.city}
-                to={areaHref(area)}
-                className="group relative min-w-[200px] shrink-0 snap-start overflow-hidden rounded-2xl shadow-md transition-shadow hover:shadow-xl sm:min-w-[220px] md:min-w-[calc(20%-16px)] md:flex-1"
-                style={{ aspectRatio: '3/4' }}
-              >
-                <img
-                  src={area.image}
-                  alt={area.label}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-                <div
-                  className="absolute inset-0 bg-linear-to-t from-black/80 via-black/25 to-transparent"
-                  aria-hidden
-                />
-                {area.comingSoon ? (
-                  <span className="absolute top-3 right-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-on-surface uppercase">
-                    Sắp mở
-                  </span>
-                ) : null}
-                <p className="absolute right-4 bottom-4 left-4 font-headline text-lg font-bold leading-snug text-white drop-shadow-sm md:text-xl">
-                  {area.label}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="loai-hinh-luu-tru" className="scroll-mt-28 bg-surface-container-low py-16 md:py-20">
-        <div className={LAYOUT_CONTAINER}>
-          <p className="text-xs font-bold tracking-widest text-primary uppercase">Loại hình</p>
-          <h2 className="mt-1 font-headline text-2xl font-extrabold text-on-surface md:text-3xl">
-            Khám phá thêm loại hình lưu trú
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm text-on-surface-variant md:text-base">
-            Homestay ấm cúng, mini hotel tiện nghi hay villa riêng tư — cùng một hành trình đặt phòng.
-          </p>
-
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-            {ACCOMMODATION_TYPE_CARDS.map((card) => {
-              const label = PROPERTY_KIND_LABELS[card.kind];
-              const count = kindCounts[card.kind] ?? 0;
-              return (
-                <Link
-                  key={card.kind}
-                  to={kindHref(card.kind)}
-                  className="group overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
-                >
-                  <div className="aspect-[4/3] overflow-hidden">
-                    <img
-                      src={card.image}
-                      alt={label}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="p-4 md:p-5">
-                    <h3 className="font-headline text-lg font-bold text-on-surface group-hover:text-primary">
-                      {label}
-                    </h3>
-                    <p className="mt-1 text-sm text-on-surface-variant">
-                      {count > 0 ? (
-                        <>
-                          <span className="font-semibold text-on-surface">{count}</span> cơ sở {label}
-                        </>
-                      ) : (
-                        <>Sắp có thêm cơ sở {label}</>
-                      )}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-16 md:py-20">
-        <div className={LAYOUT_CONTAINER}>
-          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-linear-to-br from-primary/8 via-white to-surface-container-high p-10 text-center md:rounded-[3rem] md:p-16">
-            <div className="absolute -top-24 -right-24 size-64 rounded-full bg-primary/10 blur-3xl" aria-hidden />
-            <div className="absolute -bottom-24 -left-24 size-64 rounded-full bg-primary/10 blur-3xl" aria-hidden />
-            <div className="relative z-10 space-y-6">
-              <h2 className="font-headline text-2xl leading-tight font-extrabold text-on-surface md:text-4xl">
-                Ưu đãi khi đặt trực tiếp trên web
-              </h2>
-              <p className="mx-auto max-w-lg text-sm text-on-surface-variant md:text-base">
-                Nhận tin mở cơ sở mới, mã giảm giá theo chi nhánh và gợi ý phòng trống theo mùa.
-              </p>
-              <form
-                className="mx-auto flex max-w-md flex-col gap-3 md:flex-row"
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <input
-                  className="flex-1 rounded-full border border-outline-variant/30 bg-white px-6 py-3.5 outline-none focus:border-transparent focus:ring-2 focus:ring-primary"
-                  placeholder="Email của bạn"
-                  type="email"
-                  name="newsletter-email"
-                  autoComplete="email"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full bg-primary px-8 py-3.5 font-headline text-sm font-bold tracking-widest text-on-primary uppercase shadow-lg transition-all hover:bg-primary-container"
-                >
-                  Đăng ký
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
+      {sections.newsletterEnabled ? (
+        <HomeNewsletterSection
+          title={sections.newsletterTitle}
+          description={sections.newsletterDescription}
+          placeholder={sections.newsletterPlaceholder}
+          buttonLabel={sections.newsletterButtonLabel}
+          successMessage={sections.newsletterSuccessMessage}
+        />
+      ) : null}
     </div>
   );
 }

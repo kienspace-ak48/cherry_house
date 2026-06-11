@@ -10,11 +10,13 @@ router.post('/pay', optionalAuth, checkoutController.startPay);
 /** Tra cứu trạng thái đơn sau thanh toán */
 router.get('/status/:bookingCode', checkoutController.getStatus);
 
-/** Xác thực redirect VNPay (frontend gọi với query params) */
+/** Xác thực redirect VNPay / MoMo (frontend gọi với query params) */
 router.get('/verify/vnpay', checkoutController.verifyVnpay);
+router.get('/verify/momo', checkoutController.verifyMomo);
 
 /** IPN production — cấu hình trên cổng thanh toán */
 router.post('/ipn/sepay', checkoutController.sepayIpn);
+router.post('/ipn/momo', checkoutController.momoIpn);
 router.get('/ipn/vnpay', checkoutController.vnpayIpn);
 router.post('/ipn/vnpay', checkoutController.vnpayIpn);
 

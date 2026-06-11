@@ -3,7 +3,7 @@ const branchRepository = require('../repositories/branch.repository');
 const inventoryRoomRepository = require('../repositories/inventoryRoom.repository');
 const branchService = require('../services/branch.service');
 const { httpError, parseId, parseOptionalBoolean } = require('../utils/http');
-const { toPublicProperty, toPublicBranch, toPublicRoom } = require('../utils/catalog.mapper');
+const { toDetailSlug, toPublicProperty, toPublicBranch, toPublicRoom, toPublicRoomDetail } = require('../utils/catalog.mapper');
 
 function parseSlug(raw) {
   const slug = typeof raw === 'string' ? raw.trim() : '';
@@ -130,6 +130,37 @@ async function getRoomById(idRaw) {
   return toPublicRoom(row);
 }
 
+async function getRoomDetail(query = {}) {
+  const detailSlug =
+    typeof query.detailSlug === 'string' ? query.detailSlug.trim() : '';
+  const propertySlug =
+    typeof query.propertySlug === 'string' ? query.propertySlug.trim() : '';
+  const branchCode =
+    typeof query.branchCode === 'string' ? query.branchCode.trim().toLowerCase() : '';
+
+  let row = null;
+
+  if (query.roomId !== undefined && query.roomId !== null && query.roomId !== '') {
+    row = await inventoryRoomRepository.findByIdForCatalogDetail(parseId(query.roomId, 'roomId'));
+  } else if (propertySlug && branchCode && detailSlug) {
+    const property = await propertyRepository.findBySlugForCatalog(parseSlug(propertySlug));
+    if (!property) return null;
+    const branch = await branchRepository.findByPropertyAndCode(property.id, branchCode);
+    if (!branch || branch.isActive === false) return null;
+    const rooms = await inventoryRoomRepository.findAllForCatalogDetail({
+      branchId: branch.id,
+      isActive: true,
+    });
+    row = rooms.find((r) => toDetailSlug(r.code) === detailSlug) ?? null;
+  } else if (detailSlug) {
+    const rooms = await inventoryRoomRepository.findAllForCatalogDetail({ isActive: true });
+    row = rooms.find((r) => toDetailSlug(r.code) === detailSlug) ?? null;
+  }
+
+  if (!row || row.isActive === false) return null;
+  return toPublicRoomDetail(row);
+}
+
 module.exports = {
   listProperties,
   getPropertyBySlug,
@@ -141,4 +172,5 @@ module.exports = {
   listRooms,
   listRoomsByBranchId,
   getRoomById,
+  getRoomDetail,
 };

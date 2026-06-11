@@ -85,17 +85,16 @@
               <div class="form-text">Dùng trên web/API (<code>?branch=dl-hxh</code>). Chữ thường, số, gạch ngang — unique trong cùng cơ sở.</div>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="roomCount">Số phòng</label>
-              <input
-                class="form-control"
-                type="number"
-                min="0"
-                id="roomCount"
-                name="roomCount"
-                value="<%= isCreate && (b.roomCount === 0 || !b.roomCount) ? '' : (b.roomCount ?? '') %>"
-                placeholder="8"
-              >
-              <div class="form-text">Tổng phòng tại chi nhánh — cập nhật sau khi thêm phòng cũng được.</div>
+              <div class="text-body-secondary small mb-1">Số phòng</div>
+              <div class="fs-5 fw-semibold"><%= b.roomCount ?? 0 %></div>
+              <div class="form-text">
+                Tự động đếm từ bảng phòng.
+                <% if (!isCreate && b.id) { %>
+                <a href="/admin/rooms?branchId=<%= b.id %>">Quản lý phòng</a>
+                <% } else { %>
+                Mặc định 0 — tăng khi thêm phòng trong Chi nhánh này.
+                <% } %>
+              </div>
             </div>
             <div class="col-12">
               <label class="form-label" for="name">Tên chi nhánh <span class="text-danger">*</span></label>

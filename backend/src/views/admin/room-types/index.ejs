@@ -1,0 +1,68 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Loại phòng</h2>
+    <p class="text-body-secondary mb-0 small">
+      Mẫu phòng dùng chung — gallery, tiện nghi, mô tả chi tiết hiển thị trên trang <strong>/room/:slug</strong>.
+    </p>
+  </div>
+  <a href="/admin/room-types/new" class="btn btn-primary btn-sm">+ Thêm loại phòng</a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'created') { %>
+<div class="alert alert-success">Đã tạo loại phòng.</div>
+<% } else if (flash === 'updated') { %>
+<div class="alert alert-success">Đã cập nhật loại phòng.</div>
+<% } else if (flash === 'deleted') { %>
+<div class="alert alert-success">Đã xóa loại phòng.</div>
+<% } else if (flash === 'notfound') { %>
+<div class="alert alert-warning">Không tìm thấy loại phòng.</div>
+<% } else if (flash === 'error' && typeof msg !== 'undefined' && msg) { %>
+<div class="alert alert-danger"><%= msg %></div>
+<% } %>
+<% if (typeof formError !== 'undefined' && formError) { %>
+<div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<div class="card admin-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Loại phòng</th>
+          <th>Danh mục</th>
+          <th>Diện tích</th>
+          <th>Giá gốc</th>
+          <th>Slug</th>
+          <th class="text-end">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!roomTypes.length) { %>
+        <tr>
+          <td colspan="6" class="text-center text-body-secondary py-5">
+            Chưa có loại phòng. <a href="/admin/room-types/new">Tạo loại đầu tiên</a>
+          </td>
+        </tr>
+        <% } %>
+        <% roomTypes.forEach(function(rt) { %>
+        <tr>
+          <td>
+            <div class="fw-semibold"><%= rt.title %></div>
+            <div class="small text-body-secondary"><%= rt.badge %></div>
+          </td>
+          <td><span class="badge text-bg-light text-body-secondary"><%= rt.category %></span></td>
+          <td><%= rt.areaSqm %> m²</td>
+          <td><%= formatPriceVnd(rt.basePriceVnd) %> ₫</td>
+          <td><code class="small"><%= rt.slug %></code></td>
+          <td class="text-end text-nowrap">
+            <a href="/admin/room-types/<%= rt.id %>/edit" class="btn btn-outline-primary btn-sm">Sửa</a>
+            <form method="POST" action="/admin/room-types/<%= rt.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa loại phòng này? Phòng đang dùng sẽ bị chặn.');">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>

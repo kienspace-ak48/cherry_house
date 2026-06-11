@@ -10,7 +10,7 @@ import {
   mapPropertyFromApi,
   propertyApiQueryFromContext,
 } from '../../lib/mapProperty';
-import { BookingPageLoading, awaitMinLoadingDelay } from './BookingLoading';
+import { BookingPageLoading } from './BookingLoading';
 import {
   CTA,
   formatContextSummary,
@@ -97,7 +97,6 @@ export default function PropertyDiscovery() {
     let cancelled = false;
 
     async function loadProperties() {
-      const startedAt = Date.now();
       setLoading(true);
       setError(null);
       setProperties([]);
@@ -118,10 +117,7 @@ export default function PropertyDiscovery() {
         setError(message);
         setProperties([]);
       } finally {
-        if (!cancelled) {
-          await awaitMinLoadingDelay(startedAt);
-          if (!cancelled) setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -165,11 +161,11 @@ export default function PropertyDiscovery() {
     <div className="bg-surface pb-20">
       <section className="border-b border-black/5 bg-surface-container-low/80">
         <div className={[LAYOUT_CONTAINER, 'pt-24 pb-10 md:pt-28 md:pb-12'].join(' ')}>
-          <BookingProgress current={getDiscoveryProgressStep(context)} context={context} />
+          <BookingProgress current={getDiscoveryProgressStep(context, searchParams)} context={context} />
           <BookingBreadcrumbs
             className="mb-4"
             items={
-              getDiscoveryProgressStep(context) === 'search'
+              getDiscoveryProgressStep(context, searchParams) === 'search'
                 ? [{ label: 'Tìm kiếm', current: true }]
                 : [
                     { label: 'Tìm kiếm', href: getBookingStepHref('search', context) },

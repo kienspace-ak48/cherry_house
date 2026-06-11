@@ -34,6 +34,15 @@ async function verifyVnpay(req, res) {
   }
 }
 
+async function verifyMomo(req, res) {
+  try {
+    const data = await checkoutService.verifyMomoReturn(req.query);
+    res.json({ success: true, data });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+}
+
 async function sepayIpn(req, res) {
   if (!sepayPgService.isIpnAuthorized(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized IPN' });
@@ -50,6 +59,30 @@ async function sepayIpn(req, res) {
 
 function queryFromReq(req) {
   return Object.keys(req.query || {}).length ? req.query : req.body || {};
+}
+
+async function momoIpn(req, res) {
+  try {
+    const payload = Object.keys(req.body || {}).length ? req.body : req.query || {};
+    const { verify, handled } = await checkoutService.handleMomoIpn(payload);
+    console.info('[checkout-momo-ipn]', JSON.stringify({
+      orderId: verify.orderId,
+      handled,
+      resultCode: verify.resultCode,
+      isVerified: verify.isVerified,
+    }));
+
+    return res.status(200).json({
+      partnerCode: verify.partnerCode,
+      requestId: verify.requestId,
+      orderId: verify.orderId,
+      resultCode: handled && verify.isSuccess ? 0 : 1,
+      message: handled ? 'success' : verify.message || 'failed',
+    });
+  } catch (error) {
+    console.error('[checkout-momo-ipn]', error);
+    return res.status(500).json({ resultCode: 99, message: 'error' });
+  }
 }
 
 async function vnpayIpn(req, res) {
@@ -75,6 +108,8 @@ module.exports = {
   startPay,
   getStatus,
   verifyVnpay,
+  verifyMomo,
   sepayIpn,
+  momoIpn,
   vnpayIpn,
 };

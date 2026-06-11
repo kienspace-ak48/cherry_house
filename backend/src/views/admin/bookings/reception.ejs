@@ -1,0 +1,125 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Lễ tân</h2>
+    <p class="text-body-secondary mb-0 small">
+      Tra cứu booking theo mã QR, email, SĐT hoặc mã đặt phòng
+      <% if (branchName) { %> · Chi nhánh <strong><%= branchName %></strong><% } %>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/bookings" class="btn btn-outline-secondary btn-sm">Danh sách đầy đủ</a>
+    <a href="/admin/bookings/new" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-plus me-1"></i> Tạo booking
+    </a>
+  </div>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'status_updated') { %>
+<div class="alert alert-success"><%= msg || 'Thao tác thành công.' %></div>
+<% } else if (typeof flash !== 'undefined' && flash === 'notfound') { %>
+<div class="alert alert-warning">Không tìm thấy booking.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-xl-5">
+    <div class="card admin-card mb-4">
+      <div class="card-header"><strong>Quét mã QR</strong></div>
+      <div class="card-body">
+        <div id="qrReader" class="rounded border bg-dark-subtle overflow-hidden" style="min-height:240px;"></div>
+        <p class="small text-body-secondary mt-2 mb-0">Đưa mã QR từ email hoặc trang xác nhận của khách vào khung camera.</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="btnToggleScanner">Bật / tắt camera</button>
+      </div>
+    </div>
+
+    <div class="card admin-card">
+      <div class="card-header"><strong>Tra cứu thủ công</strong></div>
+      <div class="card-body">
+        <div class="input-group">
+          <input type="search" class="form-control" id="lookupInput" placeholder="Email, SĐT, mã CH-…" autocomplete="off">
+          <button type="button" class="btn btn-primary" id="btnLookup">Tìm</button>
+        </div>
+        <p class="small text-body-secondary mt-2 mb-0">Nhập ít nhất 3 ký tự hoặc mã đặt phòng đầy đủ.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-7">
+    <div class="card admin-card mb-4" id="lookupResultsCard" style="display:none;">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Kết quả tra cứu</strong>
+        <span class="badge text-bg-secondary" id="lookupCount">0</span>
+      </div>
+      <div class="card-body p-0" id="lookupResults"></div>
+    </div>
+
+    <div class="card admin-card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fa-solid fa-door-open me-1 text-success"></i> Nhận phòng hôm nay</strong>
+        <span class="badge text-bg-success"><%= arrivals.length %></span>
+      </div>
+      <div class="card-body p-0">
+        <% if (!arrivals.length) { %>
+        <p class="text-center text-body-secondary py-4 mb-0">Không có khách check-in hôm nay</p>
+        <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr><th>Mã</th><th>Khách</th><th>Phòng</th><th></th></tr>
+            </thead>
+            <tbody>
+              <% arrivals.forEach(function(b) { %>
+              <tr>
+                <td><code><%= b.bookingCode %></code></td>
+                <td><%= b.guestName %><br><small class="text-body-secondary"><%= b.guestPhone %></small></td>
+                <td><%= b.roomCode %></td>
+                <td class="text-end"><a href="/admin/bookings/<%= b.id %>" class="btn btn-sm btn-outline-primary">Mở</a></td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="card admin-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fa-solid fa-door-closed me-1 text-info"></i> Trả phòng hôm nay</strong>
+        <span class="badge text-bg-info"><%= departures.length %></span>
+      </div>
+      <div class="card-body p-0">
+        <% if (!departures.length) { %>
+        <p class="text-center text-body-secondary py-4 mb-0">Không có khách check-out hôm nay</p>
+        <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr><th>Mã</th><th>Khách</th><th>Phòng</th><th></th></tr>
+            </thead>
+            <tbody>
+              <% departures.forEach(function(b) { %>
+              <tr>
+                <td><code><%= b.bookingCode %></code></td>
+                <td><%= b.guestName %><br><small class="text-body-secondary"><%= b.guestPhone %></small></td>
+                <td><%= b.roomCode %></td>
+                <td class="text-end">
+                  <form method="POST" action="/admin/bookings/<%= b.id %>/check-out" class="d-inline" onsubmit="return confirm('Xác nhận check-out khách <%= b.guestName %>?');">
+                    <input type="hidden" name="redirect" value="/admin/bookings/reception">
+                    <button type="submit" class="btn btn-sm btn-info text-white">Check-out</button>
+                  </form>
+                </td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/admin/js/admin-reception.js"></script>

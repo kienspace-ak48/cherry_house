@@ -12,7 +12,7 @@ async function list(req, res) {
 
 async function listMine(req, res) {
   try {
-    const data = await bookingService.listForUser(req.user);
+    const data = await bookingService.listForUser(req.user, req.query);
     res.json({ success: true, data });
   } catch (error) {
     sendApiError(res, error);
@@ -69,7 +69,16 @@ async function checkAvailability(req, res) {
 
 async function getOccupancy(req, res) {
   try {
-    const data = await bookingService.getBranchOccupancy(req.query);
+    const actor = req.admin || req.staff;
+    let scopedQuery = req.query;
+    if (actor?.role === 'staff') {
+      const { mergeStaffScopeFilters } = require('../../utils/staffScope.util');
+      scopedQuery = mergeStaffScopeFilters(actor, req.query);
+    } else if (actor) {
+      const { mergeScopeFilters } = require('../../utils/adminScope.util');
+      scopedQuery = mergeScopeFilters(actor, req.query);
+    }
+    const data = await bookingService.getBranchOccupancy(scopedQuery);
     res.json({ success: true, data });
   } catch (error) {
     sendApiError(res, error);

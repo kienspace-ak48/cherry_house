@@ -42,6 +42,8 @@ async function issueAdminAccessToken(admin) {
       id: admin.id,
       email: admin.email,
       role: admin.role,
+      branchId: admin.branchId ?? null,
+      propertyId: admin.propertyId ?? null,
       typ: 'admin',
     },
     ADMIN_ACCESS_EXPIRES,

@@ -1,0 +1,149 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Nội dung trang chủ</h2>
+    <p class="text-body-secondary mb-0 small">
+      Tùy chỉnh thanh thống kê (social proof) và khối &quot;Tại sao Cherry House&quot; ngay dưới hero.
+    </p>
+  </div>
+  <a class="btn btn-outline-primary btn-sm" href="/" target="_blank" rel="noopener">Mở website</a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'saved') { %>
+<div class="alert alert-success">Đã lưu nội dung trang chủ.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'reset') { %>
+<div class="alert alert-success">Đã khôi phục nội dung mặc định.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="POST" action="/admin/home-page" class="admin-crud-form">
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <strong>Thống kê (social proof)</strong>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="statsEnabled" name="statsEnabled" value="1" <%= settings.statsEnabled ? 'checked' : '' %>>
+            <label class="form-check-label small" for="statsEnabled">Hiển thị</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-3">Tối đa 4 cột — số liệu lớn màu đỏ và nhãn phía dưới.</p>
+          <div class="d-flex flex-column gap-3">
+            <% (settings.stats || []).forEach(function(stat, idx) { %>
+            <div class="row g-2 align-items-end border rounded-3 p-3 bg-light">
+              <div class="col-sm-4">
+                <label class="form-label small" for="statValue_<%= idx %>">Số liệu <%= idx + 1 %></label>
+                <input
+                  class="form-control form-control-sm"
+                  id="statValue_<%= idx %>"
+                  name="statValue[]"
+                  value="<%= stat.value %>"
+                  maxlength="40"
+                  placeholder="2,400+"
+                  required
+                >
+              </div>
+              <div class="col-sm-8">
+                <label class="form-label small" for="statLabel_<%= idx %>">Nhãn</label>
+                <input
+                  class="form-control form-control-sm"
+                  id="statLabel_<%= idx %>"
+                  name="statLabel[]"
+                  value="<%= stat.label %>"
+                  maxlength="120"
+                  placeholder="Lượt đặt phòng thành công"
+                  required
+                >
+              </div>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <strong>Tại sao Cherry House</strong>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="whyEnabled" name="whyEnabled" value="1" <%= settings.whyEnabled ? 'checked' : '' %>>
+            <label class="form-check-label small" for="whyEnabled">Hiển thị</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="whyEyebrow">Eyebrow (dòng nhỏ phía trên)</label>
+            <input class="form-control" id="whyEyebrow" name="whyEyebrow" value="<%= settings.whyEyebrow %>" maxlength="120" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="whyLeadTitle">Tiêu đề chính</label>
+            <input class="form-control" id="whyLeadTitle" name="whyLeadTitle" value="<%= settings.whyTitle %>" maxlength="255" required>
+          </div>
+          <div class="mb-4">
+            <label class="form-label" for="whyLeadDescription">Mô tả ngắn</label>
+            <textarea class="form-control" id="whyLeadDescription" name="whyLeadDescription" rows="2" required><%= settings.whyDescription %></textarea>
+          </div>
+
+          <p class="small text-body-secondary mb-3">3 cột ưu điểm — số thứ tự lớn (01, 02, 03).</p>
+          <div class="d-flex flex-column gap-3">
+            <% (settings.whyItems || []).forEach(function(item, idx) { %>
+            <div class="border rounded-3 p-3 bg-light">
+              <strong class="small d-block mb-2">Ưu điểm <%= idx + 1 %></strong>
+              <div class="row g-2 mb-2">
+                <div class="col-sm-3">
+                  <label class="form-label small" for="whyNumber_<%= idx %>">Số</label>
+                  <input
+                    class="form-control form-control-sm"
+                    id="whyNumber_<%= idx %>"
+                    name="whyNumber[]"
+                    value="<%= item.number %>"
+                    maxlength="8"
+                    placeholder="01"
+                    required
+                  >
+                </div>
+                <div class="col-sm-9">
+                  <label class="form-label small" for="whyTitleItem_<%= idx %>">Tiêu đề</label>
+                  <input
+                    class="form-control form-control-sm"
+                    id="whyTitleItem_<%= idx %>"
+                    name="whyItemTitle[]"
+                    value="<%= item.title %>"
+                    maxlength="120"
+                    required
+                  >
+                </div>
+              </div>
+              <div>
+                <label class="form-label small" for="whyDescItem_<%= idx %>">Mô tả</label>
+                <textarea
+                  class="form-control form-control-sm"
+                  id="whyDescItem_<%= idx %>"
+                  name="whyItemDescription[]"
+                  rows="2"
+                  required
+                ><%= item.description %></textarea>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+        <div class="card-footer d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card mb-3">
+      <div class="card-header py-3"><strong>Mặc định</strong></div>
+      <div class="card-body small text-body-secondary">
+        <p class="mb-2">Khôi phục số liệu và nội dung &quot;Tại sao&quot; như thiết kế ban đầu.</p>
+        <form method="POST" action="/admin/home-page/reset" onsubmit="return confirm('Khôi phục nội dung mặc định?');">
+          <button type="submit" class="btn btn-outline-warning btn-sm">Reset mặc định</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

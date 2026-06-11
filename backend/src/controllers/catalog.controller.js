@@ -109,6 +109,18 @@ async function getRoomById(req, res) {
   }
 }
 
+async function getRoomDetail(req, res) {
+  try {
+    const room = await catalogService.getRoomDetail(req.query);
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+    res.json({ success: true, data: room });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+}
+
 module.exports = {
   listProperties,
   getPropertyBySlug,
@@ -120,4 +132,5 @@ module.exports = {
   listRooms,
   listBranchRooms,
   getRoomById,
+  getRoomDetail,
 };

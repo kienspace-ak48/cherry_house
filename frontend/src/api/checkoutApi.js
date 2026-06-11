@@ -16,7 +16,7 @@ const checkoutApi = {
    *   guestEmail: string;
    *   specialNote?: string;
    *   promoCode?: string | null;
-   *   paymentMethod: 'card' | 'bank' | 'wallet';
+   *   paymentMethod: 'card' | 'momo' | 'bank' | 'wallet';
    * }} payload
    */
   async startPay(payload) {
@@ -32,6 +32,12 @@ const checkoutApi = {
   /** Xác thực redirect VNPay — truyền toàn bộ query string */
   async verifyVnpay(queryParams) {
     const res = await axiosClient.get('/checkout/verify/vnpay', { params: queryParams });
+    return res.data?.data ?? res.data;
+  },
+
+  /** Xác thực redirect MoMo */
+  async verifyMomo(queryParams) {
+    const res = await axiosClient.get('/checkout/verify/momo', { params: queryParams });
     return res.data?.data ?? res.data;
   },
 };

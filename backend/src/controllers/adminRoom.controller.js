@@ -1,8 +1,11 @@
 const inventoryRoomService = require('../services/inventoryRoom.service');
 const branchService = require('../services/branch.service');
 const roomTypeService = require('../services/roomType.service');
+const roomTypeRepository = require('../repositories/roomType.repository');
 const propertyService = require('../services/property.service');
 const { renderAdminPage, kindLabel } = require('../utils/adminRender');
+const { getClientAppUrl } = require('../config/appUrl.config');
+const { toDetailSlug } = require('../utils/catalog.mapper');
 
 const ROOM_STATUSES = [
   { value: 'available', label: 'Còn phòng (available)' },
@@ -33,6 +36,8 @@ function parseRoomFormBody(body) {
     priceVnd: Number.isNaN(priceVnd) ? 0 : priceVnd,
     description: body.description,
     imageUrl: body.imageUrl || null,
+    galleryImageUrl: body.galleryImageUrl,
+    extraParagraph: body.extraParagraph,
     altText: body.altText || null,
     maxAdults: Number.isNaN(maxAdults) ? 2 : maxAdults,
     maxChildren: Number.isNaN(maxChildren) ? 0 : maxChildren,
@@ -49,6 +54,8 @@ function emptyRoom() {
     priceVnd: 0,
     description: '',
     imageUrl: '',
+    galleryImages: [],
+    extraParagraphs: [],
     altText: '',
     maxAdults: 2,
     maxChildren: 0,
@@ -59,6 +66,40 @@ function emptyRoom() {
 
 function formatPriceVnd(amount) {
   return Number(amount || 0).toLocaleString('vi-VN');
+}
+
+async function loadRoomFormData() {
+  const [branches, roomTypes, properties, roomTypeCatalog] = await Promise.all([
+    branchService.listBranches(),
+    roomTypeService.list(),
+    propertyService.listProperties(),
+    roomTypeRepository.findAllForAdminCatalog(),
+  ]);
+  return { branches, roomTypes, properties, roomTypeCatalog };
+}
+
+function roomFromFailedSubmit(body) {
+  const parsed = parseRoomFormBody(body);
+  const galleryImages = Array.isArray(body.galleryImageUrl)
+    ? body.galleryImageUrl.map((u) => String(u).trim()).filter(Boolean)
+    : [];
+  const extraParagraphs = Array.isArray(body.extraParagraph)
+    ? body.extraParagraph.map((p) => String(p).trim()).filter(Boolean)
+    : [];
+  return { ...parsed, galleryImages, extraParagraphs };
+}
+
+function buildRoomPreviewUrl(req, room) {
+  if (!room?.code || !room.branchId) return null;
+  const branch = room.branch;
+  const propertySlug = branch?.property?.slug;
+  const branchCode = branch?.code;
+  if (!propertySlug || !branchCode) return null;
+  const params = new URLSearchParams({
+    property: propertySlug,
+    branch: branchCode,
+  });
+  return `${getClientAppUrl()}/room/${toDetailSlug(room.code)}?${params.toString()}`;
 }
 
 const ROOMS_GROUPED_THRESHOLD = 30;
@@ -300,11 +341,7 @@ async function list(req, res) {
 }
 
 async function createForm(req, res) {
-  const [branches, roomTypes, properties] = await Promise.all([
-    branchService.listBranches(),
-    roomTypeService.list(),
-    propertyService.listProperties(),
-  ]);
+  const { branches, roomTypes, properties, roomTypeCatalog } = await loadRoomFormData();
 
   renderAdminPage(req, res, 'admin/rooms/form', {
     pageTitle: 'Thêm phòng',
@@ -319,6 +356,7 @@ async function createForm(req, res) {
     branches,
     properties,
     roomTypes,
+    roomTypeCatalog,
     roomStatuses: ROOM_STATUSES,
     preselectBranchId: req.query.branchId || '',
     preselectPropertyId: req.query.propertyId || '',
@@ -331,11 +369,7 @@ async function create(req, res) {
     await inventoryRoomService.create(parseRoomFormBody(req.body));
     res.redirect('/admin/rooms?flash=created');
   } catch (error) {
-    const [branches, roomTypes, properties] = await Promise.all([
-      branchService.listBranches(),
-      roomTypeService.list(),
-      propertyService.listProperties(),
-    ]);
+    const { branches, roomTypes, properties, roomTypeCatalog } = await loadRoomFormData();
     renderAdminPage(req, res, 'admin/rooms/form', {
       pageTitle: 'Thêm phòng',
       adminPage: 'rooms',
@@ -345,10 +379,11 @@ async function create(req, res) {
         { label: 'Thêm mới' },
       ],
       mode: 'create',
-      room: parseRoomFormBody(req.body),
+      room: roomFromFailedSubmit(req.body),
       branches,
       properties,
       roomTypes,
+      roomTypeCatalog,
       roomStatuses: ROOM_STATUSES,
       formError: error.message,
     });
@@ -361,11 +396,7 @@ async function editForm(req, res) {
     if (!room) {
       return res.redirect('/admin/rooms?flash=notfound');
     }
-    const [branches, roomTypes, properties] = await Promise.all([
-      branchService.listBranches(),
-      roomTypeService.list(),
-      propertyService.listProperties(),
-    ]);
+    const { branches, roomTypes, properties, roomTypeCatalog } = await loadRoomFormData();
 
     renderAdminPage(req, res, 'admin/rooms/form', {
       pageTitle: 'Sửa phòng',
@@ -380,7 +411,9 @@ async function editForm(req, res) {
       branches,
       properties,
       roomTypes,
+      roomTypeCatalog,
       roomStatuses: ROOM_STATUSES,
+      previewUrl: buildRoomPreviewUrl(req, room),
     });
   } catch (error) {
     res.redirect(`/admin/rooms?flash=error&msg=${encodeURIComponent(error.message)}`);
@@ -392,12 +425,8 @@ async function update(req, res) {
     await inventoryRoomService.update(req.params.id, parseRoomFormBody(req.body));
     res.redirect('/admin/rooms?flash=updated');
   } catch (error) {
-    const [branches, roomTypes, properties] = await Promise.all([
-      branchService.listBranches(),
-      roomTypeService.list(),
-      propertyService.listProperties(),
-    ]);
-    const body = parseRoomFormBody(req.body);
+    const { branches, roomTypes, properties, roomTypeCatalog } = await loadRoomFormData();
+    const body = roomFromFailedSubmit(req.body);
     renderAdminPage(req, res, 'admin/rooms/form', {
       pageTitle: 'Sửa phòng',
       adminPage: 'rooms',
@@ -411,6 +440,7 @@ async function update(req, res) {
       branches,
       properties,
       roomTypes,
+      roomTypeCatalog,
       roomStatuses: ROOM_STATUSES,
       formError: error.message,
     });

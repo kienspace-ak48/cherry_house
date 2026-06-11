@@ -1,4 +1,5 @@
 const branchService = require('../services/branch.service');
+const catalogCountService = require('../services/catalogCount.service');
 const branchMapPinService = require('../services/branchMapPin.service');
 const branchMapPinRepository = require('../repositories/branchMapPin.repository');
 const propertyService = require('../services/property.service');
@@ -7,7 +8,6 @@ const { renderAdminPage, kindLabel } = require('../utils/adminRender');
 function parseBranchFormBody(body) {
   const propertyId = Number.parseInt(body.propertyId, 10);
   const price = Number.parseInt(body.price, 10);
-  const roomCount = Number.parseInt(body.roomCount, 10);
 
   return {
     propertyId: Number.isNaN(propertyId) ? undefined : propertyId,
@@ -16,7 +16,6 @@ function parseBranchFormBody(body) {
     address: body.address,
     tagline: body.tagline || null,
     price: Number.isNaN(price) ? 0 : price,
-    roomCount: Number.isNaN(roomCount) ? 0 : roomCount,
     imgUrl: body.imgUrl || null,
     isActive: body.isActive === 'on' || body.isActive === true || body.isActive === '1',
   };
@@ -139,9 +138,11 @@ async function list(req, res) {
       branchService.listBranches(filters),
       loadProperties(),
     ]);
+    await Promise.all(branches.map((b) => catalogCountService.syncBranchRoomCount(b.id)));
+    const refreshedBranches = await branchService.listBranches(filters);
 
     const filterPropertyId = req.query.propertyId ? String(req.query.propertyId) : '';
-    const propertyGroups = groupBranchesByProperty(branches, properties);
+    const propertyGroups = groupBranchesByProperty(refreshedBranches, properties);
     const selectedProperty = filterPropertyId
       ? properties.find((p) => String(p.id) === filterPropertyId) || null
       : null;
@@ -156,7 +157,7 @@ async function list(req, res) {
         { label: 'Dashboard', href: '/admin' },
         { label: 'Chi nhánh' },
       ],
-      branches,
+      branches: refreshedBranches,
       properties,
       propertyGroups: visibleGroups,
       selectedProperty,
@@ -243,6 +244,8 @@ async function editForm(req, res) {
     if (!branch) {
       return res.redirect('/admin/branches?flash=notfound');
     }
+    await catalogCountService.syncBranchRoomCount(branch.id);
+    const refreshed = await branchService.getBranchById(req.params.id);
     const properties = await loadProperties();
     renderAdminPage(req, res, 'admin/branches/form', {
       pageTitle: 'Sửa chi nhánh',
@@ -254,11 +257,11 @@ async function editForm(req, res) {
       ],
       mode: 'edit',
       branch: {
-        ...branch,
-        propertyId: branch.propertyId,
-        price: Number(branch.price),
+        ...refreshed,
+        propertyId: refreshed.propertyId,
+        price: Number(refreshed.price),
       },
-      mapPin: mapPinFromBranch(branch),
+      mapPin: mapPinFromBranch(refreshed),
       properties,
     });
   } catch (error) {

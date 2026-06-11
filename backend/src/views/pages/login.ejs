@@ -189,11 +189,11 @@
 </head>
 <body style="position: relative;">
   
-  <% if (typeof mess !== "undefined" && mess) { %>
-  <div class="alert" >
-    <%= mess %>
-  </div>
-<% } %>
+  <% if (typeof message !== 'undefined' && message) { %>
+  <div class="alert"><%= message %></div>
+  <% } else if (typeof mess !== 'undefined' && mess) { %>
+  <div class="alert"><%= mess %></div>
+  <% } %>
   <div class="login-card ">
     
     <h2>Login</h2>

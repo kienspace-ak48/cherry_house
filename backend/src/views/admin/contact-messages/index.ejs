@@ -1,0 +1,128 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Tin liên hệ</h2>
+    <p class="text-body-secondary mb-0 small">
+      Hộp thư từ form <a href="<%= contactPageUrl %>" target="_blank" rel="noopener">Liên hệ</a> trên website Cherry House.
+    </p>
+  </div>
+  <a href="<%= contactPageUrl %>" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Mở trang liên hệ
+  </a>
+</div>
+
+<% if (flash === 'deleted') { %><div class="alert alert-success">Đã xóa tin nhắn.</div>
+<% } else if (flash === 'error' && msg) { %><div class="alert alert-danger"><%= msg %></div><% } %>
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
+
+<div class="row g-3 mb-4">
+  <% statuses.forEach(function(s) {
+    const count = (statusCounts && statusCounts[s.value]) || 0;
+    const isActive = filterStatus === s.value;
+    const cardClass = s.value === 'new' ? 'bg-primary text-white'
+      : s.value === 'replied' ? 'bg-success text-white'
+      : s.value === 'archived' ? 'bg-dark text-white'
+      : '';
+  %>
+  <div class="col-6 col-md-3">
+    <a
+      href="/admin/contact-messages<%= buildListQuery({ q: searchQ, status: isActive ? '' : s.value }) %>"
+      class="card admin-stat-card admin-card h-100 text-decoration-none <%= cardClass || 'admin-contact-stat-neutral' %> <%= isActive ? 'admin-contact-stat-active' : '' %>"
+    >
+      <div class="card-body py-3">
+        <div class="stat-value"><%= count %></div>
+        <div class="stat-label"><%= s.label %></div>
+      </div>
+    </a>
+  </div>
+  <% }); %>
+</div>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/contact-messages" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small mb-1" for="searchQ">Tìm kiếm</label>
+        <input class="form-control form-control-sm" type="search" id="searchQ" name="q" value="<%= searchQ %>" placeholder="Tên, email, SĐT, nội dung…">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="filterStatus">Trạng thái</label>
+        <select class="form-select form-select-sm" id="filterStatus" name="status">
+          <option value="">— Tất cả —</option>
+          <% statuses.forEach(function(s) { %>
+          <option value="<%= s.value %>" <%= filterStatus === s.value ? 'selected' : '' %>><%= s.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
+        <a href="/admin/contact-messages" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <strong>
+      <i class="fa-solid fa-inbox me-1 text-body-secondary"></i>
+      Hộp thư
+    </strong>
+    <span class="badge text-bg-secondary"><%= total %> tin<%= filterStatus || searchQ ? ' (đã lọc)' : '' %></span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle admin-contact-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width:52px"></th>
+            <th>Khách hàng</th>
+            <th>Nội dung</th>
+            <th>Trạng thái</th>
+            <th>Gửi lúc</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!messages.length) { %>
+          <tr>
+            <td colspan="6" class="text-center py-5">
+              <div class="text-body-secondary">
+                <i class="fa-regular fa-envelope-open fa-2x mb-3 d-block opacity-50"></i>
+                <% if (searchQ || filterStatus) { %>
+                Không có tin phù hợp bộ lọc.
+                <div class="mt-2"><a href="/admin/contact-messages">Xóa lọc</a></div>
+                <% } else { %>
+                Chưa có tin nhắn từ khách.
+                <% } %>
+              </div>
+            </td>
+          </tr>
+          <% } else { messages.forEach(function(m) { const meta = statusMeta(m.status); %>
+          <tr class="admin-contact-row<%= m.status === 'new' ? ' admin-contact-row--new' : '' %>">
+            <td class="text-center">
+              <% if (m.status === 'new') { %>
+              <span class="admin-contact-unread-dot" title="Tin mới"></span>
+              <% } else { %>
+              <i class="fa-regular fa-envelope text-body-secondary opacity-50"></i>
+              <% } %>
+            </td>
+            <td>
+              <div class="fw-semibold <%= m.status === 'new' ? '' : 'text-body-emphasis' %>"><%= m.fullName %></div>
+              <a href="mailto:<%= m.email %>" class="small text-body-secondary text-decoration-none"><%= m.email %></a>
+              <% if (m.phone) { %><div class="small text-body-secondary"><i class="fa-solid fa-phone fa-xs me-1"></i><%= m.phone %></div><% } %>
+            </td>
+            <td class="small admin-contact-excerpt"><%= excerpt(m.message, 100) %></td>
+            <td><span class="badge bg-<%= meta.badge %>"><%= meta.label %></span></td>
+            <td class="text-nowrap"><small class="text-body-secondary"><%= formatDateTime(m.createdAt) %></small></td>
+            <td class="text-end text-nowrap">
+              <a href="/admin/contact-messages/<%= m.id %>" class="btn btn-sm <%= m.status === 'new' ? 'btn-primary' : 'btn-outline-primary' %>">
+                <%= m.status === 'new' ? 'Đọc' : 'Xem' %>
+              </a>
+            </td>
+          </tr>
+          <% }); } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

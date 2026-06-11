@@ -164,30 +164,28 @@
           </div>
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label" for="branchCount">Số chi nhánh</label>
-              <input
-                class="form-control"
-                type="number"
-                min="0"
-                id="branchCount"
-                name="branchCount"
-                value="<%= numField(p.branchCount) %>"
-                placeholder="0"
-              >
-              <div class="form-text">Có thể để trống — cập nhật sau khi tạo chi nhánh.</div>
+              <div class="text-body-secondary small mb-1">Số chi nhánh</div>
+              <div class="fs-5 fw-semibold"><%= p.branchCount ?? 0 %></div>
+              <div class="form-text">
+                Tự động đếm từ bảng chi nhánh.
+                <% if (!isCreate && p.id) { %>
+                <a href="/admin/branches?propertyId=<%= p.id %>">Quản lý chi nhánh</a>
+                <% } else { %>
+                Thêm chi nhánh sau khi tạo cơ sở.
+                <% } %>
+              </div>
             </div>
             <div class="col-6">
-              <label class="form-label" for="roomCount">Số phòng</label>
-              <input
-                class="form-control"
-                type="number"
-                min="0"
-                id="roomCount"
-                name="roomCount"
-                value="<%= numField(p.roomCount) %>"
-                placeholder="0"
-              >
-              <div class="form-text">Tổng phòng toàn cơ sở. Cập nhật khi đã thêm phòng.</div>
+              <div class="text-body-secondary small mb-1">Số phòng</div>
+              <div class="fs-5 fw-semibold"><%= p.roomCount ?? 0 %></div>
+              <div class="form-text">
+                Tự động đếm từ bảng phòng (inventory).
+                <% if (!isCreate && p.id) { %>
+                <a href="/admin/rooms?propertyId=<%= p.id %>">Quản lý phòng</a>
+                <% } else { %>
+                Mặc định 0 khi chưa có phòng.
+                <% } %>
+              </div>
             </div>
             <div class="col-6">
               <label class="form-label" for="rating">Rating</label>

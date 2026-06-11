@@ -1,4 +1,5 @@
 const branchRepository = require('../repositories/branch.repository');
+const catalogCountService = require('./catalogCount.service');
 const { httpError, parseId, parseOptionalBoolean, parseOptionalId } = require('../utils/http');
 
 function normalizeCode(raw) {
@@ -42,7 +43,7 @@ function assertCreatePayload(body) {
         ? String(body.tagline).trim() || null
         : null,
     price,
-    roomCount: Number.isInteger(body.roomCount) ? body.roomCount : 0,
+    roomCount: 0,
     imgUrl:
       body.imgUrl !== undefined && body.imgUrl !== null
         ? String(body.imgUrl).trim() || null
@@ -75,12 +76,6 @@ function buildUpdatePayload(body) {
     const price = Number(body.price ?? body.priceFromVnd);
     if (Number.isNaN(price) || price < 0) throw httpError('price must be a non-negative number');
     data.price = price;
-  }
-  if (body.roomCount !== undefined) {
-    if (!Number.isInteger(body.roomCount) || body.roomCount < 0) {
-      throw httpError('roomCount must be a non-negative integer');
-    }
-    data.roomCount = body.roomCount;
   }
   if (body.imgUrl !== undefined || body.img_url !== undefined) {
     const raw = body.imgUrl ?? body.img_url;
@@ -115,7 +110,9 @@ async function getBranchByPropertyAndCode(propertyIdRaw, codeRaw) {
 
 async function createBranch(body) {
   try {
-    return await branchRepository.create(assertCreatePayload(body));
+    const branch = await branchRepository.create(assertCreatePayload(body));
+    await catalogCountService.syncAfterBranchChange(branch.id);
+    return branchRepository.findById(branch.id);
   } catch (error) {
     mapPrismaError(error);
   }
@@ -123,8 +120,12 @@ async function createBranch(body) {
 
 async function updateBranch(idRaw, body) {
   const id = parseId(idRaw);
+  const existing = await branchRepository.findById(id);
+  if (!existing) throw httpError('Branch not found', 404);
   try {
-    return await branchRepository.update(id, buildUpdatePayload(body));
+    const branch = await branchRepository.update(id, buildUpdatePayload(body));
+    await catalogCountService.syncAfterBranchChange(branch.id, existing.propertyId);
+    return branchRepository.findById(branch.id);
   } catch (error) {
     mapPrismaError(error);
   }
@@ -132,8 +133,11 @@ async function updateBranch(idRaw, body) {
 
 async function deleteBranch(idRaw) {
   const id = parseId(idRaw);
+  const existing = await branchRepository.findById(id);
+  if (!existing) throw httpError('Branch not found', 404);
   try {
-    return await branchRepository.remove(id);
+    await branchRepository.remove(id);
+    await catalogCountService.syncPropertyCounts(existing.propertyId);
   } catch (error) {
     mapPrismaError(error);
   }

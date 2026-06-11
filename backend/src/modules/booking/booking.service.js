@@ -13,6 +13,9 @@ const {
 } = require('./bookingAvailability.service');
 const { getBranchOccupancy } = require('./bookingOccupancy.service');
 const { assertUserCanBook } = require('../../services/userBookingGuard.service');
+const checkoutService = require('../checkout/checkout.service');
+const { sendBookingConfirmationEmail } = require('../../services/bookingEmail.service');
+const { parseBookingCodeFromScan } = require('../../utils/bookingQr.util');
 
 function parseStatus(raw) {
   const status = typeof raw === 'string' ? raw.trim() : '';
@@ -218,12 +221,49 @@ function formatBookingDetail(row) {
   };
 }
 
+const DEFAULT_LIST_PAGE_SIZE = 20;
+const DEFAULT_USER_PAGE_SIZE = 10;
+const MAX_LIST_PAGE_SIZE = 100;
+
+function parseListPagination(query = {}, defaultPageSize = DEFAULT_LIST_PAGE_SIZE) {
+  const page = Math.max(1, Number.parseInt(String(query.page || ''), 10) || 1);
+  const pageSizeRaw = Number.parseInt(String(query.pageSize || ''), 10);
+  const pageSize = Number.isFinite(pageSizeRaw)
+    ? Math.min(MAX_LIST_PAGE_SIZE, Math.max(1, pageSizeRaw))
+    : defaultPageSize;
+  return { page, pageSize };
+}
+
+function parseUserListFilter(raw) {
+  const filter = typeof raw === 'string' ? raw.trim() : '';
+  if (['all', 'upcoming', 'past', 'pending'].includes(filter)) return filter;
+  return 'all';
+}
+
 async function list(query = {}) {
   const rows = await bookingRepository.findAll(parseListFilters(query));
   return rows.map(formatBookingRow);
 }
 
-async function listForUser(userJwt) {
+async function listPage(query = {}) {
+  const filters = parseListFilters(query);
+  const { page, pageSize } = parseListPagination(query);
+  const total = await bookingRepository.countAll(filters);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const skip = (safePage - 1) * pageSize;
+  const rows = await bookingRepository.findAll(filters, { skip, take: pageSize });
+
+  return {
+    items: rows.map(formatBookingRow),
+    total,
+    page: safePage,
+    pageSize,
+    totalPages,
+  };
+}
+
+async function listForUser(userJwt, query = {}) {
   const userId = Number(userJwt?.id);
   if (!Number.isInteger(userId) || userId < 1) {
     throw httpError('Unauthorized', 401);
@@ -235,11 +275,25 @@ async function listForUser(userJwt) {
   });
   if (!user) throw httpError('User not found', 404);
 
-  const rows = await bookingRepository.findForUser({
-    userId: user.id,
-    email: user.email,
-  });
-  return rows.map(formatBookingRow);
+  const filter = parseUserListFilter(query.filter);
+  const { page, pageSize } = parseListPagination(query, DEFAULT_USER_PAGE_SIZE);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const userQuery = { userId: user.id, email: user.email, filter, todayIso };
+
+  const total = await bookingRepository.countForUser(userQuery);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const skip = (safePage - 1) * pageSize;
+  const rows = await bookingRepository.findForUser(userQuery, { skip, take: pageSize });
+
+  return {
+    items: rows.map(formatBookingRow),
+    total,
+    page: safePage,
+    pageSize,
+    totalPages,
+    filter,
+  };
 }
 
 async function getById(idRaw) {
@@ -290,10 +344,100 @@ async function persistBooking(data, options = {}) {
         },
       });
     });
-    return formatBookingDetail(row);
+    const detail = formatBookingDetail(row);
+    sendBookingConfirmationEmail(row).catch((err) => {
+      console.error('[booking] counter payment email failed:', err?.message || err);
+    });
+    return detail;
   } catch (error) {
     mapPrismaError(error, 'Booking not found');
   }
+}
+
+async function lookupForStaff(queryRaw, scopeFilters = {}) {
+  const raw = String(queryRaw || '').trim();
+  if (!raw) return [];
+
+  const parsedCode = parseBookingCodeFromScan(raw);
+  const baseFilters = { ...scopeFilters };
+
+  if (parsedCode && /^CH-/i.test(parsedCode)) {
+    const exactRows = await bookingRepository.findAll(
+      { ...baseFilters, exactBookingCode: parsedCode.toUpperCase() },
+      { take: 5 },
+    );
+    if (exactRows.length) return exactRows.map(formatBookingRow);
+  }
+
+  const rows = await bookingRepository.findAll(
+    { ...baseFilters, q: raw },
+    { take: 12 },
+  );
+  return rows.map(formatBookingRow);
+}
+
+async function confirmPaymentAtCounter(idRaw, staffRef = 'counter') {
+  const id = parseId(idRaw);
+  const existing = await bookingRepository.findById(id);
+  if (!existing) throw httpError('Booking not found', 404);
+  if (existing.status === 'cancelled') {
+    throw httpError('Booking đã hủy, không thể xác nhận thanh toán', 409);
+  }
+  if (existing.status === 'confirmed' && existing.payment?.status === 'paid') {
+    return formatBookingDetail(existing);
+  }
+
+  if (!existing.payment) {
+    await prisma.payment.create({
+      data: {
+        bookingId: existing.id,
+        method: 'bank',
+        amountVnd: existing.totalVnd,
+        status: 'pending',
+      },
+    });
+  }
+
+  await checkoutService.markBookingPaid(existing.bookingCode, 'counter', staffRef);
+  return formatBookingDetail(await bookingRepository.findById(id));
+}
+
+async function checkInGuest(idRaw) {
+  const id = parseId(idRaw);
+  const existing = await bookingRepository.findById(id);
+  if (!existing) throw httpError('Booking not found', 404);
+  if (existing.status === 'cancelled') {
+    throw httpError('Booking đã hủy', 409);
+  }
+  if (existing.status === 'checked_in') {
+    return formatBookingDetail(existing);
+  }
+  if (existing.status !== 'confirmed') {
+    throw httpError('Chỉ check-in booking đã xác nhận (chưa check-in)', 409);
+  }
+  const isPaid = existing.payment?.status === 'paid' || existing.status === 'confirmed';
+  if (!isPaid) {
+    throw httpError('Khách chưa thanh toán — xác nhận thanh toán trước khi check-in', 409);
+  }
+  const row = await bookingRepository.updateStatus(id, 'checked_in');
+  return formatBookingDetail(row);
+}
+
+async function checkOutGuest(idRaw) {
+  const id = parseId(idRaw);
+  const existing = await bookingRepository.findById(id);
+  if (!existing) throw httpError('Booking not found', 404);
+  if (existing.status === 'cancelled') {
+    throw httpError('Booking đã hủy', 409);
+  }
+  if (existing.status === 'completed') {
+    return formatBookingDetail(existing);
+  }
+  if (!['confirmed', 'checked_in'].includes(existing.status)) {
+    throw httpError('Chỉ check-out booking đã check-in hoặc đã xác nhận', 409);
+  }
+  const row = await bookingRepository.updateStatus(id, 'completed');
+  return formatBookingDetail(row);
 }
 
 async function create(body) {
@@ -465,12 +609,11 @@ async function update(idRaw, body) {
 
   try {
     const row = await bookingRepository.update(id, data);
-    if (isTruthyFlag(body.markPaid) && row.payment && row.payment.status !== 'paid') {
-      await prisma.payment.update({
-        where: { id: row.payment.id },
-        data: { status: 'paid', paidAt: new Date(), amountVnd: data.totalVnd },
-      });
-      return formatBookingDetail(await bookingRepository.findById(id));
+    if (isTruthyFlag(body.markPaid)) {
+      const refreshed = await bookingRepository.findById(id);
+      if (refreshed.payment?.status !== 'paid' || refreshed.status === 'pending_payment') {
+        return confirmPaymentAtCounter(id, 'ADMIN');
+      }
     }
     return formatBookingDetail(row);
   } catch (error) {
@@ -492,6 +635,7 @@ async function patchStatus(idRaw, body) {
 
 module.exports = {
   list,
+  listPage,
   listForUser,
   getById,
   getByIdRaw,
@@ -499,6 +643,10 @@ module.exports = {
   createAdmin,
   update,
   patchStatus,
+  lookupForStaff,
+  confirmPaymentAtCounter,
+  checkInGuest,
+  checkOutGuest,
   checkAvailability,
   getBranchOccupancy,
   formatBookingDetail,

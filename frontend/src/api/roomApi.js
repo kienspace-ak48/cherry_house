@@ -21,6 +21,19 @@ const roomApi = {
     return res.data;
   },
 
+  /**
+   * @param {{
+   *   detailSlug?: string;
+   *   propertySlug?: string;
+   *   branchCode?: string;
+   *   roomId?: number | string;
+   * }} params
+   */
+  async getDetail(params = {}) {
+    const res = await axiosClient.get('/catalog/rooms/detail', { params });
+    return res.data;
+  },
+
   /** @deprecated Dùng admin API — giữ cho tương thích cũ */
   async getAll() {
     return roomApi.list({ isActive: 'true' });

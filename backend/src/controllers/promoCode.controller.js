@@ -1,63 +1,21 @@
 const promoCodeService = require('../services/promoCode.service');
+const { sendApiError } = require('../utils/http');
 
-async function list(req, res) {
+async function validate(req, res) {
   try {
-    const data = await promoCodeService.list(req.query);
+    const code = typeof req.body?.code === 'string' ? req.body.code : '';
+    const subtotalVnd = Number(req.body?.subtotalVnd);
+    if (!code.trim()) {
+      return res.status(400).json({ success: false, message: 'code is required' });
+    }
+    if (!Number.isFinite(subtotalVnd) || subtotalVnd < 0) {
+      return res.status(400).json({ success: false, message: 'subtotalVnd must be a non-negative number' });
+    }
+    const data = await promoCodeService.validateAndApply(code, subtotalVnd);
     res.json({ success: true, data });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    sendApiError(res, error);
   }
 }
 
-async function getById(req, res) {
-  try {
-    const item = await promoCodeService.getById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Promo code not found' });
-    }
-    res.json({ success: true, data: item });
-  } catch (error) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message });
-  }
-}
-
-async function getByCode(req, res) {
-  try {
-    const item = await promoCodeService.getByCode(req.params.code);
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Promo code not found' });
-    }
-    res.json({ success: true, data: item });
-  } catch (error) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message });
-  }
-}
-
-async function create(req, res) {
-  try {
-    const item = await promoCodeService.create(req.body);
-    res.status(201).json({ success: true, data: item });
-  } catch (error) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message });
-  }
-}
-
-async function update(req, res) {
-  try {
-    const item = await promoCodeService.update(req.params.id, req.body);
-    res.json({ success: true, data: item });
-  } catch (error) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message });
-  }
-}
-
-async function remove(req, res) {
-  try {
-    await promoCodeService.remove(req.params.id);
-    res.json({ success: true, message: 'Promo code deleted' });
-  } catch (error) {
-    res.status(error.statusCode || 500).json({ success: false, message: error.message });
-  }
-}
-
-module.exports = { list, getById, getByCode, create, update, remove };
+module.exports = { validate };

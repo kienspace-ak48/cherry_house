@@ -1,0 +1,114 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Tài khoản hệ thống</h2>
+    <p class="text-body-secondary mb-0 small">
+      Quản lý đăng nhập CMS — <strong>Super Admin</strong>, <strong>Admin</strong>, <strong>Nhân viên</strong> (gắn chi nhánh).
+    </p>
+  </div>
+  <a href="/admin/accounts/new" class="btn btn-primary btn-sm">
+    <i class="fa-solid fa-user-plus me-1"></i> Tạo tài khoản
+  </a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'created') { %><div class="alert alert-success">Đã tạo tài khoản.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật tài khoản.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'forbidden') { %><div class="alert alert-warning">Bạn không có quyền thực hiện thao tác này.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/accounts" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="searchQ">Tìm kiếm</label>
+        <input class="form-control form-control-sm" type="search" id="searchQ" name="q" value="<%= searchQ %>" placeholder="Tên, email…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterRole">Vai trò</label>
+        <select class="form-select form-select-sm" id="filterRole" name="role">
+          <option value="">— Tất cả —</option>
+          <% (adminRoles || []).forEach(function(r) { %>
+          <option value="<%= r.value %>" <%= filterRole === r.value ? 'selected' : '' %>><%= r.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="filterBranchId">Chi nhánh</label>
+        <select class="form-select form-select-sm" id="filterBranchId" name="branchId">
+          <option value="">— Tất cả —</option>
+          <% branches.forEach(function(br) { %>
+          <option value="<%= br.id %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %> (<%= br.code %>)</option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterActive">Trạng thái</label>
+        <select class="form-select form-select-sm" id="filterActive" name="isActive">
+          <option value="">— Tất cả —</option>
+          <option value="true" <%= filterActive === 'true' ? 'selected' : '' %>>Đang hoạt động</option>
+          <option value="false" <%= filterActive === 'false' ? 'selected' : '' %>>Đã khóa</option>
+        </select>
+      </div>
+      <div class="col-md-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
+        <a href="/admin/accounts" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách</strong>
+    <span class="badge text-bg-secondary"><%= accounts.length %> tài khoản</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Vai trò</th>
+            <th>Chi nhánh</th>
+            <th>Trạng thái</th>
+            <th>Tạo lúc</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!accounts.length) { %>
+          <tr><td colspan="7" class="text-center text-body-secondary py-4">Chưa có tài khoản phù hợp</td></tr>
+          <% } else { accounts.forEach(function(acc) { %>
+          <tr>
+            <td><strong><%= acc.fullName %></strong></td>
+            <td><code class="small"><%= acc.email %></code></td>
+            <td><span class="badge bg-<%= roleBadgeClass(acc.role) %>"><%= roleLabel(acc.role) %></span></td>
+            <td>
+              <% if (acc.role === 'staff' && acc.branchLabel) { %>
+              <span class="small"><%= acc.branchLabel %></span>
+              <% } else { %>
+              <span class="text-body-secondary">—</span>
+              <% } %>
+            </td>
+            <td>
+              <span class="badge bg-<%= acc.isActive ? 'success' : 'secondary' %>">
+                <%= acc.isActive ? 'Hoạt động' : 'Khóa' %>
+              </span>
+            </td>
+            <td class="small text-body-secondary"><%= formatDateTime(acc.createdAt) %></td>
+            <td class="text-end text-nowrap">
+              <% if (canEditAccount(acc)) { %>
+              <a href="/admin/accounts/<%= acc.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <% } else { %>
+              <span class="small text-body-secondary">—</span>
+              <% } %>
+            </td>
+          </tr>
+          <% }); } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

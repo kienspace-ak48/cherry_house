@@ -34,6 +34,12 @@ export default function BookingProgress({ current, context = {}, extra = {} }) {
           const reachable = isBookingStepReachable(step.id, context, extra);
           const href = reachable ? getBookingStepHref(step.id, context, extra) : null;
           const canNavigate = Boolean(href) && !active;
+          const disabledReason =
+            step.id === 'checkout' && !reachable
+              ? 'Chọn phòng và ngày nhận–trả phòng trước'
+              : !reachable && !active
+                ? 'Hoàn thành bước trước để mở bước này'
+                : undefined;
 
           const chipClass = [
             'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold sm:px-3 sm:text-sm transition-colors',
@@ -85,6 +91,7 @@ export default function BookingProgress({ current, context = {}, extra = {} }) {
                 <span
                   className={chipClass}
                   aria-current={active ? 'step' : undefined}
+                  title={disabledReason}
                 >
                   {inner}
                 </span>

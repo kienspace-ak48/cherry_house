@@ -37,9 +37,13 @@ const bookingApi = {
     return res.data?.data ?? res.data;
   },
 
-  /** Lịch sử đặt phòng của user đang đăng nhập */
-  async listMine() {
-    const res = await axiosClient.get('/bookings/me');
+  /**
+   * Lịch sử đặt phòng của user đang đăng nhập (có phân trang).
+   *
+   * @param {{ page?: number; pageSize?: number; filter?: 'all'|'upcoming'|'past'|'pending' }} [params]
+   */
+  async listMine(params = {}) {
+    const res = await axiosClient.get('/bookings/me', { params });
     return res.data?.data ?? res.data;
   },
 };

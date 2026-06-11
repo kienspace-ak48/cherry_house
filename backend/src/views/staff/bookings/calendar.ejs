@@ -1,0 +1,156 @@
+<div class="staff-page-head">
+  <h2>Lịch phòng</h2>
+  <p>Xem phòng bận theo ngày — <%= user.propertyName %></p>
+</div>
+
+<div class="staff-card">
+  <div class="staff-card-body">
+    <form method="GET" action="/staff/bookings/calendar" id="calendarFilterForm" style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;">
+      <div>
+        <label class="small text-muted">Chi nhánh</label>
+        <select class="staff-form-control" id="calBranchId" name="branchId" required>
+          <option value="">— Chọn —</option>
+          <% branches.forEach(function(br) { %>
+          <option value="<%= br.id %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label class="small text-muted">Từ</label>
+        <input class="staff-form-control" type="date" id="calFrom" name="from" value="<%= from %>">
+      </div>
+      <div>
+        <label class="small text-muted">Đến</label>
+        <input class="staff-form-control" type="date" id="calTo" name="to" value="<%= to %>">
+      </div>
+      <button type="submit" class="staff-btn staff-btn-primary">Xem</button>
+    </form>
+  </div>
+</div>
+
+<div id="calendar-error" class="staff-alert staff-alert-error" style="display:none;"></div>
+<div class="staff-card" id="calendar-summary-card" style="display:none;">
+  <div class="staff-card-body" style="display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem;">
+    <span><strong id="sum-total">0</strong> phòng</span>
+    <span>Trống: <strong id="sum-available">0</strong></span>
+    <span>Giữ: <strong id="sum-held">0</strong></span>
+    <span>Đã đặt: <strong id="sum-booked">0</strong></span>
+  </div>
+</div>
+<div class="staff-card" id="calendar-grid-card" style="display:none;">
+  <div class="booking-calendar-scroll">
+    <table class="booking-calendar-table" id="calendar-table">
+      <thead><tr id="calendar-head-row"><th class="booking-calendar-room-col">Phòng</th></tr></thead>
+      <tbody id="calendar-body"></tbody>
+    </table>
+  </div>
+</div>
+<p id="calendar-placeholder" style="text-align:center;color:var(--staff-muted);">Chọn chi nhánh và khoảng ngày.</p>
+
+<script>
+(function staffCalendar() {
+  const branchSel = document.getElementById('calBranchId');
+  const fromInput = document.getElementById('calFrom');
+  const toInput = document.getElementById('calTo');
+
+  function defaultDates() {
+    if (!fromInput.value || !toInput.value) {
+      const start = new Date();
+      const end = new Date();
+      end.setDate(end.getDate() + 13);
+      fromInput.value = start.toISOString().slice(0, 10);
+      toInput.value = end.toISOString().slice(0, 10);
+    }
+  }
+
+  function dateRange(fromStr, toStr) {
+    const dates = [];
+    const cur = new Date(fromStr + 'T12:00:00');
+    const end = new Date(toStr + 'T12:00:00');
+    while (cur < end) {
+      dates.push(cur.toISOString().slice(0, 10));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+  }
+
+  function cellClass(room, dateStr, bookings) {
+    const day = new Date(dateStr + 'T12:00:00');
+    for (const b of bookings) {
+      if (b.roomId !== room.roomId) continue;
+      const cin = new Date(b.checkIn + 'T12:00:00');
+      const cout = new Date(b.checkOut + 'T12:00:00');
+      if (day >= cin && day < cout) {
+        return ['confirmed', 'checked_in'].includes(b.status) ? 'booking-cal-booked' : 'booking-cal-held';
+      }
+    }
+    return room.isActive ? 'booking-cal-free' : 'booking-cal-inactive';
+  }
+
+  async function loadCalendar() {
+    const branchId = branchSel.value;
+    if (!branchId) return;
+    defaultDates();
+    const errEl = document.getElementById('calendar-error');
+    errEl.style.display = 'none';
+    document.getElementById('calendar-placeholder').style.display = 'none';
+    try {
+      const data = await StaffApi.get(`/bookings/occupancy?branchId=${branchId}&from=${fromInput.value}&to=${toInput.value}`);
+      renderCalendar(data, dateRange(fromInput.value, toInput.value));
+    } catch (err) {
+      document.getElementById('calendar-summary-card').style.display = 'none';
+      document.getElementById('calendar-grid-card').style.display = 'none';
+      document.getElementById('calendar-placeholder').style.display = 'block';
+      errEl.textContent = err.message || 'Lỗi tải lịch';
+      errEl.style.display = 'block';
+    }
+  }
+
+  function renderCalendar(data, dates) {
+    document.getElementById('calendar-summary-card').style.display = 'block';
+    document.getElementById('calendar-grid-card').style.display = 'block';
+    const s = data.summary;
+    document.getElementById('sum-total').textContent = s.totalRooms;
+    document.getElementById('sum-available').textContent = s.available;
+    document.getElementById('sum-held').textContent = s.held;
+    document.getElementById('sum-booked').textContent = s.booked;
+    const headRow = document.getElementById('calendar-head-row');
+    headRow.innerHTML = '<th class="booking-calendar-room-col">Phòng</th>';
+    dates.forEach((d) => {
+      const th = document.createElement('th');
+      th.className = 'booking-calendar-day-col';
+      const dt = new Date(d + 'T12:00:00');
+      th.innerHTML = `${dt.getDate()}/${dt.getMonth() + 1}`;
+      headRow.appendChild(th);
+    });
+    const tbody = document.getElementById('calendar-body');
+    tbody.innerHTML = '';
+    const bookings = data.activeBookings || [];
+    data.rooms.forEach((room) => {
+      const tr = document.createElement('tr');
+      const roomTd = document.createElement('td');
+      roomTd.className = 'booking-calendar-room-col';
+      roomTd.textContent = room.code;
+      tr.appendChild(roomTd);
+      dates.forEach((dateStr) => {
+        const td = document.createElement('td');
+        td.className = 'booking-calendar-day-col ' + cellClass(room, dateStr, bookings);
+        const hit = bookings.find((b) => b.roomId === room.roomId && dateStr >= b.checkIn && dateStr < b.checkOut);
+        if (hit) {
+          td.innerHTML = `<a href="/staff/bookings/${hit.bookingId}" class="booking-cal-link">${hit.guestName.split(' ').slice(-1)[0]}</a>`;
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('calendarFilterForm').addEventListener('submit', (e) => {
+    if (!branchSel.value) return;
+    e.preventDefault();
+    loadCalendar();
+  });
+  defaultDates();
+  <% if (filterBranchId) { %>loadCalendar();<% } %>
+})();
+</script>

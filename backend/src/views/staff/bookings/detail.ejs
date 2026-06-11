@@ -1,0 +1,77 @@
+<div class="staff-page-head" style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h2><code><%= booking.bookingCode %></code></h2>
+    <p><%= booking.propertyName %> · <%= booking.branchName %></p>
+  </div>
+  <a href="/staff/bookings" class="staff-btn staff-btn-outline">← Danh sách</a>
+</div>
+
+<% if (flash === 'ok') { %><div class="staff-alert staff-alert-success"><%= msg || 'Thành công' %></div>
+<% } else if (flash === 'error') { %><div class="staff-alert staff-alert-error"><%= msg %></div><% } %>
+
+<div class="staff-grid-2">
+  <div>
+    <div class="staff-card">
+      <div class="staff-card-head">Thông tin lưu trú</div>
+      <div class="staff-card-body">
+        <p><strong>Phòng:</strong> <%= booking.roomCode %></p>
+        <p><strong>Check-in:</strong> <%= formatDateOnly(booking.checkIn) %></p>
+        <p><strong>Check-out:</strong> <%= formatDateOnly(booking.checkOut) %> (<%= booking.nights %> đêm)</p>
+        <p><strong>Trạng thái:</strong>
+          <span class="staff-badge staff-badge-<%= statusBadgeClass(booking.status) %>"><%= statusLabel(booking.status) %></span>
+        </p>
+      </div>
+    </div>
+    <div class="staff-card">
+      <div class="staff-card-head">Khách hàng</div>
+      <div class="staff-card-body">
+        <p><strong><%= booking.guestName %></strong></p>
+        <p><a href="tel:<%= booking.guestPhone %>"><%= booking.guestPhone %></a></p>
+        <p><a href="mailto:<%= booking.guestEmail %>"><%= booking.guestEmail %></a></p>
+      </div>
+    </div>
+    <div class="staff-card">
+      <div class="staff-card-head">Thanh toán</div>
+      <div class="staff-card-body">
+        <p><strong>Tổng:</strong> <%= formatVnd(booking.totalVnd) %></p>
+        <% if (booking.payment) { %>
+        <p>PT: <%= booking.payment.method %> · <span class="staff-badge staff-badge-<%= booking.payment.status === 'paid' ? 'success' : 'warning' %>"><%= booking.payment.status %></span></p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <div>
+    <% if (bookingQrDataUrl) { %>
+    <div class="staff-card">
+      <div class="staff-card-head">Mã QR</div>
+      <div class="staff-card-body" style="text-align:center;">
+        <img src="<%= bookingQrDataUrl %>" alt="QR" width="180" height="180" style="border:1px solid var(--staff-border);border-radius:8px;padding:8px;background:#fff;">
+      </div>
+    </div>
+    <% } %>
+    <div class="staff-card">
+      <div class="staff-card-head">Thao tác</div>
+      <div class="staff-card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <% const isPaid = booking.payment?.status === 'paid' || booking.status === 'confirmed' || booking.status === 'checked_in'; %>
+        <% if ((booking.status === 'pending_payment' || !isPaid) && booking.status !== 'cancelled') { %>
+        <form method="POST" action="/staff/bookings/<%= booking.id %>/mark-paid">
+          <input type="hidden" name="redirect" value="/staff/bookings/<%= booking.id %>">
+          <button type="submit" class="staff-btn staff-btn-success" style="width:100%;justify-content:center;" onclick="return confirm('Xác nhận thanh toán tại quầy?');">Thanh toán quầy</button>
+        </form>
+        <% } %>
+        <% if (booking.status === 'confirmed' && isPaid) { %>
+        <form method="POST" action="/staff/bookings/<%= booking.id %>/check-in">
+          <input type="hidden" name="redirect" value="/staff/bookings/<%= booking.id %>">
+          <button type="submit" class="staff-btn staff-btn-primary" style="width:100%;justify-content:center;">Check-in khách</button>
+        </form>
+        <% } %>
+        <% if (booking.status === 'checked_in') { %>
+        <form method="POST" action="/staff/bookings/<%= booking.id %>/check-out">
+          <input type="hidden" name="redirect" value="/staff/bookings/<%= booking.id %>">
+          <button type="submit" class="staff-btn staff-btn-info" style="width:100%;justify-content:center;" onclick="return confirm('Check-out khách?');">Check-out khách</button>
+        </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>

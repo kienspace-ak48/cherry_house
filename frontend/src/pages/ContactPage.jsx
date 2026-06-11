@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import contactApi from '../api/contactApi';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
 import { getHeaderBookingHref } from '../lib/bookingContext';
 
@@ -12,11 +13,32 @@ const GOOGLE_MAPS_EXTERNAL_HREF = `https://www.google.com/maps/search/?api=1&que
 
 function ContactPage() {
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const bookingHref = getHeaderBookingHref();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSent(true);
+    if (submitting) return;
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const fullName = String(data.get('name') || '').trim();
+    const email = String(data.get('email') || '').trim();
+    const message = String(data.get('message') || '').trim();
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await contactApi.submit({ fullName, email, message });
+      setSent(true);
+      form.reset();
+    } catch (err) {
+      setSubmitError(err?.message || 'Không gửi được tin nhắn. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -95,11 +117,15 @@ function ContactPage() {
             <h2 className="font-headline text-lg font-bold text-on-surface">Gửi tin nhắn</h2>
             {sent ? (
               <p className="mt-6 rounded-xl bg-primary/5 p-4 text-sm text-on-surface-variant">
-                Cảm ơn bạn — chúng tôi đã ghi nhận. Trong bản demo, biểu mẫu không gửi dữ liệu thật; bạn
-                có thể nối API sau tại đây.
+                Cảm ơn bạn — Cherry House đã nhận tin nhắn và sẽ phản hồi qua email trong thời gian sớm nhất.
               </p>
             ) : (
               <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+                {submitError ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
+                    {submitError}
+                  </p>
+                ) : null}
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
                     Họ và tên
@@ -140,9 +166,10 @@ function ContactPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-md shadow-primary/25 transition-all hover:brightness-110"
+                  disabled={submitting}
+                  className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-md shadow-primary/25 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Gửi liên hệ
+                  {submitting ? 'Đang gửi…' : 'Gửi liên hệ'}
                 </button>
               </form>
             )}

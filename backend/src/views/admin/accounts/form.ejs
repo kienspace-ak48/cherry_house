@@ -1,0 +1,85 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= mode === 'create' ? 'Tạo tài khoản hệ thống' : 'Sửa tài khoản' %></h2>
+    <p class="text-body-secondary mb-0 small">
+      Nhân viên (<code>staff</code>) đăng nhập tại <strong>/staff/login</strong> — bắt buộc gắn <strong>một cơ sở</strong> (xem booking toàn property).
+    </p>
+  </div>
+  <a href="/admin/accounts" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+</div>
+
+<% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
+
+<form
+  method="POST"
+  action="<%= mode === 'edit' ? '/admin/accounts/' + accountId : '/admin/accounts' %>"
+  class="admin-crud-form card admin-card"
+  id="adminAccountForm"
+>
+  <div class="card-body p-4">
+    <div class="row g-4">
+      <div class="col-md-6">
+        <label class="form-label" for="fullName">Họ tên <span class="text-danger">*</span></label>
+        <input class="form-control" type="text" id="fullName" name="fullName" value="<%= account.fullName %>" required maxlength="255">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="email">Email đăng nhập <span class="text-danger">*</span></label>
+        <input class="form-control" type="email" id="email" name="email" value="<%= account.email %>" required maxlength="255" autocomplete="off">
+      </div>
+      <div class="col-12">
+        <%- include('../../partials/admin/galleryImagePicker', {
+          fieldId: 'avatarUrl',
+          fieldName: 'avatarUrl',
+          value: account.avatarUrl,
+          label: 'Ảnh đại diện (tùy chọn)',
+        }) %>
+        <div class="form-text">Hiển thị ở góc phải header admin. Chọn từ gallery hoặc để trống dùng ảnh mặc định.</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="role">Vai trò <span class="text-danger">*</span></label>
+        <select class="form-select" id="role" name="role" required>
+          <% assignableRoles.forEach(function(r) { %>
+          <option value="<%= r.value %>" <%= account.role === r.value ? 'selected' : '' %>><%= r.label %> — <%= r.description %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-6" id="propertyFieldWrap">
+        <label class="form-label" for="propertyId">Cơ sở lưu trú <span class="text-danger property-required">*</span></label>
+        <select class="form-select" id="propertyId" name="propertyId">
+          <option value="">— Chọn cơ sở —</option>
+          <% properties.forEach(function(prop) { %>
+          <option value="<%= prop.id %>" <%= String(account.propertyId) === String(prop.id) ? 'selected' : '' %>><%= prop.name %> (<%= prop.city %>)</option>
+          <% }); %>
+        </select>
+        <div class="form-text">Nhân viên chỉ xem booking & lịch của cơ sở này tại portal /staff.</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="password">
+          Mật khẩu
+          <% if (mode === 'create') { %><span class="text-danger">*</span><% } else { %> <span class="text-body-secondary">(để trống nếu không đổi)</span><% } %>
+        </label>
+        <input
+          class="form-control"
+          type="password"
+          id="password"
+          name="password"
+          minlength="6"
+          autocomplete="new-password"
+          <%= mode === 'create' ? 'required' : '' %>
+        >
+      </div>
+      <div class="col-md-6 d-flex align-items-end">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="isActive" name="isActive" <%= account.isActive ? 'checked' : '' %>>
+          <label class="form-check-label" for="isActive">Tài khoản đang hoạt động</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-end gap-2 py-3">
+    <a href="/admin/accounts" class="btn btn-light">Hủy</a>
+    <button type="submit" class="btn btn-primary"><%= mode === 'create' ? 'Tạo tài khoản' : 'Lưu thay đổi' %></button>
+  </div>
+</form>
+
+<script src="/admin/js/admin-accounts-form.js"></script>

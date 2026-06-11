@@ -1,8 +1,10 @@
 <%
   const currentPage = typeof adminPage !== 'undefined' ? adminPage : '';
-  const catalogOpen = ['properties', 'branches', 'rooms'].includes(currentPage) ? ' show' : '';
-  const bookingOpen = ['bookings', 'bookings-calendar'].includes(currentPage) ? ' show' : '';
-  const usersOpen = currentPage === 'users' ? ' show' : '';
+  const staffUser = typeof isStaff !== 'undefined' && isStaff;
+  const catalogOpen = ['properties', 'branches', 'rooms', 'room-types'].includes(currentPage) ? ' show' : '';
+  const bookingOpen = ['bookings', 'bookings-calendar', 'bookings-reception', 'promo-codes'].includes(currentPage) ? ' show' : '';
+  const usersOpen = ['users', 'contact-messages'].includes(currentPage) ? ' show' : '';
+  const systemOpen = ['accounts', 'backups'].includes(currentPage) ? ' show' : '';
 %>
 <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
   <div class="sidebar-header border-bottom">
@@ -15,13 +17,16 @@
     <button class="btn-close d-lg-none" type="button" data-coreui-theme="dark" aria-label="Close" onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"></button>
   </div>
   <ul class="sidebar-nav" data-coreui="navigation" data-simplebar>
+    <% if (!staffUser) { %>
     <li class="nav-item">
       <a class="nav-link<%= currentPage === 'dashboard' ? ' active' : '' %>" href="/admin">
         <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-speedometer"></use></svg>
         Dashboard
       </a>
     </li>
+    <% } %>
 
+    <% if (!staffUser) { %>
     <li class="nav-title admin-nav-section-heading">Quản lý lưu trú</li>
     <li class="nav-group<%= catalogOpen %>">
       <a class="nav-link nav-group-toggle" href="#">
@@ -32,8 +37,10 @@
         <li class="nav-item"><a class="nav-link<%= currentPage === 'properties' ? ' active' : '' %>" href="/admin/properties"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Cơ sở lưu trú</a></li>
         <li class="nav-item"><a class="nav-link<%= currentPage === 'branches' ? ' active' : '' %>" href="/admin/branches"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Chi nhánh</a></li>
         <li class="nav-item"><a class="nav-link<%= currentPage === 'rooms' ? ' active' : '' %>" href="/admin/rooms"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Phòng</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'room-types' ? ' active' : '' %>" href="/admin/room-types"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Loại phòng</a></li>
       </ul>
     </li>
+    <% } %>
 
     <li class="nav-group<%= bookingOpen %>">
       <a class="nav-link nav-group-toggle" href="#">
@@ -41,12 +48,17 @@
         Đặt phòng
       </a>
       <ul class="nav-group-items compact">
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings-reception' ? ' active' : '' %>" href="/admin/bookings/reception"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Lễ tân</a></li>
         <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings' ? ' active' : '' %>" href="/admin/bookings"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Danh sách</a></li>
         <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings-calendar' ? ' active' : '' %>" href="/admin/bookings/calendar"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Lịch phòng</a></li>
+        <% if (!staffUser) { %>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'promo-codes' ? ' active' : '' %>" href="/admin/promo-codes"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Mã giảm giá</a></li>
+        <% } %>
         <li class="nav-item"><a class="nav-link" href="/admin/bookings/new"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tạo booking</a></li>
       </ul>
     </li>
 
+    <% if (!staffUser) { %>
     <li class="nav-divider"></li>
     <li class="nav-title admin-nav-section-heading">Khách hàng</li>
     <li class="nav-group<%= usersOpen %>">
@@ -56,6 +68,7 @@
       </a>
       <ul class="nav-group-items compact">
         <li class="nav-item"><a class="nav-link<%= currentPage === 'users' ? ' active' : '' %>" href="/admin/users"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Khách hàng</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'contact-messages' ? ' active' : '' %>" href="/admin/contact-messages"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tin liên hệ</a></li>
       </ul>
     </li>
 
@@ -67,24 +80,44 @@
         Gallery
       </a>
     </li>
+    <% } %>
 
-    <% if (typeof isSuperAdmin !== 'undefined' && isSuperAdmin) { %>
+    <% if (typeof isAdminManager !== 'undefined' && isAdminManager) { %>
     <li class="nav-divider"></li>
     <li class="nav-title admin-nav-section-heading">Hệ thống</li>
-    <li class="nav-item">
-      <a class="nav-link<%= currentPage === 'backups' ? ' active' : '' %>" href="/admin/backups">
-        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-data-transfer-down"></use></svg>
-        Backup DB
+    <li class="nav-group<%= systemOpen %>">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-shield-alt"></use></svg>
+        Quản trị
       </a>
+      <ul class="nav-group-items compact">
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'accounts' ? ' active' : '' %>" href="/admin/accounts"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tài khoản CMS</a></li>
+        <% if (typeof isSuperAdmin !== 'undefined' && isSuperAdmin) { %>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'backups' ? ' active' : '' %>" href="/admin/backups"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Backup DB</a></li>
+        <% } %>
+      </ul>
     </li>
     <% } %>
 
+    <% if (!staffUser) { %>
     <li class="nav-divider"></li>
     <li class="nav-title admin-nav-section-heading">Site</li>
+    <li class="nav-item">
+      <a class="nav-link<%= currentPage === 'homepage' ? ' active' : '' %>" href="/admin/homepage">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-home"></use></svg>
+        Trang chủ
+      </a>
+    </li>
     <li class="nav-item">
       <a class="nav-link<%= currentPage === 'seo' ? ' active' : '' %>" href="/admin/seo">
         <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-search"></use></svg>
         SEO &amp; Meta
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link<%= currentPage === 'email-templates' ? ' active' : '' %>" href="/admin/email-templates">
+        <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-envelope-open"></use></svg>
+        Mẫu email
       </a>
     </li>
     <li class="nav-item">
@@ -93,6 +126,7 @@
         Chatbot AI
       </a>
     </li>
+    <% } %>
     <!-- <li class="nav-item">
       <a class="nav-link" href="/" target="_blank" rel="noopener">
         <svg class="nav-icon"><use xlink:href="/coreui/vendors/@coreui/icons/svg/free.svg#cil-external-link"></use></svg>

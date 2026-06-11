@@ -9,7 +9,7 @@
     "dev": "nodemon --inspect server.js",
     "build:client": "npm install --prefix ../frontend && npm run build --prefix ../frontend",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate deploy",
+    "db:migrate": "prisma migrate deploy && prisma generate",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "prisma generate && node prisma/seed.js",
     "postinstall": "prisma generate"

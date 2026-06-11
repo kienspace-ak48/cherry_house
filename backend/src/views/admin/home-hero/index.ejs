@@ -1,0 +1,215 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Hero trang chủ</h2>
+    <p class="text-body-secondary mb-0 small">
+      Mỗi slide có badge, tiêu đề, mô tả và ảnh riêng. Website tự chuyển slide và hiển thị chấm điều hướng.
+    </p>
+  </div>
+  <a class="btn btn-outline-primary btn-sm" href="/" target="_blank" rel="noopener">Mở website</a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'saved') { %>
+<div class="alert alert-success">Đã lưu cấu hình hero.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'reset') { %>
+<div class="alert alert-success">Đã khôi phục hero mặc định.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="POST" action="/admin/home-hero" class="admin-crud-form" id="homeHeroForm">
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <strong>Cài đặt chung</strong>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="isEnabled" name="isEnabled" value="1" <%= settings.isEnabled ? 'checked' : '' %>>
+            <label class="form-check-label small" for="isEnabled">Bật hero CMS</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-0">
+            <label class="form-label" for="quickCities">Thành phố phổ biến (phân cách bằng dấu phẩy)</label>
+            <input class="form-control" id="quickCities" name="quickCities" value="<%= settings.quickCitiesText %>" placeholder="Đà Lạt, Đà Nẵng, Vũng Tàu">
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <strong>Banner trượt (carousel)</strong>
+          <div class="d-flex align-items-center gap-2">
+            <label class="form-label small mb-0 text-nowrap" for="slideIntervalSec">Giãn cách (giây)</label>
+            <input
+              class="form-control form-control-sm"
+              style="width: 4.5rem;"
+              type="number"
+              id="slideIntervalSec"
+              name="slideIntervalSec"
+              min="3"
+              max="30"
+              value="<%= settings.slideIntervalSec %>"
+            >
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-3">
+            Mỗi slide gồm nội dung (badge, tiêu đề, mô tả) và ảnh nền. Khách có thể bấm chấm tròn dưới hero để chuyển slide.
+          </p>
+          <div id="heroSlidesList" class="d-flex flex-column gap-3">
+            <% (settings.slides || []).forEach(function(slide, idx) { %>
+            <div class="hero-slide-row border rounded-3 p-3 bg-light" data-slide-row>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <strong class="small">Slide <%= idx + 1 %></strong>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-remove-slide <%= (settings.slides || []).length <= 1 ? 'disabled' : '' %>>
+                  Xóa slide
+                </button>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small" for="slideBadge_<%= idx %>">Badge</label>
+                <input
+                  class="form-control form-control-sm"
+                  id="slideBadge_<%= idx %>"
+                  name="slideBadge[]"
+                  value="<%= slide.badge || '' %>"
+                  maxlength="255"
+                  placeholder="Website chính thức Cherry House"
+                >
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label small" for="slideTitleLine1_<%= idx %>">Tiêu đề — dòng 1 (đậm) <span class="text-danger">*</span></label>
+                  <input
+                    class="form-control form-control-sm"
+                    id="slideTitleLine1_<%= idx %>"
+                    name="slideTitleLine1[]"
+                    value="<%= slide.titleLine1 || '' %>"
+                    maxlength="255"
+                    required
+                  >
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small" for="slideTitleLine2_<%= idx %>">Tiêu đề — dòng 2 (nghiêng)</label>
+                  <input
+                    class="form-control form-control-sm"
+                    id="slideTitleLine2_<%= idx %>"
+                    name="slideTitleLine2[]"
+                    value="<%= slide.titleLine2 || '' %>"
+                    maxlength="255"
+                  >
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small" for="slideDescription_<%= idx %>">Mô tả <span class="text-danger">*</span></label>
+                <textarea
+                  class="form-control form-control-sm"
+                  id="slideDescription_<%= idx %>"
+                  name="slideDescription[]"
+                  rows="2"
+                  required
+                ><%= slide.description || '' %></textarea>
+              </div>
+              <%- include('../../partials/admin/galleryImagePicker', {
+                fieldId: 'slideImageUrl_' + idx,
+                fieldName: 'slideImageUrl[]',
+                value: slide.imageUrl,
+                label: 'Ảnh banner'
+              }) %>
+              <div class="mt-2">
+                <label class="form-label small" for="slideAlt_<%= idx %>">Alt text (SEO / accessibility)</label>
+                <input
+                  class="form-control form-control-sm"
+                  id="slideAlt_<%= idx %>"
+                  name="slideAlt[]"
+                  value="<%= slide.alt || '' %>"
+                  maxlength="255"
+                  placeholder="Mô tả ngắn về ảnh"
+                >
+              </div>
+            </div>
+            <% }); %>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addHeroSlide">
+            <i class="fa-solid fa-plus me-1"></i>Thêm slide
+          </button>
+        </div>
+        <div class="card-footer d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card mb-3">
+      <div class="card-header py-3"><strong>Mặc định</strong></div>
+      <div class="card-body small text-body-secondary">
+        <p class="mb-2">Khôi phục một slide mặc định với nội dung và ảnh banner ban đầu.</p>
+        <form method="POST" action="/admin/home-hero/reset" onsubmit="return confirm('Khôi phục hero mặc định?');">
+          <button type="submit" class="btn btn-outline-warning btn-sm">Reset mặc định</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card admin-card">
+      <div class="card-header py-3"><strong>Gợi ý</strong></div>
+      <div class="card-body small text-body-secondary">
+        <ul class="mb-0 ps-3">
+          <li>Mỗi slide nên có badge + tiêu đề + mô tả khác nhau</li>
+          <li>Ảnh khuyến nghị 1920×1080, định dạng JPG/PNG</li>
+          <li>Chấm điều hướng chỉ hiện khi có từ 2 slide trở lên</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<template id="heroSlideRowTemplate">
+  <div class="hero-slide-row border rounded-3 p-3 bg-light" data-slide-row>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <strong class="small" data-slide-label>Slide</strong>
+      <button type="button" class="btn btn-sm btn-outline-danger" data-remove-slide>Xóa slide</button>
+    </div>
+    <div class="mb-3">
+      <label class="form-label small">Badge</label>
+      <input class="form-control form-control-sm" name="slideBadge[]" value="" maxlength="255" placeholder="Website chính thức Cherry House">
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-md-6">
+        <label class="form-label small">Tiêu đề — dòng 1 (đậm) <span class="text-danger">*</span></label>
+        <input class="form-control form-control-sm" name="slideTitleLine1[]" value="" maxlength="255" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small">Tiêu đề — dòng 2 (nghiêng)</label>
+        <input class="form-control form-control-sm" name="slideTitleLine2[]" value="" maxlength="255">
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label small">Mô tả <span class="text-danger">*</span></label>
+      <textarea class="form-control form-control-sm" name="slideDescription[]" rows="2" required></textarea>
+    </div>
+    <div class="gallery-image-picker" data-gallery-picker>
+      <label class="form-label">Ảnh banner</label>
+      <div class="gallery-image-picker-preview mb-2 d-none" data-gallery-picker-preview>
+        <img src="" alt="" class="gallery-image-picker-thumb rounded border" data-gallery-picker-preview-img>
+      </div>
+      <input type="hidden" class="gallery-image-picker-input" name="slideImageUrl[]" value="" data-gallery-picker-input>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>
+          <i class="fa-solid fa-images me-1"></i>Chọn từ gallery
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-gallery-picker-clear>
+          <i class="fa-solid fa-xmark me-1"></i>Xóa ảnh
+        </button>
+        <a href="/admin/gallery" class="btn btn-link btn-sm text-body-secondary" target="_blank" rel="noopener">Quản lý thư viện</a>
+      </div>
+      <div class="form-text" data-gallery-picker-path-text>Chưa chọn ảnh — mở gallery để chọn.</div>
+    </div>
+    <div class="mt-2">
+      <label class="form-label small">Alt text (SEO / accessibility)</label>
+      <input class="form-control form-control-sm" name="slideAlt[]" value="" maxlength="255" placeholder="Mô tả ngắn về ảnh">
+    </div>
+  </div>
+</template>
+
+<script src="/admin/js/admin-home-hero-page.js"></script>

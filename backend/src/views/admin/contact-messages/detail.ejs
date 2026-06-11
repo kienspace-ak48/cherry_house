@@ -1,0 +1,137 @@
+<% const meta = statusMeta(message.status); %>
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+      <h2 class="mb-0">Tin #<%= message.id %></h2>
+      <span class="badge bg-<%= meta.badge %>"><%= meta.label %></span>
+    </div>
+    <p class="text-body-secondary mb-0 small">
+      <i class="fa-regular fa-clock me-1"></i><%= formatDateTime(message.createdAt) %>
+      <% if (message.readAt) { %> · Đọc <%= formatDateTime(message.readAt) %><% } %>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/contact-messages" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+    <a href="<%= mailReplyUrl %>" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-reply me-1"></i> Trả lời email
+    </a>
+    <form method="POST" action="/admin/contact-messages/<%= message.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa tin #<%= message.id %>?');">
+      <button type="submit" class="btn btn-outline-danger btn-sm">
+        <i class="fa-solid fa-trash-can me-1"></i> Xóa
+      </button>
+    </form>
+  </div>
+</div>
+
+<% if (flash === 'updated') { %><div class="alert alert-success">Đã cập nhật trạng thái tin nhắn.</div>
+<% } else if (flash === 'error' && msg) { %><div class="alert alert-danger"><%= msg %></div><% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card admin-card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fa-solid fa-user me-1 text-body-secondary"></i> Thông tin liên hệ</strong>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <div class="text-body-secondary small">Họ tên</div>
+            <div class="fw-semibold"><%= message.fullName %></div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-body-secondary small">Email</div>
+            <div><a href="mailto:<%= message.email %>"><%= message.email %></a></div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-body-secondary small">Điện thoại</div>
+            <div>
+              <% if (message.phone) { %>
+              <a href="tel:<%= message.phone %>"><%= message.phone %></a>
+              <% } else { %>—<% } %>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-body-secondary small">Tài khoản website</div>
+            <div>
+              <% if (linkedUser) { %>
+              <a href="/admin/users/<%= linkedUser.id %>" class="fw-semibold text-decoration-none">
+                <%= linkedUser.fullName %>
+              </a>
+              <span class="badge bg-<%= linkedUser.isActive ? 'success' : 'danger' %> ms-1">
+                <%= linkedUser.isActive ? 'Active' : 'Khóa' %>
+              </span>
+              <% } else { %>
+              <span class="text-body-secondary">Chưa đăng ký / email khác</span>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-body-secondary small mb-2">Nội dung tin nhắn</div>
+        <div class="admin-contact-message-body"><%= message.message %></div>
+      </div>
+    </div>
+
+    <% if (message.ipAddress || message.userAgent) { %>
+    <div class="card admin-card">
+      <div class="card-header"><strong class="small">Kỹ thuật</strong></div>
+      <div class="card-body small text-body-secondary">
+        <% if (message.ipAddress) { %>
+        <div class="mb-2"><span class="text-body-secondary">IP:</span> <code><%= message.ipAddress %></code></div>
+        <% } %>
+        <% if (message.userAgent) { %>
+        <div class="text-break"><span class="text-body-secondary">Trình duyệt:</span> <%= message.userAgent %></div>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card mb-3">
+      <div class="card-header"><strong>Xử lý</strong></div>
+      <div class="card-body">
+        <div class="text-body-secondary small mb-2">Đổi nhanh trạng thái</div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <% statuses.forEach(function(s) { %>
+          <form method="POST" action="/admin/contact-messages/<%= message.id %>" class="d-inline">
+            <input type="hidden" name="status" value="<%= s.value %>">
+            <button
+              type="submit"
+              class="btn btn-sm <%= message.status === s.value ? 'btn-' + s.badge : 'btn-outline-' + s.badge %>"
+            >
+              <%= s.label %>
+            </button>
+          </form>
+          <% }); %>
+        </div>
+        <form method="POST" action="/admin/contact-messages/<%= message.id %>">
+          <div class="mb-3">
+            <label class="form-label" for="status">Trạng thái</label>
+            <select class="form-select form-select-sm" id="status" name="status">
+              <% statuses.forEach(function(s) { %>
+              <option value="<%= s.value %>" <%= message.status === s.value ? 'selected' : '' %>><%= s.label %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="adminNote">Ghi chú nội bộ</label>
+            <textarea class="form-control" id="adminNote" name="adminNote" rows="5" placeholder="VD: Đã gọi lại, đã gửi báo giá…"><%= message.adminNote || '' %></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Lưu thay đổi</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card admin-card border-0 bg-body-tertiary">
+      <div class="card-body small text-body-secondary">
+        <div class="fw-semibold text-body mb-2">Gợi ý xử lý</div>
+        <ul class="mb-0 ps-3">
+          <li>Trả lời qua email — nút <strong>Trả lời email</strong> đã kèm nội dung gốc.</li>
+          <li>Đánh dấu <strong>Đã phản hồi</strong> sau khi trả lời khách.</li>
+          <li><strong>Lưu trữ</strong> tin đã xử lý xong.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

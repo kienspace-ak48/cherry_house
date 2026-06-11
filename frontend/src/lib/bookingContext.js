@@ -138,8 +138,18 @@ export function hasCompleteBookingTarget(ctx) {
 /**
  * Bước tiến trình hiện tại trên màn discovery (tìm kiếm vs chọn cơ sở).
  * @param {BookingContext} ctx
+ * @param {URLSearchParams | string | null | undefined} [searchParams]
  */
-export function getDiscoveryProgressStep(ctx) {
+export function getDiscoveryProgressStep(ctx, searchParams) {
+  const params =
+    searchParams instanceof URLSearchParams
+      ? searchParams
+      : searchParams
+        ? new URLSearchParams(searchParams)
+        : null;
+
+  if (params?.get('focus') === 'search') return 'search';
+  if (params?.get('list') === '1' || ctx.city || ctx.kind || ctx.q) return 'property';
   return hasDateRange(ctx) ? 'property' : 'search';
 }
 
@@ -160,7 +170,7 @@ export function getHeaderBookingHref() {
 /** @param {BookingContext} ctx */
 export function getBranchStepHref(ctx) {
   const { branch, ...rest } = ctx;
-  return buildUrl('/booking', rest);
+  return buildUrl('/booking', rest, { step: 'branch' });
 }
 
 /**
@@ -319,7 +329,7 @@ export function getBookingStepHref(stepId, ctx = {}, extra = {}) {
       return buildUrl('/booking', base, { list: '1' });
     case 'branch':
       if (!ctx.property) return getBookingStepHref('property', ctx, extra);
-      return buildUrl('/booking', { ...base, property: ctx.property });
+      return buildUrl('/booking', { ...base, property: ctx.property }, { step: 'branch' });
     case 'rooms':
       if (!ctx.property || !ctx.branch) {
         return ctx.property

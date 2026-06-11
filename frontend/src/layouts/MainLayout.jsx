@@ -5,11 +5,13 @@ import { SeoProvider } from '../seo/SeoContext'
 import PageSeo from '../seo/PageSeo'
 import ChatBotWidget from '../components/chat/ChatBotWidget'
 import ScrollToTop from '../components/ScrollToTop'
+import RouteTransitionLoading from '../components/RouteTransitionLoading'
 
 function MainLayout() {
   return (
     <SeoProvider>
       <ScrollToTop />
+      <RouteTransitionLoading />
       <PageSeo />
       <div className="flex min-h-screen flex-col bg-surface">
           <Header />

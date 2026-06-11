@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <%- include('../partials/faviconLinks') %>
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' · Cherry House Staff' : 'Cherry House Staff' %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous">
+  <link href="/staff/css/staff-app.css" rel="stylesheet">
+  <%- style %>
+</head>
+<body class="staff-body">
+  <%- include('../staff/partials/sidebar') %>
+  <div class="staff-main">
+    <%- include('../staff/partials/header') %>
+    <main class="staff-content">
+      <%- body %>
+    </main>
+  </div>
+  <script src="/staff/js/staff-api.js"></script>
+  <%- script %>
+</body>
+</html>

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import bookingApi from '../../api/bookingApi';
 
 const STATUS_META = {
   pending_payment: { label: 'Chờ thanh toán', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
-  confirmed: { label: 'Đã xác nhận', tone: 'text-tertiary bg-tertiary/10 border-tertiary/30' },
+  confirmed: { label: 'Chưa check-in', tone: 'text-tertiary bg-tertiary/10 border-tertiary/30' },
+  checked_in: { label: 'Đã check-in', tone: 'text-primary bg-primary/10 border-primary/20' },
   cancelled: { label: 'Đã hủy', tone: 'text-on-surface-variant bg-surface-container-low border-outline-variant/40' },
   completed: { label: 'Hoàn tất', tone: 'text-primary bg-primary/10 border-primary/20' },
   draft: { label: 'Nháp', tone: 'text-on-surface-variant bg-surface-container-low border-outline-variant/40' },
@@ -17,6 +18,8 @@ const FILTERS = [
   { id: 'past', label: 'Đã qua' },
   { id: 'pending', label: 'Chờ TT' },
 ];
+
+const PAGE_SIZE = 10;
 
 function fmtMoney(amountVnd) {
   return `${new Intl.NumberFormat('vi-VN').format(Math.round(amountVnd))}đ`;
@@ -31,14 +34,8 @@ function paymentMethodLabel(method) {
   if (method === 'card') return 'Thẻ / VNPay';
   if (method === 'bank') return 'Chuyển khoản';
   if (method === 'wallet') return 'Ví / QR';
+  if (method === 'momo') return 'MoMo';
   return method || '—';
-}
-
-function classifyBooking(booking, todayIso) {
-  if (booking.status === 'pending_payment') return 'pending';
-  if (booking.status === 'cancelled') return 'past';
-  if (booking.checkOut >= todayIso) return 'upcoming';
-  return 'past';
 }
 
 function BookingCard({ booking }) {
@@ -92,30 +89,87 @@ function BookingCard({ booking }) {
         </div>
       </dl>
 
-      {booking.status === 'pending_payment' ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
+        {booking.status === 'pending_payment' ? (
+          <>
+            <Link
+              to={`/checkout/result?bookingCode=${encodeURIComponent(booking.bookingCode)}`}
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary"
+            >
+              <span className="material-symbols-outlined text-[16px]">payments</span>
+              Kiểm tra thanh toán
+            </Link>
+            <Link
+              to="/booking"
+              className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 px-3 py-2 text-xs font-bold text-on-surface"
+            >
+              Đặt phòng mới
+            </Link>
+          </>
+        ) : null}
+        {paid ? (
           <Link
             to={`/checkout/result?bookingCode=${encodeURIComponent(booking.bookingCode)}`}
-            className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary"
+            className="inline-flex items-center gap-1 rounded-lg border border-tertiary/40 bg-tertiary/5 px-3 py-2 text-xs font-bold text-tertiary"
           >
-            <span className="material-symbols-outlined text-[16px]">payments</span>
-            Kiểm tra thanh toán
+            <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
+            Xem mã QR check-in
           </Link>
-          <Link
-            to="/booking"
-            className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 px-3 py-2 text-xs font-bold text-on-surface"
-          >
-            Đặt phòng mới
-          </Link>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </article>
+  );
+}
+
+function BookingsPagination({ page, totalPages, total, pageSize, onPageChange, loading }) {
+  if (totalPages <= 1) return null;
+
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+
+  return (
+    <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-outline-variant/30 bg-white px-4 py-3 shadow-sm sm:flex-row">
+      <p className="text-xs text-on-surface-variant">
+        Hiển thị <span className="font-semibold text-on-surface">{from}–{to}</span> /{' '}
+        <span className="font-semibold text-on-surface">{total}</span> đơn
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={loading || page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface transition-colors enabled:hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+          Trước
+        </button>
+        <span className="min-w-20 text-center text-xs font-semibold text-on-surface">
+          {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={loading || page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 px-3 py-1.5 text-xs font-bold text-on-surface transition-colors enabled:hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Sau
+          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
 export default function ProfileBookingsSection() {
   const [filter, setFilter] = useState('all');
-  const [state, setState] = useState({ loading: true, items: [], error: null });
+  const [page, setPage] = useState(1);
+  const [state, setState] = useState({
+    loading: true,
+    items: [],
+    total: 0,
+    totalPages: 1,
+    error: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -123,15 +177,23 @@ export default function ProfileBookingsSection() {
     async function load() {
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
-        const items = await bookingApi.listMine();
+        const data = await bookingApi.listMine({ page, pageSize: PAGE_SIZE, filter });
         if (!cancelled) {
-          setState({ loading: false, items: Array.isArray(items) ? items : [], error: null });
+          setState({
+            loading: false,
+            items: Array.isArray(data?.items) ? data.items : [],
+            total: Number(data?.total) || 0,
+            totalPages: Number(data?.totalPages) || 1,
+            error: null,
+          });
         }
       } catch (err) {
         if (!cancelled) {
           setState({
             loading: false,
             items: [],
+            total: 0,
+            totalPages: 1,
             error: err?.message || 'Không tải được lịch sử đặt phòng.',
           });
         }
@@ -142,14 +204,12 @@ export default function ProfileBookingsSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filter, page]);
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-
-  const filtered = useMemo(() => {
-    if (filter === 'all') return state.items;
-    return state.items.filter((b) => classifyBooking(b, todayIso) === filter);
-  }, [filter, state.items, todayIso]);
+  function handleFilterChange(nextFilter) {
+    setFilter(nextFilter);
+    setPage(1);
+  }
 
   return (
     <div className="space-y-4">
@@ -175,7 +235,7 @@ export default function ProfileBookingsSection() {
             <button
               key={f.id}
               type="button"
-              onClick={() => setFilter(f.id)}
+              onClick={() => handleFilterChange(f.id)}
               className={[
                 'rounded-full px-3 py-1.5 text-xs font-bold transition-colors',
                 filter === f.id
@@ -201,7 +261,7 @@ export default function ProfileBookingsSection() {
         </section>
       ) : null}
 
-      {!state.loading && !state.error && filtered.length === 0 ? (
+      {!state.loading && !state.error && state.items.length === 0 ? (
         <section className="rounded-xl border border-dashed border-outline-variant/40 bg-white p-8 text-center">
           <span className="material-symbols-outlined text-4xl text-primary/60">event_busy</span>
           <p className="mt-3 font-headline text-sm font-bold text-on-surface">Chưa có đơn đặt phòng</p>
@@ -219,12 +279,22 @@ export default function ProfileBookingsSection() {
         </section>
       ) : null}
 
-      {!state.loading && !state.error && filtered.length > 0 ? (
-        <div className="space-y-3">
-          {filtered.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
-          ))}
-        </div>
+      {!state.loading && !state.error && state.items.length > 0 ? (
+        <>
+          <div className="space-y-3">
+            {state.items.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} />
+            ))}
+          </div>
+          <BookingsPagination
+            page={page}
+            totalPages={state.totalPages}
+            total={state.total}
+            pageSize={PAGE_SIZE}
+            loading={state.loading}
+            onPageChange={setPage}
+          />
+        </>
       ) : null}
     </div>
   );

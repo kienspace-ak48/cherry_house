@@ -14,7 +14,7 @@
 
 <% if (typeof flash !== 'undefined' && flash === 'created') { %><div class="alert alert-success">Đã tạo booking thành công.</div>
 <% } else if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật booking.</div>
-<% } else if (typeof flash !== 'undefined' && flash === 'status_updated') { %><div class="alert alert-success">Đã đổi trạng thái.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'status_updated') { %><div class="alert alert-success"><%= msg || 'Đã đổi trạng thái.' %></div>
 <% } else if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi' %></div>
 <% } %>
 
@@ -128,9 +128,44 @@
   </div>
 
   <div class="col-lg-4">
+    <% if (typeof bookingQrDataUrl !== 'undefined' && bookingQrDataUrl) { %>
+    <div class="card admin-card mb-4">
+      <div class="card-header"><strong>Mã QR check-in</strong></div>
+      <div class="card-body text-center">
+        <img src="<%= bookingQrDataUrl %>" alt="QR <%= booking.bookingCode %>" width="180" height="180" class="border rounded bg-white p-2">
+        <p class="small text-body-secondary mt-2 mb-0">Khách xuất trình QR hoặc mã <code><%= booking.bookingCode %></code> tại lễ tân.</p>
+      </div>
+    </div>
+    <% } %>
+
     <div class="card admin-card">
       <div class="card-header"><strong>Thao tác nhanh</strong></div>
       <div class="card-body">
+        <% const isPaid = booking.payment?.status === 'paid' || booking.status === 'confirmed'; %>
+        <% if (booking.status === 'pending_payment' || !isPaid) { %>
+        <form method="POST" action="/admin/bookings/<%= booking.id %>/mark-paid" class="mb-3">
+          <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
+          <button type="submit" class="btn btn-success btn-sm w-100" onclick="return confirm('Xác nhận thanh toán tại quầy?');">
+            <i class="fa-solid fa-cash-register me-1"></i> Xác nhận thanh toán quầy
+          </button>
+        </form>
+        <% } %>
+        <% if (booking.status === 'confirmed' && isPaid) { %>
+        <form method="POST" action="/admin/bookings/<%= booking.id %>/check-in" class="mb-3">
+          <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="fa-solid fa-door-open me-1"></i> Check-in khách
+          </button>
+        </form>
+        <% } %>
+        <% if (booking.status === 'checked_in') { %>
+        <form method="POST" action="/admin/bookings/<%= booking.id %>/check-out" class="mb-3">
+          <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
+          <button type="submit" class="btn btn-info btn-sm w-100 text-white" onclick="return confirm('Xác nhận check-out khách?');">
+            <i class="fa-solid fa-door-closed me-1"></i> Check-out khách
+          </button>
+        </form>
+        <% } %>
         <form method="POST" action="/admin/bookings/<%= booking.id %>/status" class="mb-0">
           <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
           <label class="form-label small" for="quickStatus">Đổi trạng thái</label>

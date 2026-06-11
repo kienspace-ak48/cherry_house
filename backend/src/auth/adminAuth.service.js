@@ -32,6 +32,9 @@ async function loginAdmin(email, password) {
   if (!admin.isActive) {
     throw httpError('Account is disabled', 403);
   }
+  if (admin.role === 'staff') {
+    throw httpError('Nhân viên đăng nhập tại /staff/login', 403);
+  }
 
   const tokens = await tokenService.createAdminSession(admin);
   return {
@@ -60,6 +63,42 @@ async function loginAdminForCookie(email, password) {
   if (!admin.isActive) {
     throw httpError('Account is disabled', 403);
   }
+  if (admin.role === 'staff') {
+    throw httpError('Nhân viên đăng nhập tại /staff/login', 403);
+  }
+
+  const tokens = await tokenService.createAdminAccessOnly(admin);
+  return { admin: sanitizeAdmin(admin), ...tokens };
+}
+
+/** Cookie login portal nhân viên — chỉ role staff + propertyId */
+async function loginStaffForCookie(email, password) {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!normalizedEmail || !password) {
+    throw httpError('email and password are required');
+  }
+
+  const admin = await prisma.admin.findUnique({
+    where: { email: normalizedEmail },
+    include: { property: { select: { id: true, name: true } } },
+  });
+  if (!admin) {
+    throw httpError('Invalid email or password', 401);
+  }
+
+  const valid = await comparePassword(password, admin.passwordHash);
+  if (!valid) {
+    throw httpError('Invalid email or password', 401);
+  }
+  if (!admin.isActive) {
+    throw httpError('Account is disabled', 403);
+  }
+  if (admin.role !== 'staff') {
+    throw httpError('Tài khoản quản trị đăng nhập tại /auth/login', 403);
+  }
+  if (!admin.propertyId) {
+    throw httpError('Tài khoản nhân viên chưa được gắn cơ sở. Liên hệ quản trị viên.', 403);
+  }
 
   const tokens = await tokenService.createAdminAccessOnly(admin);
   return { admin: sanitizeAdmin(admin), ...tokens };
@@ -76,6 +115,7 @@ async function getAdminById(id) {
 module.exports = {
   loginAdmin,
   loginAdminForCookie,
+  loginStaffForCookie,
   getAdminById,
   sanitizeAdmin,
   findByEmail,

@@ -15,8 +15,29 @@ function findAll(filters = {}) {
   });
 }
 
+function findAllForAdminCatalog() {
+  return prisma.roomType.findMany({
+    orderBy: [{ category: 'asc' }, { title: 'asc' }],
+    include: {
+      gallery: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
+      amenities: { include: { amenity: true } },
+    },
+  });
+}
+
 function findById(id) {
   return prisma.roomType.findUnique({ where: { id } });
+}
+
+function findByIdWithRelations(id) {
+  return prisma.roomType.findUnique({
+    where: { id },
+    include: {
+      gallery: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
+      amenities: { include: { amenity: true } },
+      _count: { select: { rooms: true } },
+    },
+  });
 }
 
 function findBySlug(slug) {
@@ -35,4 +56,13 @@ function remove(id) {
   return prisma.roomType.delete({ where: { id } });
 }
 
-module.exports = { findAll, findById, findBySlug, create, update, remove };
+module.exports = {
+  findAll,
+  findAllForAdminCatalog,
+  findById,
+  findByIdWithRelations,
+  findBySlug,
+  create,
+  update,
+  remove,
+};

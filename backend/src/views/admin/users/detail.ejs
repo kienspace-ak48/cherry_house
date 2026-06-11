@@ -8,6 +8,16 @@
   <div class="d-flex flex-wrap gap-2">
     <a href="/admin/users" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
     <a href="/admin/users/<%= user.id %>/edit" class="btn btn-primary btn-sm">Sửa tài khoản</a>
+    <% if (typeof isSuperAdmin !== 'undefined' && isSuperAdmin) { %>
+    <form
+      method="POST"
+      action="/admin/users/<%= user.id %>/delete"
+      class="d-inline"
+      onsubmit="return confirm('Xóa vĩnh viễn <%= user.fullName %>?');"
+    >
+      <button type="submit" class="btn btn-outline-danger btn-sm">Xóa tài khoản</button>
+    </form>
+    <% } %>
   </div>
 </div>
 

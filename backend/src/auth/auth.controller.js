@@ -26,7 +26,14 @@ const authController = {
   },
 
   loginForm(req, res) {
-    res.render('pages/login', { layout: false });
+    const session = typeof req.query.session === 'string' ? req.query.session : '';
+    let message = null;
+    if (session === 'expired') {
+      message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    } else if (session === 'disabled') {
+      message = 'Tài khoản bị khóa hoặc chưa được cấu hình đúng.';
+    }
+    res.render('pages/login', { layout: false, message });
   },
 
   /** Admin SSR — cookie httpOnly, bảng admins */

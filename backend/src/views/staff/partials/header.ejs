@@ -1,0 +1,14 @@
+<header class="staff-header">
+  <button type="button" class="staff-menu-toggle" id="staffMenuToggle" aria-label="Menu">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  <div class="staff-header-title">
+    <h1><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Staff' %></h1>
+    <% if (user && user.propertyName) { %>
+    <p class="staff-header-sub"><i class="fa-solid fa-building me-1"></i><%= user.propertyName %></p>
+    <% } %>
+  </div>
+  <div class="staff-header-user">
+    <span><%= user?.fullName || user?.email || '' %></span>
+  </div>
+</header>

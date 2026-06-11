@@ -1,0 +1,549 @@
+<% const featuredIndex = Math.max(0, (page.areas || []).findIndex(function(a) { return a.isFeatured; })); %>
+
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Trang chủ</h2>
+    <p class="text-body-secondary mb-0 small">Tùy chỉnh từng khối nội dung — bấm tiêu đề section để mở hoặc thu gọn.</p>
+  </div>
+  <a class="btn btn-outline-primary btn-sm" href="/" target="_blank" rel="noopener">Mở website</a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'saved') { %>
+<div class="alert alert-success">Đã lưu cấu hình trang chủ.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'reset') { %>
+<div class="alert alert-success">Đã khôi phục mặc định.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<div class="row g-4 admin-homepage-layout">
+  <div class="col-lg-8">
+    <form method="POST" action="/admin/homepage" class="admin-crud-form" id="homepageForm" novalidate>
+      <div class="card admin-card admin-home-section mb-3" id="hero" data-home-section="hero">
+        <button
+          type="button"
+          class="card-header py-3 admin-collapse-toggle w-100 border-0 text-start"
+          data-admin-collapse="#homepageHero"
+          aria-expanded="false"
+          aria-controls="homepageHero"
+        >
+          <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+            <div class="flex-grow-1 min-w-0 d-flex align-items-center gap-2">
+              <strong>Hero banner</strong>
+              <span class="badge text-bg-light border small fw-normal"><%= (hero.slides || []).length %> slide</span>
+            </div>
+            <div class="form-check form-switch mb-0" data-collapse-ignore>
+              <input class="form-check-input" type="checkbox" id="isEnabled" name="isEnabled" value="1" <%= hero.isEnabled ? 'checked' : '' %>>
+              <label class="form-check-label small" for="isEnabled">Bật hero</label>
+            </div>
+            <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+          </div>
+        </button>
+        <div class="collapse" id="homepageHero">
+          <div class="card-body border-top">
+            <div class="mb-3">
+              <label class="form-label" for="quickCities">Thành phố phổ biến (dấu phẩy)</label>
+              <input class="form-control" id="quickCities" name="quickCities" value="<%= hero.quickCitiesText %>">
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <label class="form-label small mb-0" for="slideIntervalSec">Giãn cách slide (giây)</label>
+              <input class="form-control form-control-sm" style="width:5rem" type="number" id="slideIntervalSec" name="slideIntervalSec" min="3" max="30" value="<%= hero.slideIntervalSec %>">
+            </div>
+            <div id="heroSlidesList" class="d-flex flex-column gap-3">
+              <% (hero.slides || []).forEach(function(slide, idx) { %>
+              <div class="hero-slide-row border rounded-3 p-3 bg-light" data-slide-row>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <strong class="small">Slide <%= idx + 1 %></strong>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-remove-slide <%= (hero.slides || []).length <= 1 ? 'disabled' : '' %>>Xóa</button>
+                </div>
+                <div class="row g-2 mb-2">
+                  <div class="col-md-6"><label class="form-label small">Badge</label><input class="form-control form-control-sm" name="slideBadge[]" value="<%= slide.badge || '' %>"></div>
+                  <div class="col-md-6"><label class="form-label small">Alt</label><input class="form-control form-control-sm" name="slideAlt[]" value="<%= slide.alt || '' %>"></div>
+                </div>
+                <div class="row g-2 mb-2">
+                  <div class="col-md-6"><label class="form-label small">Tiêu đề 1 *</label><input class="form-control form-control-sm" name="slideTitleLine1[]" value="<%= slide.titleLine1 || '' %>" required></div>
+                  <div class="col-md-6"><label class="form-label small">Tiêu đề 2</label><input class="form-control form-control-sm" name="slideTitleLine2[]" value="<%= slide.titleLine2 || '' %>"></div>
+                </div>
+                <div class="mb-2"><label class="form-label small">Mô tả *</label><textarea class="form-control form-control-sm" name="slideDescription[]" rows="2" required><%= slide.description || '' %></textarea></div>
+                <%- include('../../partials/admin/galleryImagePicker', { fieldId: 'slideImageUrl_' + idx, fieldName: 'slideImageUrl[]', value: slide.imageUrl, label: 'Ảnh banner' }) %>
+              </div>
+              <% }); %>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addHeroSlide">Thêm slide</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card admin-home-section mb-3" id="content" data-home-section="content">
+        <button
+          type="button"
+          class="card-header py-3 admin-collapse-toggle w-100 border-0 text-start"
+          data-admin-collapse="#homepageContent"
+          aria-expanded="false"
+          aria-controls="homepageContent"
+        >
+          <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+            <div class="flex-grow-1 min-w-0">
+              <strong>Thống kê &amp; Tại sao</strong>
+            </div>
+            <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+          </div>
+        </button>
+        <div class="collapse" id="homepageContent">
+          <div class="card-body border-top">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="small fw-semibold">Thống kê</span>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" name="statsEnabled" value="1" <%= page.statsEnabled ? 'checked' : '' %>>
+              </div>
+            </div>
+            <% (page.stats || []).forEach(function(stat, idx) { %>
+            <div class="row g-2 mb-2">
+              <div class="col-4"><input class="form-control form-control-sm" name="statValue[]" value="<%= stat.value %>" placeholder="2,400+" required></div>
+              <div class="col-8"><input class="form-control form-control-sm" name="statLabel[]" value="<%= stat.label %>" placeholder="Nhãn" required></div>
+            </div>
+            <% }); %>
+            <hr>
+            <div class="d-flex justify-content-between mb-2 mt-3">
+              <span class="small fw-semibold">Tại sao Cherry House</span>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" name="whyEnabled" value="1" <%= page.whyEnabled ? 'checked' : '' %>>
+              </div>
+            </div>
+            <input class="form-control form-control-sm mb-2" name="whyEyebrow" value="<%= page.whyEyebrow %>" placeholder="Eyebrow" required>
+            <input class="form-control mb-2" name="whyLeadTitle" value="<%= page.whyTitle %>" placeholder="Tiêu đề" required>
+            <textarea class="form-control form-control-sm mb-3" name="whyLeadDescription" rows="2" required><%= page.whyDescription %></textarea>
+            <% (page.whyItems || []).forEach(function(item, idx) { %>
+            <div class="border rounded p-2 mb-2 bg-light">
+              <div class="row g-2">
+                <div class="col-2"><input class="form-control form-control-sm" name="whyNumber[]" value="<%= item.number %>" required></div>
+                <div class="col-10"><input class="form-control form-control-sm" name="whyItemTitle[]" value="<%= item.title %>" required></div>
+              </div>
+              <textarea class="form-control form-control-sm mt-2" name="whyItemDescription[]" rows="2" required><%= item.description %></textarea>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card admin-home-section mb-3" id="areas" data-home-section="areas">
+        <button
+          type="button"
+          class="card-header py-3 admin-collapse-toggle w-100 border-0 text-start"
+          data-admin-collapse="#homepageAreas"
+          aria-expanded="false"
+          aria-controls="homepageAreas"
+        >
+          <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+            <div class="flex-grow-1 min-w-0 d-flex align-items-center gap-2">
+              <strong>Khu vực phổ biến</strong>
+              <span class="badge text-bg-light border small fw-normal" data-home-count-badge><%= (page.areas || []).length %> khu vực</span>
+            </div>
+            <div class="form-check form-switch mb-0" data-collapse-ignore>
+              <input class="form-check-input" type="checkbox" name="areasEnabled" value="1" <%= page.areasEnabled ? 'checked' : '' %>>
+              <label class="form-check-label small">Hiển thị</label>
+            </div>
+            <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+          </div>
+        </button>
+        <div class="collapse" id="homepageAreas">
+          <div class="card-body border-top">
+            <div class="row g-2 mb-3">
+              <div class="col-md-4"><input class="form-control form-control-sm" name="areasEyebrow" value="<%= page.areasEyebrow %>" required></div>
+              <div class="col-md-8"><input class="form-control form-control-sm" name="areasTitle" value="<%= page.areasTitle %>" required></div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-md-4"><input class="form-control form-control-sm" name="areasSeeAllLabel" value="<%= page.areasSeeAllLabel %>"></div>
+              <div class="col-md-8"><input class="form-control form-control-sm" name="areasSeeAllHref" value="<%= page.areasSeeAllHref %>" placeholder="/booking"></div>
+            </div>
+            <div id="areasList" class="d-flex flex-column gap-0">
+              <% (page.areas || []).forEach(function(area, idx) { %>
+              <div class="border rounded-3 p-3 mb-3 bg-light" data-area-row>
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                  <strong class="small" data-area-label>Khu vực <%= idx + 1 %></strong>
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="form-check mb-0">
+                      <input class="form-check-input" type="radio" name="areaFeaturedIndex" value="<%= idx %>" data-area-featured <%= featuredIndex === idx ? 'checked' : '' %>>
+                      <label class="form-check-label small">Nổi bật (2 cột)</label>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove-area <%= (page.areas || []).length <= 1 ? 'disabled' : '' %>>Xóa</button>
+                  </div>
+                </div>
+                <div class="row g-2 mb-2">
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="areaTitle[]" value="<%= area.title %>" placeholder="Đà Lạt" required></div>
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="areaPriceFrom[]" value="<%= area.priceFrom || '' %>" placeholder="từ 450K/đêm"></div>
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="areaFilterCity[]" value="<%= area.filterCity || '' %>" placeholder="Đà Lạt"></div>
+                </div>
+                <input class="form-control form-control-sm mb-2" name="areaSubtitle[]" value="<%= area.subtitle || '' %>" placeholder="38 cơ sở · Homestay & Villa">
+                <%- include('../../partials/admin/galleryImagePicker', { fieldId: 'areaImageUrl_' + idx, fieldName: 'areaImageUrl[]', value: area.imageUrl, label: 'Ảnh' }) %>
+                <div class="form-check mt-2">
+                  <input type="hidden" name="areaComingSoon[]" value="<%= area.comingSoon ? '1' : '0' %>" data-area-coming-soon-input>
+                  <input class="form-check-input" type="checkbox" data-area-coming-soon-toggle value="1" <%= area.comingSoon ? 'checked' : '' %>>
+                  <label class="form-check-label small">Sắp mở</label>
+                </div>
+              </div>
+              <% }); %>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addAreaRow">Thêm khu vực</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card admin-home-section mb-3" id="kinds" data-home-section="kinds">
+        <button
+          type="button"
+          class="card-header py-3 admin-collapse-toggle w-100 border-0 text-start"
+          data-admin-collapse="#homepageKinds"
+          aria-expanded="false"
+          aria-controls="homepageKinds"
+        >
+          <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+            <div class="flex-grow-1 min-w-0 d-flex align-items-center gap-2">
+              <strong>Loại hình lưu trú</strong>
+              <span class="badge text-bg-light border small fw-normal" data-home-count-badge><%= (page.kinds || []).length %> loại</span>
+            </div>
+            <div class="form-check form-switch mb-0" data-collapse-ignore>
+              <input class="form-check-input" type="checkbox" name="kindsEnabled" value="1" <%= page.kindsEnabled ? 'checked' : '' %>>
+              <label class="form-check-label small">Hiển thị</label>
+            </div>
+            <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+          </div>
+        </button>
+        <div class="collapse" id="homepageKinds">
+          <div class="card-body border-top">
+            <input class="form-control form-control-sm mb-2" name="kindsEyebrow" value="<%= page.kindsEyebrow %>" required>
+            <input class="form-control mb-2" name="kindsTitle" value="<%= page.kindsTitle %>" required>
+            <textarea class="form-control form-control-sm mb-3" name="kindsDescription" rows="2" required><%= page.kindsDescription %></textarea>
+            <div id="kindsList">
+              <% (page.kinds || []).forEach(function(item, idx) { %>
+              <div class="border rounded-3 p-3 mb-3 bg-light" data-kind-row>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <strong class="small" data-kind-label>Loại <%= idx + 1 %></strong>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-remove-kind <%= (page.kinds || []).length <= 1 ? 'disabled' : '' %>>Xóa</button>
+                </div>
+                <div class="row g-2 mb-2">
+                  <div class="col-md-4">
+                    <select class="form-select form-select-sm" name="kindType[]" required>
+                      <option value="homestay" <%= item.kind === 'homestay' ? 'selected' : '' %>>Homestay</option>
+                      <option value="mini_hotel" <%= item.kind === 'mini_hotel' ? 'selected' : '' %>>Mini Hotel</option>
+                      <option value="villa" <%= item.kind === 'villa' ? 'selected' : '' %>>Villa</option>
+                      <option value="serviced_apartment" <%= item.kind === 'serviced_apartment' ? 'selected' : '' %>>Căn hộ dịch vụ</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="kindBadge[]" value="<%= item.badge || '' %>" placeholder="PHỔ BIẾN NHẤT"></div>
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="kindCountLabel[]" value="<%= item.countLabel || '' %>" placeholder="64 cơ sở"></div>
+                </div>
+                <%- include('../../partials/admin/galleryImagePicker', { fieldId: 'kindImageUrl_' + idx, fieldName: 'kindImageUrl[]', value: item.imageUrl, label: 'Ảnh nền' }) %>
+              </div>
+              <% }); %>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addKindRow">Thêm loại hình</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card admin-home-section mb-3" id="reviews" data-home-section="reviews">
+        <button
+          type="button"
+          class="card-header py-3 admin-collapse-toggle w-100 border-0 text-start"
+          data-admin-collapse="#homepageReviews"
+          aria-expanded="false"
+          aria-controls="homepageReviews"
+        >
+          <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+            <div class="flex-grow-1 min-w-0 d-flex align-items-center gap-2">
+              <strong>Đánh giá khách thực</strong>
+              <span class="badge text-bg-light border small fw-normal" data-home-count-badge><%= (page.reviews || []).length %> review</span>
+            </div>
+            <div class="form-check form-switch mb-0" data-collapse-ignore>
+              <input class="form-check-input" type="checkbox" name="reviewsEnabled" value="1" <%= page.reviewsEnabled ? 'checked' : '' %>>
+              <label class="form-check-label small">Hiển thị</label>
+            </div>
+            <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+          </div>
+        </button>
+        <div class="collapse" id="homepageReviews">
+          <div class="card-body border-top">
+            <input class="form-control form-control-sm mb-2" name="reviewsEyebrow" value="<%= page.reviewsEyebrow %>" placeholder="Eyebrow" required>
+            <input class="form-control mb-3" name="reviewsTitle" value="<%= page.reviewsTitle %>" placeholder="Tiêu đề section" required>
+            <div id="reviewsList">
+              <% (page.reviews || []).forEach(function(review, idx) { %>
+              <div class="border rounded-3 p-3 mb-3 bg-light" data-review-row>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <strong class="small" data-review-label>Review <%= idx + 1 %></strong>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-remove-review <%= (page.reviews || []).length <= 1 ? 'disabled' : '' %>>Xóa</button>
+                </div>
+                <textarea class="form-control form-control-sm mb-2" name="reviewQuote[]" rows="3" placeholder="Nội dung đánh giá" required><%= review.quote || '' %></textarea>
+                <div class="row g-2 mb-2">
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="reviewName[]" value="<%= review.name || '' %>" placeholder="Tên khách" required></div>
+                  <div class="col-md-2"><input class="form-control form-control-sm" name="reviewInitials[]" value="<%= review.initials || '' %>" placeholder="LN" maxlength="4"></div>
+                  <div class="col-md-2"><input class="form-control form-control-sm" type="number" name="reviewRating[]" min="1" max="5" value="<%= review.rating || 5 %>"></div>
+                  <div class="col-md-4"><input class="form-control form-control-sm" name="reviewMeta[]" value="<%= review.meta || '' %>" placeholder="TP.HCM · Homestay Đà Lạt"></div>
+                </div>
+              </div>
+              <% }); %>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addReviewRow">Thêm đánh giá</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card admin-home-section mb-3" id="newsletter" data-home-section="newsletter">
+        <button
+          type="button"
+          class="card-header py-3 admin-collapse-toggle w-100 border-0 text-start"
+          data-admin-collapse="#homepageNewsletter"
+          aria-expanded="false"
+          aria-controls="homepageNewsletter"
+        >
+          <div class="d-flex flex-wrap gap-2 align-items-center w-100">
+            <div class="flex-grow-1 min-w-0">
+              <strong>Newsletter / Deal sớm</strong>
+            </div>
+            <div class="form-check form-switch mb-0" data-collapse-ignore>
+              <input class="form-check-input" type="checkbox" name="newsletterEnabled" value="1" <%= page.newsletterEnabled ? 'checked' : '' %>>
+              <label class="form-check-label small">Hiển thị</label>
+            </div>
+            <i class="fa-solid fa-chevron-down admin-collapse-chevron"></i>
+          </div>
+        </button>
+        <div class="collapse" id="homepageNewsletter">
+          <div class="card-body border-top">
+            <input class="form-control mb-2" name="newsletterTitle" value="<%= page.newsletterTitle %>" placeholder="Tiêu đề" required>
+            <textarea class="form-control form-control-sm mb-3" name="newsletterDescription" rows="2" required><%= page.newsletterDescription %></textarea>
+            <div class="row g-2">
+              <div class="col-md-4"><input class="form-control form-control-sm" name="newsletterPlaceholder" value="<%= page.newsletterPlaceholder %>" placeholder="Placeholder email" required></div>
+              <div class="col-md-4"><input class="form-control form-control-sm" name="newsletterButtonLabel" value="<%= page.newsletterButtonLabel %>" placeholder="Nhãn nút" required></div>
+              <div class="col-md-4"><input class="form-control form-control-sm" name="newsletterSuccessMessage" value="<%= page.newsletterSuccessMessage %>" placeholder="Thông báo sau đăng ký"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-0 border-primary border-opacity-25">
+        <div class="card-body py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <span class="small text-body-secondary">Lưu áp dụng cho tất cả section (kể cả đang thu gọn).</span>
+          <button type="submit" class="btn btn-primary">Lưu toàn bộ trang chủ</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-4 admin-homepage-sidebar-col">
+    <div class="admin-homepage-sidebar">
+      <div class="card admin-card mb-3">
+        <div class="card-header py-3"><strong>Điều hướng</strong></div>
+        <div class="card-body small">
+          <div class="d-flex flex-column gap-1" id="homepageNav">
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0" data-home-nav="hero">Hero banner</button>
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0" data-home-nav="content">Thống kê &amp; Tại sao</button>
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0" data-home-nav="areas">Khu vực phổ biến</button>
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0" data-home-nav="kinds">Loại hình lưu trú</button>
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0" data-home-nav="reviews">Đánh giá khách thực</button>
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0" data-home-nav="newsletter">Newsletter</button>
+          </div>
+        </div>
+      </div>
+      <div class="card admin-card">
+        <div class="card-header py-3"><strong>Mặc định</strong></div>
+        <div class="card-body small text-body-secondary">
+          <form method="POST" action="/admin/homepage/reset" onsubmit="return confirm('Khôi phục toàn bộ trang chủ?');">
+            <button type="submit" class="btn btn-outline-warning btn-sm">Reset mặc định</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<template id="heroSlideRowTemplate">
+  <div class="hero-slide-row border rounded-3 p-3 bg-light" data-slide-row>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong class="small" data-slide-label>Slide</strong>
+      <button type="button" class="btn btn-sm btn-outline-danger" data-remove-slide>Xóa</button>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><label class="form-label small">Badge</label><input class="form-control form-control-sm" name="slideBadge[]"></div>
+      <div class="col-md-6"><label class="form-label small">Alt</label><input class="form-control form-control-sm" name="slideAlt[]"></div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><label class="form-label small">Tiêu đề 1 *</label><input class="form-control form-control-sm" name="slideTitleLine1[]" required></div>
+      <div class="col-md-6"><label class="form-label small">Tiêu đề 2</label><input class="form-control form-control-sm" name="slideTitleLine2[]"></div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Mô tả *</label><textarea class="form-control form-control-sm" name="slideDescription[]" rows="2" required></textarea></div>
+    <div class="gallery-image-picker" data-gallery-picker>
+      <label class="form-label">Ảnh banner</label>
+      <div class="gallery-image-picker-preview mb-2 d-none" data-gallery-picker-preview><img src="" alt="" class="gallery-image-picker-thumb rounded border" data-gallery-picker-preview-img></div>
+      <input type="hidden" class="gallery-image-picker-input" name="slideImageUrl[]" value="" data-gallery-picker-input>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>Chọn từ gallery</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-gallery-picker-clear>Xóa ảnh</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="areaRowTemplate">
+  <div class="border rounded-3 p-3 mb-3 bg-light" data-area-row>
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <strong class="small" data-area-label>Khu vực</strong>
+      <div class="d-flex align-items-center gap-3">
+        <div class="form-check mb-0">
+          <input class="form-check-input" type="radio" name="areaFeaturedIndex" value="0" data-area-featured>
+          <label class="form-check-label small">Nổi bật (2 cột)</label>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-remove-area>Xóa</button>
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><input class="form-control form-control-sm" name="areaTitle[]" placeholder="Đà Lạt" required></div>
+      <div class="col-md-4"><input class="form-control form-control-sm" name="areaPriceFrom[]" placeholder="từ 450K/đêm"></div>
+      <div class="col-md-4"><input class="form-control form-control-sm" name="areaFilterCity[]" placeholder="Đà Lạt"></div>
+    </div>
+    <input class="form-control form-control-sm mb-2" name="areaSubtitle[]" placeholder="38 cơ sở · Homestay & Villa">
+    <div class="gallery-image-picker" data-gallery-picker>
+      <label class="form-label">Ảnh</label>
+      <div class="gallery-image-picker-preview mb-2 d-none" data-gallery-picker-preview><img src="" alt="" class="gallery-image-picker-thumb rounded border" data-gallery-picker-preview-img></div>
+      <input type="hidden" class="gallery-image-picker-input" name="areaImageUrl[]" value="" data-gallery-picker-input>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>Chọn từ gallery</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-gallery-picker-clear>Xóa ảnh</button>
+      </div>
+    </div>
+    <div class="form-check mt-2">
+      <input type="hidden" name="areaComingSoon[]" value="0" data-area-coming-soon-input>
+      <input class="form-check-input" type="checkbox" data-area-coming-soon-toggle value="1">
+      <label class="form-check-label small">Sắp mở</label>
+    </div>
+  </div>
+</template>
+
+<template id="kindRowTemplate">
+  <div class="border rounded-3 p-3 mb-3 bg-light" data-kind-row>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong class="small" data-kind-label>Loại</strong>
+      <button type="button" class="btn btn-sm btn-outline-danger" data-remove-kind>Xóa</button>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4">
+        <select class="form-select form-select-sm" name="kindType[]" required>
+          <option value="homestay">Homestay</option>
+          <option value="mini_hotel">Mini Hotel</option>
+          <option value="villa">Villa</option>
+          <option value="serviced_apartment">Căn hộ dịch vụ</option>
+        </select>
+      </div>
+      <div class="col-md-4"><input class="form-control form-control-sm" name="kindBadge[]" placeholder="PHỔ BIẾN NHẤT"></div>
+      <div class="col-md-4"><input class="form-control form-control-sm" name="kindCountLabel[]" placeholder="64 cơ sở"></div>
+    </div>
+    <div class="gallery-image-picker" data-gallery-picker>
+      <label class="form-label">Ảnh nền</label>
+      <div class="gallery-image-picker-preview mb-2 d-none" data-gallery-picker-preview><img src="" alt="" class="gallery-image-picker-thumb rounded border" data-gallery-picker-preview-img></div>
+      <input type="hidden" class="gallery-image-picker-input" name="kindImageUrl[]" value="" data-gallery-picker-input>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>Chọn từ gallery</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-gallery-picker-clear>Xóa ảnh</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="reviewRowTemplate">
+  <div class="border rounded-3 p-3 mb-3 bg-light" data-review-row>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong class="small" data-review-label>Review</strong>
+      <button type="button" class="btn btn-sm btn-outline-danger" data-remove-review>Xóa</button>
+    </div>
+    <textarea class="form-control form-control-sm mb-2" name="reviewQuote[]" rows="3" placeholder="Nội dung đánh giá" required></textarea>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><input class="form-control form-control-sm" name="reviewName[]" placeholder="Tên khách" required></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" name="reviewInitials[]" placeholder="LN" maxlength="4"></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" type="number" name="reviewRating[]" min="1" max="5" value="5"></div>
+      <div class="col-md-4"><input class="form-control form-control-sm" name="reviewMeta[]" placeholder="TP.HCM · Homestay Đà Lạt"></div>
+    </div>
+  </div>
+</template>
+
+<script src="/admin/js/admin-home-hero-page.js"></script>
+<script src="/admin/js/admin-homepage-lists.js"></script>
+<script>
+  (function homepageSections() {
+    const sectionMap = {
+      hero: '#homepageHero',
+      content: '#homepageContent',
+      areas: '#homepageAreas',
+      kinds: '#homepageKinds',
+      reviews: '#homepageReviews',
+      newsletter: '#homepageNewsletter',
+    };
+
+    function syncToggle(trigger, target) {
+      if (!trigger || !target) return;
+      trigger.setAttribute('aria-expanded', target.classList.contains('show') ? 'true' : 'false');
+    }
+
+    function openSection(key, scroll) {
+      const selector = sectionMap[key];
+      if (!selector) return;
+      const target = document.querySelector(selector);
+      const card = document.querySelector(`[data-home-section="${key}"]`);
+      const trigger = card ? card.querySelector('[data-admin-collapse]') : null;
+      if (!target) return;
+      target.classList.add('show');
+      syncToggle(trigger, target);
+      if (scroll && card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    document.querySelectorAll('[data-admin-collapse]').forEach((trigger) => {
+      const selector = trigger.getAttribute('data-admin-collapse');
+      const target = selector ? document.querySelector(selector) : null;
+      if (!target) return;
+
+      syncToggle(trigger, target);
+
+      trigger.querySelectorAll('[data-collapse-ignore]').forEach((el) => {
+        el.addEventListener('click', (event) => event.stopPropagation());
+      });
+
+      trigger.addEventListener('click', (event) => {
+        if (event.target.closest('[data-collapse-ignore]')) return;
+        event.preventDefault();
+        target.classList.toggle('show');
+        syncToggle(trigger, target);
+      });
+    });
+
+    document.querySelectorAll('[data-home-nav]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-home-nav');
+        openSection(key, true);
+        if (key && sectionMap[key]) {
+          history.replaceState(null, '', `#${key}`);
+        }
+      });
+    });
+
+    function expandAllSections() {
+      document.querySelectorAll('#homepageForm .collapse').forEach((panel) => {
+        panel.classList.add('show');
+        const card = panel.closest('[data-home-section]');
+        const trigger = card ? card.querySelector('[data-admin-collapse]') : null;
+        syncToggle(trigger, panel);
+      });
+    }
+
+    const form = document.getElementById('homepageForm');
+    if (form) {
+      form.addEventListener('submit', () => {
+        expandAllSections();
+      });
+    }
+
+    const hash = (window.location.hash || '').replace(/^#/, '');
+    if (hash && sectionMap[hash]) {
+      openSection(hash, true);
+    }
+  })();
+</script>

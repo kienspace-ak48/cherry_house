@@ -9,11 +9,7 @@ import BookingSearchBar from '../../components/booking/BookingSearchBar';
 import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import BranchStep from '../../components/booking/BranchStep';
-import {
-  BookingInlineLoading,
-  BookingPageLoading,
-  awaitMinLoadingDelay,
-} from '../../components/booking/BookingLoading';
+import { BookingInlineLoading, BookingPageLoading } from '../../components/booking/BookingLoading';
 import PropertyDiscovery from '../../components/booking/PropertyDiscovery';
 import RoomPickerGrid from '../../components/booking/RoomPickerGrid';
 import { mapPropertyFromApi, mapRoomFromApi } from '../../lib/mapProperty';
@@ -174,7 +170,6 @@ function BookingPage() {
     }
 
     let cancelled = false;
-    const startedAt = Date.now();
     setPropertyLoading(true);
     setCatalogError(null);
 
@@ -191,9 +186,7 @@ function BookingPage() {
         setPropertyOnly(null);
         setCatalogError(err instanceof Error ? err.message : 'Lỗi tải cơ sở');
       })
-      .finally(async () => {
-        if (cancelled) return;
-        await awaitMinLoadingDelay(startedAt);
+      .finally(() => {
         if (!cancelled) setPropertyLoading(false);
       });
 
@@ -213,7 +206,6 @@ function BookingPage() {
     }
 
     let cancelled = false;
-    const startedAt = Date.now();
     setRoomsLoading(true);
     setCatalogError(null);
 
@@ -263,10 +255,7 @@ function BookingPage() {
         setScopeRooms([]);
         setCatalogError(err instanceof Error ? err.message : 'Lỗi tải phòng');
       } finally {
-        if (!cancelled) {
-          await awaitMinLoadingDelay(startedAt);
-          if (!cancelled) setRoomsLoading(false);
-        }
+        if (!cancelled) setRoomsLoading(false);
       }
     }
 
@@ -309,23 +298,6 @@ function BookingPage() {
         ]
       : [],
   );
-
-  useEffect(() => {
-    if (
-      propertyOnly &&
-      !context.branch &&
-      propertyOnly.subBranches.length === 1
-    ) {
-      navigate(
-        buildUrl('/booking', {
-          ...context,
-          property: propertyOnly.slug,
-          branch: propertyOnly.subBranches[0].id,
-        }),
-        { replace: true },
-      );
-    }
-  }, [propertyOnly, context, navigate]);
 
   useEffect(() => {
     const h = searchParams.get('highlight');
@@ -426,16 +398,13 @@ function BookingPage() {
     if (!propertyOnly) {
       return <Navigate to={getDiscoveryListHref(context)} replace />;
     }
-    if (propertyOnly.subBranches.length > 1) {
-      return (
-        <BranchStep
-          property={propertyOnly}
-          context={context}
-          onSearch={(ctx) => navigate(resolveSearchDestination(ctx))}
-        />
-      );
-    }
-    return <BookingPageLoading title="Đang tải" message="Đang chuyển tới chi nhánh…" />;
+    return (
+      <BranchStep
+        property={propertyOnly}
+        context={context}
+        onSearch={(ctx) => navigate(resolveSearchDestination(ctx))}
+      />
+    );
   }
 
   if (!canShowRooms) {

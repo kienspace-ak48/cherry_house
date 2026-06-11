@@ -81,6 +81,12 @@ function buildUpdatePayload(body) {
   if (body.phone !== undefined) {
     data.phone = body.phone === null ? null : String(body.phone).trim() || null;
   }
+  if (body.avatarUrl !== undefined) {
+    data.avatarUrl =
+      body.avatarUrl === null || body.avatarUrl === ''
+        ? null
+        : String(body.avatarUrl).trim() || null;
+  }
   if (body.membershipTier !== undefined) {
     data.membershipTier = parseMembershipTier(body.membershipTier);
   }
@@ -165,6 +171,17 @@ async function adminUpdate(idRaw, body) {
   }
 }
 
+async function adminRemove(idRaw) {
+  const id = parseId(idRaw);
+  const existing = await userRepository.findById(id);
+  if (!existing) throw httpError('Không tìm thấy khách hàng', 404);
+  try {
+    return await userRepository.remove(id);
+  } catch (error) {
+    mapPrismaError(error, 'User not found');
+  }
+}
+
 async function remove(idRaw) {
   const id = parseId(idRaw);
   try {
@@ -180,6 +197,7 @@ module.exports = {
   create,
   update,
   adminUpdate,
+  adminRemove,
   remove,
   MEMBERSHIP_TIERS,
   AUTH_PROVIDERS,

@@ -1,5 +1,8 @@
 const userService = require('../services/user.service');
 const bookingService = require('../modules/booking/booking.service');
+const promoCodeService = require('../services/promoCode.service');
+const customerEmailService = require('../services/customerEmail.service');
+const { getClientAppUrl } = require('../config/appUrl.config');
 const { renderAdminPage } = require('../utils/adminRender');
 
 const MEMBERSHIP_TIERS = [
@@ -46,6 +49,7 @@ function parseUserFormBody(body) {
     fullName: body.fullName || '',
     email: body.email || '',
     phone: body.phone || '',
+    avatarUrl: body.avatarUrl || '',
     membershipTier: body.membershipTier || 'standard',
     isActive: body.isActive === 'on' || body.isActive === true || body.isActive === '1',
     emailVerified:
@@ -62,12 +66,27 @@ function userToForm(user) {
     fullName: user.fullName,
     email: user.email,
     phone: user.phone || '',
+    avatarUrl: user.avatarUrl || '',
     membershipTier: user.membershipTier,
     isActive: user.isActive,
     emailVerified: user.emailVerified,
     bookingBanned: user.bookingBanned,
     bookingBanReason: user.bookingBanReason || '',
     password: '',
+  };
+}
+
+async function loadEmailBulkContext(actor) {
+  const canSend = actor?.role === 'super_admin' || actor?.role === 'admin';
+  if (!canSend) {
+    return { promos: [], defaultCtaUrl: '' };
+  }
+  const promos = await promoCodeService.list({ isActive: true });
+  return {
+    promos,
+    defaultCtaUrl: `${getClientAppUrl()}/booking`,
+    formatDiscountText: customerEmailService.formatDiscountText,
+    formatDateVi: customerEmailService.formatDateVi,
   };
 }
 
@@ -96,6 +115,8 @@ async function list(req, res) {
       bookingBanned: filterBookingBanned,
     };
 
+    const emailBulk = await loadEmailBulkContext(req.admin || req.user);
+
     renderAdminPage(req, res, 'admin/users/index', {
       pageTitle: 'Khách hàng',
       adminPage: 'users',
@@ -104,6 +125,10 @@ async function list(req, res) {
         { label: 'Khách hàng' },
       ],
       users,
+      promos: emailBulk.promos,
+      defaultCtaUrl: emailBulk.defaultCtaUrl,
+      formatDiscountText: emailBulk.formatDiscountText,
+      formatDateVi: emailBulk.formatDateVi,
       searchQ,
       filterTier,
       filterProvider,
@@ -199,6 +224,8 @@ async function editForm(req, res) {
       authProviders: AUTH_PROVIDERS,
       authProviderLabel,
       tierLabel,
+      flash: req.query.flash || null,
+      msg: req.query.msg || null,
     });
   } catch (error) {
     res.redirect(`/admin/users?flash=error&msg=${encodeURIComponent(error.message)}`);
@@ -235,9 +262,23 @@ async function update(req, res) {
   }
 }
 
+async function remove(req, res) {
+  try {
+    const actor = req.admin || req.user;
+    if (actor?.role !== 'super_admin') {
+      return res.redirect('/admin/users?flash=forbidden');
+    }
+    await userService.adminRemove(req.params.id);
+    res.redirect('/admin/users?flash=deleted');
+  } catch (error) {
+    res.redirect(`/admin/users/${req.params.id}/edit?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
 module.exports = {
   list,
   detail,
   editForm,
   update,
+  remove,
 };

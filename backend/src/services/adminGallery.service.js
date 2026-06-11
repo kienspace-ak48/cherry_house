@@ -16,9 +16,11 @@ function toImageDto(image) {
   };
 }
 
-function normalizeFolderKey(folderRaw) {
-  const folder = String(folderRaw || 'all').trim();
-  if (!folder || folder === 'all') return 'all';
+function requireFolderId(folderRaw) {
+  const folder = String(folderRaw ?? '').trim();
+  if (!folder || folder === 'all') {
+    throw httpError('folder_id is required');
+  }
   return parseId(folder, 'folder_id');
 }
 
@@ -75,12 +77,12 @@ async function listFolders() {
   return mediaFolderRepository.findAll();
 }
 
-async function listImages(folderRaw = 'all') {
-  const folderKey = normalizeFolderKey(folderRaw);
-  const images = folderKey === 'all'
-    ? await mediaImageRepository.findAll()
-    : await mediaImageRepository.findAll({ folderId: folderKey });
+async function listImages(folderRaw) {
+  const folderId = requireFolderId(folderRaw);
+  const folder = await mediaFolderRepository.findById(folderId);
+  if (!folder) throw httpError('Folder not found', 404);
 
+  const images = await mediaImageRepository.findAll({ folderId });
   return images.map(toImageDto);
 }
 
@@ -109,16 +111,12 @@ async function deleteFolder(folderIdRaw) {
   }
 }
 
-async function uploadImage(file, folderRaw = 'all') {
+async function uploadImage(file, folderRaw) {
   if (!file) throw httpError('image is required');
 
-  const folderKey = normalizeFolderKey(folderRaw);
-  const folderId = folderKey === 'all' ? null : folderKey;
-
-  if (folderId) {
-    const folder = await mediaFolderRepository.findById(folderId);
-    if (!folder) throw httpError('Folder not found', 404);
-  }
+  const folderId = requireFolderId(folderRaw);
+  const folder = await mediaFolderRepository.findById(folderId);
+  if (!folder) throw httpError('Folder not found', 404);
 
   const saved = await saveUploadedFile(file);
 
@@ -135,10 +133,10 @@ async function uploadImage(file, folderRaw = 'all') {
     mapPrismaError(error, 'Image not found');
   }
 
-  return listImages(folderRaw);
+  return listImages(folderId);
 }
 
-async function deleteImage(imgPathRaw, folderRaw = 'all') {
+async function deleteImage(imgPathRaw, folderRaw) {
   const imgPath = typeof imgPathRaw === 'string' ? imgPathRaw.trim() : '';
   if (!imgPath) throw httpError('img_path is required');
 
@@ -156,9 +154,40 @@ async function deleteImage(imgPathRaw, folderRaw = 'all') {
   return listImages(folderRaw);
 }
 
+async function getPageData(folderRaw) {
+  const folders = await listFolders();
+  let selectedFolderId = null;
+
+  if (folderRaw) {
+    try {
+      selectedFolderId = requireFolderId(folderRaw);
+    } catch {
+      selectedFolderId = null;
+    }
+  }
+
+  if (selectedFolderId && !folders.some((f) => f.id === selectedFolderId)) {
+    selectedFolderId = null;
+  }
+
+  if (!selectedFolderId && folders.length) {
+    selectedFolderId = folders[0].id;
+  }
+
+  const images = selectedFolderId ? await listImages(selectedFolderId) : [];
+
+  return {
+    folders,
+    images,
+    selectedFolderId,
+    selectedFolder: folders.find((f) => f.id === selectedFolderId) || null,
+  };
+}
+
 module.exports = {
   listFolders,
   listImages,
+  getPageData,
   createFolder,
   deleteFolder,
   uploadImage,

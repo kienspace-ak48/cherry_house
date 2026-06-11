@@ -1,0 +1,150 @@
+<% const p = typeof promo !== 'undefined' ? promo : {}; %>
+<% const types = typeof discountTypes !== 'undefined' ? discountTypes : []; %>
+<% const isCreate = typeof mode !== 'undefined' && mode === 'create'; %>
+<% const fmtDate = typeof formatDateInput === 'function' ? formatDateInput : function(d) { return d ? String(d).slice(0, 10) : ''; }; %>
+
+<form method="POST" action="<%= formAction %>" class="admin-crud-form" id="promoCodeForm">
+  <% if (typeof formError !== 'undefined' && formError) { %>
+  <div class="alert alert-danger"><%= formError %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin mã</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="code">Mã coupon <span class="text-danger">*</span></label>
+              <input
+                class="form-control text-uppercase"
+                id="code"
+                name="code"
+                value="<%= p.code || '' %>"
+                placeholder="CHERRY10"
+                required
+                <%= isCreate ? '' : 'readonly' %>
+              >
+              <div class="form-text">Chữ in hoa, không dấu cách. Không đổi mã sau khi tạo.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="description">Mô tả (nội bộ / hiển thị admin)</label>
+              <input class="form-control" id="description" name="description" value="<%= p.description || '' %>" placeholder="Giảm 10% mùa hè">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Loại giảm <span class="text-danger">*</span></label>
+              <div class="d-flex flex-wrap gap-3">
+                <% types.forEach(function(t) { %>
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="discountType"
+                    id="discountType_<%= t.value %>"
+                    value="<%= t.value %>"
+                    <%= (p.discountType || 'percent') === t.value ? 'checked' : '' %>
+                    data-discount-type-radio
+                  >
+                  <label class="form-check-label" for="discountType_<%= t.value %>"><%= t.label %></label>
+                </div>
+                <% }); %>
+              </div>
+            </div>
+            <div class="col-md-6" data-discount-percent-wrap>
+              <label class="form-label" for="discountPercent">Phần trăm giảm (%)</label>
+              <input
+                class="form-control"
+                type="number"
+                min="1"
+                max="100"
+                id="discountPercent"
+                name="discountPercent"
+                value="<%= p.discountPercent ?? '' %>"
+              >
+            </div>
+            <div class="col-md-6 d-none" data-discount-fixed-wrap>
+              <label class="form-label" for="discountAmountVnd">Số tiền giảm (VND)</label>
+              <input
+                class="form-control"
+                type="number"
+                min="1"
+                step="1000"
+                id="discountAmountVnd"
+                name="discountAmountVnd"
+                value="<%= p.discountAmountVnd ?? '' %>"
+              >
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="minSubtotalVnd">Đơn tối thiểu (VND)</label>
+              <input
+                class="form-control"
+                type="number"
+                min="0"
+                step="1000"
+                id="minSubtotalVnd"
+                name="minSubtotalVnd"
+                value="<%= p.minSubtotalVnd ?? 0 %>"
+              >
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="maxUses">Số lượt dùng tối đa</label>
+              <input
+                class="form-control"
+                type="number"
+                min="1"
+                id="maxUses"
+                name="maxUses"
+                value="<%= p.maxUses ?? '' %>"
+                placeholder="Để trống = không giới hạn"
+              >
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="validFrom">Có hiệu lực từ <span class="text-danger">*</span></label>
+              <input
+                class="form-control"
+                type="date"
+                id="validFrom"
+                name="validFrom"
+                value="<%= fmtDate(p.validFrom) %>"
+                required
+              >
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="validTo">Hết hạn <span class="text-danger">*</span></label>
+              <input
+                class="form-control"
+                type="date"
+                id="validTo"
+                name="validTo"
+                value="<%= fmtDate(p.validTo) %>"
+                required
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Trạng thái</strong></div>
+        <div class="card-body">
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= p.isActive !== false ? 'checked' : '' %>>
+            <label class="form-check-label" for="isActive">Đang hoạt động</label>
+          </div>
+          <% if (!isCreate && p.usedCount !== undefined) { %>
+          <p class="small text-body-secondary mb-0">
+            Đã dùng: <strong><%= p.usedCount %></strong> lượt
+          </p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary"><%= submitLabel %></button>
+        <a href="/admin/promo-codes" class="btn btn-outline-secondary">Hủy</a>
+      </div>
+    </div>
+  </div>
+</form>

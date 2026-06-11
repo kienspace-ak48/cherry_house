@@ -56,6 +56,19 @@ function findById(id) {
   });
 }
 
+function findByIds(ids = []) {
+  const normalized = [...new Set(ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))];
+  if (!normalized.length) return Promise.resolve([]);
+  return prisma.user.findMany({
+    where: { id: { in: normalized } },
+    select: {
+      ...userSelect,
+      _count: { select: { bookings: true } },
+    },
+    orderBy: [{ fullName: 'asc' }],
+  });
+}
+
 function findByEmail(email) {
   return prisma.user.findUnique({ where: { email }, select: userSelect });
 }
@@ -73,4 +86,4 @@ function remove(id) {
   return prisma.user.delete({ where: { id }, select: userSelect });
 }
 
-module.exports = { findAll, findById, findByEmail, create, update, remove };
+module.exports = { findAll, findById, findByIds, findByEmail, create, update, remove };

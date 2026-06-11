@@ -1,5 +1,6 @@
 const { verifyJWT } = require('../utils/generateJWT.util');
 const tokenService = require('../auth/token.service');
+const adminRepository = require('../repositories/admin.repository');
 
 const ADMIN_COOKIE = 'token';
 
@@ -33,10 +34,32 @@ const adminAuthMiddleware = async (req, res, next) => {
       return res.redirect('/auth/login');
     }
 
+    const adminRecord = await adminRepository.findById(payload.id);
+    if (!adminRecord || !adminRecord.isActive) {
+      if (req.originalUrl?.startsWith('/api') || req.baseUrl?.startsWith('/api')) {
+        return res.status(403).json({ success: false, message: 'Account disabled' });
+      }
+      res.clearCookie(ADMIN_COOKIE, { path: '/' });
+      return res.redirect('/auth/login?session=disabled');
+    }
+    if (adminRecord.role === 'staff') {
+      if (req.originalUrl?.startsWith('/api') || req.baseUrl?.startsWith('/api')) {
+        return res.status(403).json({ success: false, message: 'Staff must use /staff portal' });
+      }
+      return res.redirect('/staff');
+    }
+
     req.user = {
-      id: payload.id,
-      email: payload.email,
-      role: payload.role,
+      id: adminRecord.id,
+      email: adminRecord.email,
+      fullName: adminRecord.fullName,
+      avatar: adminRecord.avatarUrl || null,
+      avatarUrl: adminRecord.avatarUrl || null,
+      role: adminRecord.role,
+      branchId: adminRecord.branchId,
+      propertyId: adminRecord.propertyId ?? adminRecord.branch?.propertyId ?? null,
+      branchName: adminRecord.branch?.name ?? null,
+      propertyName: adminRecord.property?.name ?? adminRecord.branch?.property?.name ?? null,
       typ: 'admin',
     };
     req.admin = req.user;

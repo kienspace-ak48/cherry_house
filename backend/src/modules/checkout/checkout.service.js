@@ -5,14 +5,17 @@ const { resolveRoomRef } = require('../booking/roomResolver.service');
 const { checkAvailability, parseDateOnly, nightsBetween } = require('../booking/bookingAvailability.service');
 const { DEFAULT_HOLD_MINUTES } = require('../booking/booking.constants');
 const vnpayPayService = require('../../services/vnpayPay.service');
+const momoPayService = require('../../services/momoPay.service');
 // const sepayPgService = require('../../services/sepayPg.service'); // SePay tạm tắt
 const bookingRepository = require('../booking/booking.repository');
 const { assertUserCanBook } = require('../../services/userBookingGuard.service');
 const { sendBookingConfirmationEmail } = require('../../services/bookingEmail.service');
+const { generateBookingQrDataUrl } = require('../../utils/bookingQr.util');
 const clientAuthService = require('../../auth/clientAuth.service');
+const { calculateBookingPricing } = require('../../utils/pricing.util');
 
 /** Tạm tắt SePay — bỏ `bank` khỏi set cho đến khi bật lại */
-const PAYMENT_METHODS = new Set(['card', 'wallet']);
+const PAYMENT_METHODS = new Set(['card', 'momo', 'wallet']);
 
 function generateBookingCode() {
   const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -22,7 +25,7 @@ function generateBookingCode() {
 function parsePaymentMethod(raw) {
   const method = typeof raw === 'string' ? raw.trim() : '';
   if (!PAYMENT_METHODS.has(method)) {
-    throw httpError('paymentMethod must be card (SePay/bank tạm tắt)');
+    throw httpError('paymentMethod must be card, momo or wallet');
   }
   return method;
 }
@@ -46,19 +49,6 @@ function normalizeOrderInfo(text) {
     .slice(0, 255);
 }
 
-/** Giá = priceVnd trong DB × số đêm (không phí dịch vụ, không giảm giá). */
-function calculatePricing(roomPriceVnd, nights) {
-  const pricePerNightVnd = Math.round(roomPriceVnd);
-  const subtotalVnd = pricePerNightVnd * nights;
-  return {
-    pricePerNightVnd,
-    subtotalVnd,
-    serviceFeeVnd: 0,
-    discountVnd: 0,
-    totalVnd: subtotalVnd,
-    promoCode: null,
-  };
-}
 
 async function createBookingWithPayment({
   room,
@@ -138,6 +128,22 @@ async function initiateProviderPayment(req, paymentMethod, booking, pricing) {
       provider: 'vnpay',
       action: 'redirect',
       redirectUrl: vnpay.paymentUrl,
+    };
+  }
+
+  if (paymentMethod === 'momo') {
+    const momo = await momoPayService.createBookingPayment(req, {
+      bookingCode: booking.bookingCode,
+      amountVnd: pricing.totalVnd,
+      orderInfo,
+      guestEmail: booking.guestEmail,
+      guestName: booking.guestName,
+      guestPhone: booking.guestPhone,
+    });
+    return {
+      provider: 'momo',
+      action: 'redirect',
+      redirectUrl: momo.payUrl,
     };
   }
 
@@ -225,7 +231,13 @@ async function startCheckout(req, body = {}) {
     parseDateOnly(body.checkIn, 'checkIn'),
     parseDateOnly(body.checkOut, 'checkOut'),
   );
-  const pricing = calculatePricing(room.priceVnd, nights);
+  const promoCodeInput =
+    typeof body.promoCode === 'string' ? body.promoCode.trim() : '';
+  const pricing = await calculateBookingPricing(
+    room.priceVnd,
+    nights,
+    promoCodeInput || null,
+  );
 
   await assertUserCanBook({
     userId: Number.isInteger(userId) ? userId : null,
@@ -280,6 +292,15 @@ async function getBookingStatus(bookingCodeRaw) {
   });
   if (!booking) throw httpError('Booking not found', 404);
 
+  let qrCodeDataUrl = null;
+  if (booking.status === 'confirmed' || booking.payment?.status === 'paid') {
+    try {
+      qrCodeDataUrl = await generateBookingQrDataUrl(booking.bookingCode);
+    } catch (_err) {
+      qrCodeDataUrl = null;
+    }
+  }
+
   return {
     bookingCode: booking.bookingCode,
     status: booking.status,
@@ -301,7 +322,22 @@ async function getBookingStatus(bookingCodeRaw) {
     room: booking.room,
     property: booking.property,
     branch: booking.branch,
+    qrCodeDataUrl,
   };
+}
+
+async function verifyMomoReturn(query = {}) {
+  const result = momoPayService.verifyCallback(query);
+
+  if (result.isVerified && result.isSuccess && result.bookingCode) {
+    await markBookingPaid(
+      result.bookingCode,
+      'momo',
+      String(result.transId || result.requestId || ''),
+    );
+  }
+
+  return result;
 }
 
 async function verifyVnpayReturn(query = {}) {
@@ -343,6 +379,17 @@ async function markBookingPaid(bookingCode, providerRef, providerDetail = '') {
         },
       });
     }
+    if (booking.promoCode) {
+      const affected = await tx.$executeRaw`
+        UPDATE promo_codes
+        SET used_count = used_count + 1
+        WHERE code = ${booking.promoCode}
+          AND (max_uses IS NULL OR used_count < max_uses)
+      `;
+      if (!affected) {
+        console.warn(`[checkout] promo redeem race or exhausted: ${booking.promoCode}`);
+      }
+    }
   });
 
   const confirmed = await bookingRepository.findById(booking.id);
@@ -365,6 +412,18 @@ async function handleSepayIpn(payload = {}) {
   return { handled: true, bookingCode };
 }
 
+async function handleMomoIpn(payload = {}) {
+  const verify = momoPayService.verifyCallback(payload);
+  if (!verify.isVerified || !verify.isSuccess) {
+    return { verify, handled: false };
+  }
+  const bookingCode = String(verify.orderId || verify.bookingCode || '').trim();
+  if (bookingCode) {
+    await markBookingPaid(bookingCode, 'momo', String(verify.transId || verify.requestId || ''));
+  }
+  return { verify, handled: true, bookingCode };
+}
+
 async function handleVnpayIpn(query = {}) {
   const verify = vnpayPayService.verifyIpn(query);
   if (!verify.isVerified || !verify.isSuccess) {
@@ -380,7 +439,10 @@ async function handleVnpayIpn(query = {}) {
 module.exports = {
   startCheckout,
   getBookingStatus,
+  markBookingPaid,
+  verifyMomoReturn,
   verifyVnpayReturn,
   handleSepayIpn,
+  handleMomoIpn,
   handleVnpayIpn,
 };

@@ -11,7 +11,7 @@
   if (!modal || !gridEl) return;
 
   let activePicker = null;
-  let activeFolder = 'all';
+  let activeFolder = null;
   let foldersCache = null;
 
   function publicUrl(path) {
@@ -39,7 +39,14 @@
     modal.classList.remove('d-none');
     modal.classList.add('d-flex');
     document.body.classList.add('overflow-hidden');
-    loadFolders().then(() => loadImages(activeFolder));
+    loadFolders().then((folders) => {
+      if (!folders.length) {
+        showEmptyMessage('Chưa có thư mục ảnh. Tạo thư mục trong Gallery trước.');
+        return;
+      }
+      if (!activeFolder) activeFolder = String(folders[0].id);
+      loadImages(activeFolder);
+    });
   }
 
   function closeModal() {
@@ -57,32 +64,49 @@
     }
   }
 
+  function showEmptyMessage(message, showGalleryLink = true) {
+    setLoading(false);
+    gridEl.innerHTML = '';
+    emptyEl.classList.remove('d-none');
+    emptyEl.innerHTML = `
+      <p class="mb-2">${message}</p>
+      ${showGalleryLink ? '<a href="/admin/gallery" class="btn btn-sm btn-primary" target="_blank" rel="noopener">Mở Gallery để tạo thư mục</a>' : ''}
+    `;
+  }
+
   async function loadFolders() {
     if (foldersCache) {
       renderFolders(foldersCache);
-      return;
+      return foldersCache;
     }
     try {
       const res = await fetch('/admin/gallery/folders');
       const data = await res.json();
-      if (!data.success) return;
+      if (!data.success) return [];
       foldersCache = data.folders || [];
       renderFolders(foldersCache);
+      return foldersCache;
     } catch (err) {
       console.error(err);
-      foldersEl.innerHTML = '<button type="button" class="btn btn-sm btn-primary" data-folder="all">Tất cả</button>';
+      foldersEl.innerHTML = '<span class="small text-danger">Không tải được thư mục</span>';
+      return [];
     }
   }
 
   function renderFolders(folders) {
-    const items = [
-      { id: 'all', name: 'Tất cả' },
-      ...folders.map((f) => ({ id: String(f.id), name: f.name })),
-    ];
-    foldersEl.innerHTML = items
+    if (!folders.length) {
+      foldersEl.innerHTML = '<span class="small text-body-secondary">Chưa có thư mục — tạo trong Gallery trước.</span>';
+      return;
+    }
+
+    if (!activeFolder) {
+      activeFolder = String(folders[0].id);
+    }
+
+    foldersEl.innerHTML = folders
       .map(
         (f) =>
-          `<button type="button" class="btn btn-sm ${f.id === activeFolder ? 'btn-primary' : 'btn-outline-secondary'}" data-folder="${f.id}">${f.name}</button>`,
+          `<button type="button" class="btn btn-sm ${String(f.id) === String(activeFolder) ? 'btn-primary' : 'btn-outline-secondary'}" data-folder="${f.id}">${f.name}</button>`,
       )
       .join('');
   }
@@ -111,6 +135,11 @@
   }
 
   async function loadImages(folder) {
+    if (!folder) {
+      showEmptyMessage('Chưa có thư mục ảnh. Tạo thư mục trong Gallery trước.');
+      return;
+    }
+
     activeFolder = folder;
     renderFolders(foldersCache || []);
     setLoading(true);
@@ -130,10 +159,15 @@
     }
   }
 
-  document.querySelectorAll('[data-gallery-picker]').forEach((picker) => {
+  function bindPicker(picker) {
+    if (!picker || picker.dataset.galleryPickerBound === '1') return;
+    picker.dataset.galleryPickerBound = '1';
     picker.querySelector('[data-gallery-picker-open]')?.addEventListener('click', () => openModal(picker));
     picker.querySelector('[data-gallery-picker-clear]')?.addEventListener('click', () => setPickerValue(picker, ''));
-  });
+  }
+
+  document.querySelectorAll('[data-gallery-picker]').forEach(bindPicker);
+  window.AdminGalleryPicker = { bind: bindPicker };
 
   modal.querySelectorAll('[data-gallery-picker-close]').forEach((btn) => {
     btn.addEventListener('click', closeModal);

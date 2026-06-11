@@ -54,8 +54,15 @@ function resolvePromptTemplate(template, vars) {
 
 async function ensureDefaults() {
   const existing = await chatBotConfigRepository.getSettings();
-  if (!existing) {
+  if (existing) return;
+
+  try {
     await chatBotConfigRepository.upsertSettings(buildDefaultSettings());
+  } catch (err) {
+    if (err?.code === 'CHATBOT_PRISMA_NOT_GENERATED' || err?.code === 'CHATBOT_TABLE_MISSING') {
+      return;
+    }
+    throw err;
   }
 }
 

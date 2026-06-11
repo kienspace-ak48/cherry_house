@@ -4,6 +4,9 @@
     <p class="text-body-secondary mb-0 small">Danh sách booking — lọc theo trạng thái, ngày, phòng.</p>
   </div>
   <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/bookings/reception" class="btn btn-outline-primary btn-sm">
+      <i class="fa-solid fa-qrcode me-1"></i> Lễ tân
+    </a>
     <a href="/admin/bookings/calendar" class="btn btn-outline-secondary btn-sm">
       <i class="fa-solid fa-calendar-days me-1"></i> Lịch phòng
     </a>
@@ -17,6 +20,7 @@
 <% } else if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật booking.</div>
 <% } else if (typeof flash !== 'undefined' && flash === 'status_updated') { %><div class="alert alert-success">Đã đổi trạng thái booking.</div>
 <% } else if (typeof flash !== 'undefined' && flash === 'notfound') { %><div class="alert alert-warning">Không tìm thấy booking.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'forbidden') { %><div class="alert alert-warning">Bạn không có quyền truy cập mục này.</div>
 <% } else if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
 <% } %>
 <% if (typeof formError !== 'undefined' && formError) { %><div class="alert alert-danger"><%= formError %></div><% } %>
@@ -87,7 +91,10 @@
 <div class="card admin-card">
   <div class="card-header d-flex align-items-center justify-content-between">
     <strong>Danh sách</strong>
-    <span class="badge text-bg-secondary"><%= bookings.length %> mục</span>
+    <span class="badge text-bg-secondary">
+      <%= typeof bookingTotal !== 'undefined' ? bookingTotal : bookings.length %> mục
+      <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %> · Trang <%= page %>/<%= totalPages %><% } %>
+    </span>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -140,6 +147,28 @@
       </table>
     </div>
   </div>
+  <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+  <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+    <span class="small text-body-secondary">
+      Hiển thị <%= bookings.length %> / <%= bookingTotal %> · <%= pageSize %>/trang
+    </span>
+    <nav aria-label="Phân trang booking">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <%= page <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="/admin/bookings<%= buildBookingsListQuery({ ...listQueryBase, page: page - 1 }) %>">‹</a>
+        </li>
+        <% for (let p = Math.max(1, page - 2); p <= Math.min(totalPages, page + 2); p++) { %>
+        <li class="page-item <%= p === page ? 'active' : '' %>">
+          <a class="page-link" href="/admin/bookings<%= buildBookingsListQuery({ ...listQueryBase, page: p }) %>"><%= p %></a>
+        </li>
+        <% } %>
+        <li class="page-item <%= page >= totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="/admin/bookings<%= buildBookingsListQuery({ ...listQueryBase, page: page + 1 }) %>">›</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  <% } %>
 </div>
 
 <script>

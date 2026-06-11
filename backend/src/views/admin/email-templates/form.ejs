@@ -1,0 +1,245 @@
+<%
+  const c = template.config || {};
+%>
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2><%= template.name %></h2>
+    <p class="text-body-secondary mb-0 small"><%= template.description %></p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/admin/email-templates" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+    <button type="button" class="btn btn-outline-primary btn-sm" id="btnPreviewEmail">Xem trước</button>
+  </div>
+</div>
+
+<% if (flash === 'saved') { %><div class="alert alert-success">Đã lưu cấu hình email.</div>
+<% } else if (flash === 'reset') { %><div class="alert alert-info">Đã khôi phục mặc định.</div>
+<% } else if (flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi' %></div><% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="POST" action="/admin/email-templates/<%= template.templateKey %>" id="emailTemplateForm">
+      <div class="card admin-card mb-3">
+        <div class="card-header"><strong>Chung</strong></div>
+        <div class="card-body row g-3">
+          <div class="col-12">
+            <label class="form-label" for="subject">Tiêu đề email <span class="text-danger">*</span></label>
+            <input class="form-control" id="subject" name="subject" value="<%= template.subject %>" required maxlength="255">
+            <div class="form-text">Dùng biến <code>{{booking_code}}</code>, <code>{{guest_name}}</code>, <code>{{coupon_code}}</code>…</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="isEnabled" name="isEnabled" value="1" <%= template.isEnabled ? 'checked' : '' %>>
+              <label class="form-check-label" for="isEnabled">Bật gửi loại email này</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-3">
+        <div class="card-header"><strong>Banner đầu email</strong></div>
+        <div class="card-body row g-3">
+          <div class="col-md-4">
+            <label class="form-label" for="bannerMode">Kiểu banner</label>
+            <select class="form-select" id="bannerMode" name="bannerMode">
+              <option value="color" <%= c.bannerMode === 'color' ? 'selected' : '' %>>Màu + chữ</option>
+              <option value="image" <%= c.bannerMode === 'image' ? 'selected' : '' %>>Ảnh URL</option>
+              <option value="none" <%= c.bannerMode === 'none' ? 'selected' : '' %>>Ẩn</option>
+            </select>
+          </div>
+          <div class="col-md-4" id="bannerColorWrap">
+            <label class="form-label" for="bannerColor">Màu nền</label>
+            <input class="form-control" type="color" id="bannerColor" name="bannerColor" value="<%= c.bannerColor || '#a82e42' %>">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="bannerText">Chữ banner</label>
+            <input class="form-control" id="bannerText" name="bannerText" value="<%= c.bannerText || '' %>">
+          </div>
+          <div class="col-12" id="bannerImageWrap">
+            <label class="form-label" for="bannerImageUrl">URL ảnh banner</label>
+            <input class="form-control" id="bannerImageUrl" name="bannerImageUrl" value="<%= c.bannerImageUrl || '' %>" placeholder="https://...">
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-3">
+        <div class="card-header"><strong>Nội dung</strong></div>
+        <div class="card-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="eventName">Tiêu đề trong email</label>
+            <input class="form-control" id="eventName" name="eventName" value="<%= c.eventName || '' %>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="greetingPrefix">Lời chào</label>
+            <input class="form-control" id="greetingPrefix" name="greetingPrefix" value="<%= c.greetingPrefix || 'Xin chào' %>">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="content1">Đoạn 1</label>
+            <textarea class="form-control" id="content1" name="content1" rows="3"><%= c.content1 || '' %></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="content2">Đoạn 2 (cuối)</label>
+            <textarea class="form-control" id="content2" name="content2" rows="3"><%= c.content2 || '' %></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-3">
+        <div class="card-header"><strong>Thành phần tùy chọn</strong></div>
+        <div class="card-body row g-3">
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="showDetailTable" name="showDetailTable" value="1" <%= c.showDetailTable !== false ? 'checked' : '' %>>
+              <label class="form-check-label" for="showDetailTable">Bảng chi tiết</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="showQr" name="showQr" value="1" <%= c.showQr ? 'checked' : '' %>>
+              <label class="form-check-label" for="showQr">Hiển thị QR</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="showCta" name="showCta" value="1" <%= c.showCta ? 'checked' : '' %>>
+              <label class="form-check-label" for="showCta">Nút CTA</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="otpHighlight" name="otpHighlight" value="1" <%= c.otpHighlight ? 'checked' : '' %>>
+              <label class="form-check-label" for="otpHighlight">Highlight OTP lớn</label>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label" for="ctaLabel">Nhãn nút CTA</label>
+            <input class="form-control" id="ctaLabel" name="ctaLabel" value="<%= c.ctaLabel || '' %>">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="qrIntro">Giới thiệu QR</label>
+            <input class="form-control" id="qrIntro" name="qrIntro" value="<%= c.qrIntro || '' %>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="qrCaption">Chú thích QR</label>
+            <input class="form-control" id="qrCaption" name="qrCaption" value="<%= c.qrCaption || '' %>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="qrFallback">Dòng phụ QR</label>
+            <input class="form-control" id="qrFallback" name="qrFallback" value="<%= c.qrFallback || '' %>">
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-3">
+        <div class="card-header"><strong>Footer</strong></div>
+        <div class="card-body row g-3">
+          <div class="col-md-3">
+            <label class="form-label" for="footerBgColor">Màu nền</label>
+            <input class="form-control" type="color" id="footerBgColor" name="footerBgColor" value="<%= c.footerBgColor || '#5c1a28' %>">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" for="footerTextColor">Màu chữ</label>
+            <input class="form-control" type="color" id="footerTextColor" name="footerTextColor" value="<%= c.footerTextColor || '#ffffff' %>">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="footerBody">Nội dung footer</label>
+            <textarea class="form-control" id="footerBody" name="footerBody" rows="3"><%= c.footerBody || '' %></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+        <button type="submit" formaction="/admin/email-templates/<%= template.templateKey %>/reset" formmethod="POST" class="btn btn-outline-warning" onclick="return confirm('Khôi phục mặc định?');">Khôi phục mặc định</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card sticky-top" style="top:80px;">
+      <div class="card-header"><strong>Biến có thể dùng</strong></div>
+      <div class="card-body">
+        <p class="small text-body-secondary">Chèn vào tiêu đề hoặc nội dung dạng <code>{{tên_biến}}</code></p>
+        <ul class="small mb-0 ps-3">
+          <% (template.variables || []).forEach(function(v) { %>
+          <li><code>{{<%= v %>}}</code></li>
+          <% }); %>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  id="previewModal"
+  class="admin-modal d-none align-items-center justify-content-center"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="previewModalTitle"
+>
+  <div class="admin-modal-dialog admin-email-preview-dialog bg-white rounded-3 shadow-lg">
+    <div class="d-flex justify-content-between align-items-center border-bottom px-4 py-3">
+      <h5 class="mb-0 fw-semibold" id="previewModalTitle">Xem trước email</h5>
+      <button type="button" class="btn btn-sm btn-light" data-preview-close aria-label="Đóng">×</button>
+    </div>
+    <div class="p-0" id="previewFrameWrap">
+      <iframe id="previewFrame" title="preview" style="width:100%;min-height:520px;border:0;"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+(function emailTemplateForm() {
+  const bannerMode = document.getElementById('bannerMode');
+  const colorWrap = document.getElementById('bannerColorWrap');
+  const imageWrap = document.getElementById('bannerImageWrap');
+  function syncBanner() {
+    const m = bannerMode?.value || 'color';
+    if (colorWrap) colorWrap.style.display = m === 'color' ? '' : 'none';
+    if (imageWrap) imageWrap.style.display = m === 'image' ? '' : 'none';
+  }
+  bannerMode?.addEventListener('change', syncBanner);
+  syncBanner();
+
+  const previewModal = document.getElementById('previewModal');
+
+  function openPreviewModal() {
+    if (!previewModal) return;
+    previewModal.classList.remove('d-none');
+    previewModal.classList.add('d-flex');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closePreviewModal() {
+    if (!previewModal) return;
+    previewModal.classList.add('d-none');
+    previewModal.classList.remove('d-flex');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  previewModal?.querySelectorAll('[data-preview-close]').forEach((btn) => {
+    btn.addEventListener('click', closePreviewModal);
+  });
+  previewModal?.addEventListener('click', (e) => {
+    if (e.target === previewModal) closePreviewModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && previewModal && !previewModal.classList.contains('d-none')) {
+      closePreviewModal();
+    }
+  });
+
+  document.getElementById('btnPreviewEmail')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/admin/email-templates/<%= template.templateKey %>/preview', { credentials: 'same-origin' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      const frame = document.getElementById('previewFrame');
+      frame.srcdoc = json.html;
+      openPreviewModal();
+    } catch (e) {
+      myNotification(e.message || 'Không xem trước được', 'danger');
+    }
+  });
+})();
+</script>

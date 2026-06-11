@@ -1,0 +1,75 @@
+<div class="staff-page-head">
+  <h2>Lễ tân</h2>
+  <p>Tra cứu QR / email / SĐT · <strong><%= propertyName %></strong></p>
+</div>
+
+<% if (flash === 'ok') { %><div class="staff-alert staff-alert-success"><%= msg || 'Thành công' %></div>
+<% } else if (flash === 'error') { %><div class="staff-alert staff-alert-error"><%= msg %></div>
+<% } else if (flash === 'notfound') { %><div class="staff-alert staff-alert-warning">Không tìm thấy</div><% } %>
+
+<div class="staff-grid-2">
+  <div>
+    <div class="staff-card">
+      <div class="staff-card-head">Quét mã QR</div>
+      <div class="staff-card-body">
+        <div id="qrReader" style="min-height:220px;border:1px solid var(--staff-border);border-radius:8px;background:#f0ebe7;"></div>
+        <button type="button" class="staff-btn staff-btn-outline" id="btnToggleScanner" style="margin-top:10px;">Bật / tắt camera</button>
+      </div>
+    </div>
+    <div class="staff-card">
+      <div class="staff-card-head">Tra cứu</div>
+      <div class="staff-card-body staff-input-group">
+        <input class="staff-form-control" type="search" id="lookupInput" placeholder="Email, SĐT, mã CH-…">
+        <button type="button" class="staff-btn staff-btn-primary" id="btnLookup">Tìm</button>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="staff-card" id="lookupResultsCard" style="display:none;">
+      <div class="staff-card-head">Kết quả <span class="staff-badge staff-badge-secondary" id="lookupCount">0</span></div>
+      <div id="lookupResults"></div>
+    </div>
+    <div class="staff-card">
+      <div class="staff-card-head">Chờ check-in hôm nay <span class="staff-badge staff-badge-success"><%= arrivals.length %></span></div>
+      <table class="staff-table">
+        <% arrivals.forEach(function(b) { %>
+        <tr>
+          <td><code><%= b.bookingCode %></code></td>
+          <td><%= b.guestName %></td>
+          <td><%= b.roomCode %></td>
+          <td>
+            <a href="/staff/bookings/<%= b.id %>" class="staff-btn staff-btn-outline" style="padding:4px 8px;font-size:12px;">Mở</a>
+            <form method="POST" action="/staff/bookings/<%= b.id %>/check-in" style="display:inline;">
+              <input type="hidden" name="redirect" value="/staff/reception">
+              <button type="submit" class="staff-btn staff-btn-primary" style="padding:4px 8px;font-size:12px;">Check-in</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+        <% if (!arrivals.length) { %><tr><td colspan="4" style="text-align:center;color:var(--staff-muted);">Không có</td></tr><% } %>
+      </table>
+    </div>
+    <div class="staff-card">
+      <div class="staff-card-head">Check-out hôm nay <span class="staff-badge staff-badge-primary"><%= departures.length %></span></div>
+      <table class="staff-table">
+        <% departures.forEach(function(b) { %>
+        <tr>
+          <td><code><%= b.bookingCode %></code></td>
+          <td><%= b.guestName %></td>
+          <td><%= b.roomCode %></td>
+          <td>
+            <form method="POST" action="/staff/bookings/<%= b.id %>/check-out" style="display:inline;" onsubmit="return confirm('Check-out?');">
+              <input type="hidden" name="redirect" value="/staff/reception">
+              <button type="submit" class="staff-btn staff-btn-info" style="padding:4px 8px;font-size:12px;">Check-out</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+        <% if (!departures.length) { %><tr><td colspan="4" style="text-align:center;color:var(--staff-muted);">Không có</td></tr><% } %>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/staff/js/staff-reception.js"></script>

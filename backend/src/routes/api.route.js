@@ -34,6 +34,8 @@ const catalogRoute = require('./catalog.route');
 const clientAuthRoute = require('./clientAuth.route');
 const seoRoute = require('./seo.route');
 const chatBotRoute = require('./chatBot.route');
+const contactRoute = require('./contact.route');
+const homeHeroRoute = require('./homeHero.route');
 const prisma = require('../config/prisma.config');
 const { isDbConnectionError } = require('../utils/http');
 
@@ -71,8 +73,14 @@ router.use('/auth', clientAuthRoute);
 /** SEO config công khai cho React */
 router.use('/seo', seoRoute);
 
+/** Hero banner trang chủ */
+router.use('/home', homeHeroRoute);
+
 /** Chat AI — Gemini + catalog/booking tools */
 router.use('/chat', chatBotRoute);
+
+/** Form liên hệ website */
+router.use('/contact', contactRoute);
 
 /** Catalog public API — format chuẩn cho React (ưu tiên dùng prefix /catalog) */
 router.use('/catalog', catalogRoute);

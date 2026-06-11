@@ -32,6 +32,7 @@ enum BookingStatus {
   draft
   pending_payment
   confirmed
+  checked_in
   cancelled
   completed
   no_show
@@ -41,6 +42,7 @@ enum PaymentMethod {
   card
   bank
   wallet
+  momo
 }
 
 enum PaymentStatus {
@@ -56,9 +58,15 @@ enum MembershipTier {
   diamond
 }
 
+enum PromoDiscountType {
+  percent
+  fixed_amount
+}
+
 enum AdminRole {
   admin
   super_admin
+  staff
 }
 
 enum TokenSubject {
@@ -96,6 +104,7 @@ model Property {
   gallery      PropertyGallery[]
   amenities    PropertyAmenity[]
   bookings     Booking[]
+  staffAdmins  Admin[]
 
   @@map("properties")
 }
@@ -131,6 +140,7 @@ model Branch {
   mapPin     BranchMapPin?
   rooms      InventoryRoom[]
   bookings   Booking[]
+  staffAdmins Admin[]
 
   @@unique([propertyId, code])
   @@map("branches")
@@ -232,8 +242,10 @@ model InventoryRoom {
   roomTypeId  Int                 @map("room_type_id")
   code        String              @db.VarChar(50)
   priceVnd    Int                 @map("price_vnd")
-  description String              @db.Text
-  imageUrl    String?             @map("image_url") @db.VarChar(500)
+  description      String  @db.Text
+  extraParagraphs  Json?   @map("extra_paragraphs")
+  imageUrl         String? @map("image_url") @db.VarChar(500)
+  galleryImages    Json?   @map("gallery_images")
   altText     String?             @map("alt_text") @db.VarChar(255)
   maxAdults   Int                 @default(2) @map("max_adults")
   maxChildren Int                 @default(0) @map("max_children")
@@ -279,12 +291,19 @@ model Admin {
   email         String         @unique @db.VarChar(255)
   passwordHash  String         @map("password_hash") @db.VarChar(255)
   fullName      String         @map("full_name") @db.VarChar(255)
+  avatarUrl     String?        @map("avatar_url") @db.VarChar(500)
   role          AdminRole      @default(admin)
+  branchId      Int?           @map("branch_id")
+  propertyId    Int?           @map("property_id")
   isActive      Boolean        @default(true) @map("is_active")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  property      Property?      @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
 
+  @@index([branchId])
+  @@index([propertyId])
   @@map("admins")
 }
 
@@ -446,7 +465,59 @@ model SeoPageTemplate {
   @@map("seo_page_templates")
 }
 
-// 18. chat_bot_settings — prompt & lời chào chatbot (singleton id=1)
+// 18. home_hero_settings — banner trang chủ (singleton id=1)
+model HomeHeroSettings {
+  id               Int      @id @default(1)
+  badgeText        String   @map("badge_text") @db.VarChar(255)
+  titleLine1       String   @map("title_line1") @db.VarChar(255)
+  titleLine2       String   @map("title_line2") @db.VarChar(255)
+  description      String   @db.Text
+  quickCitiesJson  String   @default("[]") @map("quick_cities_json") @db.Text
+  slidesJson       String   @default("[]") @map("slides_json") @db.LongText
+  slideIntervalSec Int      @default(6) @map("slide_interval_sec")
+  isEnabled        Boolean  @default(true) @map("is_enabled")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("home_hero_settings")
+}
+
+// 19. home_page_settings — nội dung homepage (singleton id=1)
+model HomePageSettings {
+  id                Int      @id @default(1)
+  statsEnabled      Boolean  @default(true) @map("stats_enabled")
+  statsJson         String   @map("stats_json") @db.Text
+  whyEnabled        Boolean  @default(true) @map("why_enabled")
+  whyEyebrow        String   @map("why_eyebrow") @db.VarChar(120)
+  whyTitle          String   @map("why_title") @db.VarChar(255)
+  whyDescription    String   @map("why_description") @db.Text
+  whyItemsJson      String   @map("why_items_json") @db.LongText
+  areasEnabled      Boolean  @default(true) @map("areas_enabled")
+  areasEyebrow      String   @map("areas_eyebrow") @db.VarChar(120)
+  areasTitle        String   @map("areas_title") @db.VarChar(255)
+  areasSeeAllLabel  String   @map("areas_see_all_label") @db.VarChar(80)
+  areasSeeAllHref   String   @map("areas_see_all_href") @db.VarChar(500)
+  areasJson         String   @map("areas_json") @db.LongText
+  kindsEnabled      Boolean  @default(true) @map("kinds_enabled")
+  kindsEyebrow      String   @map("kinds_eyebrow") @db.VarChar(120)
+  kindsTitle        String   @map("kinds_title") @db.VarChar(255)
+  kindsDescription  String   @map("kinds_description") @db.Text
+  kindsJson         String   @map("kinds_json") @db.LongText
+  reviewsEnabled    Boolean  @default(true) @map("reviews_enabled")
+  reviewsEyebrow    String   @map("reviews_eyebrow") @db.VarChar(120)
+  reviewsTitle      String   @map("reviews_title") @db.VarChar(255)
+  reviewsJson       String   @map("reviews_json") @db.LongText
+  newsletterEnabled       Boolean  @default(true) @map("newsletter_enabled")
+  newsletterTitle         String   @map("newsletter_title") @db.VarChar(255)
+  newsletterDescription   String   @map("newsletter_description") @db.Text
+  newsletterPlaceholder   String   @map("newsletter_placeholder") @db.VarChar(120)
+  newsletterButtonLabel   String   @map("newsletter_button_label") @db.VarChar(80)
+  newsletterSuccessMessage String  @map("newsletter_success_message") @db.VarChar(255)
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("home_page_settings")
+}
+
+// 20. chat_bot_settings — prompt & lời chào chatbot (singleton id=1)
 model ChatBotSettings {
   id             Int      @id @default(1)
   assistantName  String   @map("assistant_name") @db.VarChar(120)
@@ -458,18 +529,64 @@ model ChatBotSettings {
   @@map("chat_bot_settings")
 }
 
-// 19. promo_codes (bonus — thường đi kèm booking)
+// Email templates — nội dung admin tùy chỉnh theo loại mail
+model EmailTemplate {
+  id          Int      @id @default(autoincrement())
+  templateKey String   @unique @map("template_key") @db.VarChar(60)
+  name        String   @db.VarChar(120)
+  description String?  @db.Text
+  subject     String   @db.VarChar(255)
+  configJson  String   @map("config_json") @db.LongText
+  isEnabled   Boolean  @default(true) @map("is_enabled")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
+}
+
+// 19. promo_codes (mã giảm giá / coupon)
 model PromoCode {
-  id              Int      @id @default(autoincrement())
-  code            String   @unique @db.VarChar(40)
-  discountPercent Int      @map("discount_percent")
-  validFrom       DateTime @map("valid_from") @db.Date
-  validTo         DateTime @map("valid_to") @db.Date
-  maxUses         Int?     @map("max_uses")
-  usedCount       Int      @default(0) @map("used_count")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                Int               @id @default(autoincrement())
+  code              String            @unique @db.VarChar(40)
+  discountType      PromoDiscountType @default(percent) @map("discount_type")
+  discountPercent   Int?              @map("discount_percent")
+  discountAmountVnd Int?              @map("discount_amount_vnd")
+  minSubtotalVnd    Int               @default(0) @map("min_subtotal_vnd")
+  description       String?           @db.VarChar(500)
+  validFrom         DateTime          @map("valid_from") @db.Date
+  validTo           DateTime          @map("valid_to") @db.Date
+  maxUses           Int?              @map("max_uses")
+  usedCount         Int               @default(0) @map("used_count")
+  isActive          Boolean           @default(true) @map("is_active")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
   @@map("promo_codes")
+}
+
+enum ContactMessageStatus {
+  new
+  read
+  replied
+  archived
+}
+
+// Tin nhắn từ form /contact
+model ContactMessage {
+  id        Int                  @id @default(autoincrement())
+  fullName  String               @map("full_name") @db.VarChar(255)
+  email     String               @db.VarChar(255)
+  phone     String?              @db.VarChar(30)
+  message   String               @db.Text
+  status    ContactMessageStatus @default(new)
+  adminNote String?              @map("admin_note") @db.Text
+  readAt    DateTime?            @map("read_at")
+  ipAddress String?              @map("ip_address") @db.VarChar(64)
+  userAgent String?              @map("user_agent") @db.VarChar(500)
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@map("contact_messages")
 }

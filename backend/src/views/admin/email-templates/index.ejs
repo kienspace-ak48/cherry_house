@@ -1,0 +1,33 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Mẫu email</h2>
+    <p class="text-body-secondary mb-0 small">Tùy chỉnh nội dung từng loại email gửi cho khách. Hệ thống ghép dữ liệu admin với template HTML khi gửi.</p>
+  </div>
+</div>
+
+<% if (flash === 'saved') { %><div class="alert alert-success">Đã lưu mẫu email.</div>
+<% } else if (flash === 'reset') { %><div class="alert alert-info">Đã khôi phục mặc định.</div>
+<% } else if (flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi' %></div><% } %>
+
+<div class="row g-3">
+  <% templates.forEach(function(tpl) { %>
+  <div class="col-md-4">
+    <div class="card admin-card h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+          <h5 class="card-title mb-0"><%= tpl.name %></h5>
+          <% if (tpl.isEnabled) { %>
+          <span class="badge bg-success">Bật</span>
+          <% } else { %>
+          <span class="badge bg-secondary">Tắt</span>
+          <% } %>
+        </div>
+        <p class="small text-body-secondary flex-grow-1"><%= tpl.description %></p>
+        <p class="small mb-2"><code><%= tpl.templateKey %></code></p>
+        <p class="small text-truncate mb-3" title="<%= tpl.subject %>"><strong>Tiêu đề:</strong> <%= tpl.subject %></p>
+        <a href="/admin/email-templates/<%= tpl.templateKey %>" class="btn btn-primary btn-sm">Chỉnh sửa</a>
+      </div>
+    </div>
+  </div>
+  <% }); %>
+</div>

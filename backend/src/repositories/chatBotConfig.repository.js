@@ -1,15 +1,50 @@
 const prisma = require('../config/prisma.config');
 
-function getSettings() {
-  return prisma.chatBotSettings.findUnique({ where: { id: 1 } });
+const VPS_SETUP_HINT =
+  'Trên VPS chạy: cd backend && npm install && npm run db:migrate && pm2 restart server';
+
+function getDelegate() {
+  return prisma?.chatBotSettings ?? null;
 }
 
-function upsertSettings(data) {
-  return prisma.chatBotSettings.upsert({
-    where: { id: 1 },
-    create: { id: 1, ...data },
-    update: data,
-  });
+function isMissingTableError(err) {
+  return err?.code === 'P2021' || err?.code === 'P1014';
+}
+
+async function getSettings() {
+  const delegate = getDelegate();
+  if (!delegate) return null;
+
+  try {
+    return await delegate.findUnique({ where: { id: 1 } });
+  } catch (err) {
+    if (isMissingTableError(err)) return null;
+    throw err;
+  }
+}
+
+async function upsertSettings(data) {
+  const delegate = getDelegate();
+  if (!delegate) {
+    const err = new Error(`Prisma client chưa có model chatBotSettings. ${VPS_SETUP_HINT}`);
+    err.code = 'CHATBOT_PRISMA_NOT_GENERATED';
+    throw err;
+  }
+
+  try {
+    return await delegate.upsert({
+      where: { id: 1 },
+      create: { id: 1, ...data },
+      update: data,
+    });
+  } catch (err) {
+    if (isMissingTableError(err)) {
+      const tableErr = new Error(`Bảng chat_bot_settings chưa tồn tại. ${VPS_SETUP_HINT}`);
+      tableErr.code = 'CHATBOT_TABLE_MISSING';
+      throw tableErr;
+    }
+    throw err;
+  }
 }
 
 module.exports = {

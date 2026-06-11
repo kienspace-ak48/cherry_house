@@ -1,5 +1,6 @@
 const mailService = require('./mail.service');
 const { getClientAppUrl } = require('../config/appUrl.config');
+const { generateBookingQrDataUrl } = require('../utils/bookingQr.util');
 
 function formatDateVi(value) {
   if (!value) return '—';
@@ -41,6 +42,12 @@ async function sendBookingConfirmationEmail(booking) {
       : `${booking.adults} người lớn`;
 
   const resultUrl = `${getClientAppUrl()}/checkout/result?bookingCode=${encodeURIComponent(booking.bookingCode)}`;
+  let qrCodeDataUrl = '';
+  try {
+    qrCodeDataUrl = await generateBookingQrDataUrl(booking.bookingCode);
+  } catch (err) {
+    console.warn('[bookingEmail] QR generation failed:', err?.message || err);
+  }
 
   const result = await mailService.sendBookingConfirmation({
     to: booking.guestEmail,
@@ -58,6 +65,7 @@ async function sendBookingConfirmationEmail(booking) {
     pricePerNightVnd: formatVnd(booking.pricePerNightVnd),
     specialNote: booking.specialNote || '',
     resultUrl,
+    qrCodeDataUrl,
   });
 
   return { sent: result.success, ...result };

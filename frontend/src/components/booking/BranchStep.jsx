@@ -74,6 +74,11 @@ export default function BranchStep({ property, context, onSearch }) {
           <h2 className="font-headline text-sm font-bold tracking-wide text-on-surface uppercase">
             {singleBranch ? 'Chi nhánh' : 'Chọn chi nhánh để xem phòng'}
           </h2>
+          {singleBranch ? (
+            <p className="mt-2 text-sm text-on-surface-variant">
+              Cơ sở này có một chi nhánh — nhấn tên chi nhánh bên dưới để xem phòng.
+            </p>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
             {property.subBranches.map((b) => (
               <Link

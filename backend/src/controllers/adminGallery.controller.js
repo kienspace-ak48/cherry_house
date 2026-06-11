@@ -4,10 +4,7 @@ const { sendApiError, resolveApiErrorMessage } = require('../utils/http');
 
 async function page(req, res) {
   try {
-    const [folders, images] = await Promise.all([
-      adminGalleryService.listFolders(),
-      adminGalleryService.listImages('all'),
-    ]);
+    const pageData = await adminGalleryService.getPageData(req.query.folder);
 
     renderAdminPage(req, res, 'admin/gallery/gallery', {
       pageTitle: 'Gallery',
@@ -16,8 +13,10 @@ async function page(req, res) {
         { label: 'Dashboard', href: '/admin' },
         { label: 'Gallery' },
       ],
-      folders,
-      images,
+      folders: pageData.folders,
+      images: pageData.images,
+      selectedFolderId: pageData.selectedFolderId,
+      selectedFolder: pageData.selectedFolder,
     });
   } catch (error) {
     renderAdminPage(req, res, 'admin/gallery/gallery', {
@@ -29,6 +28,8 @@ async function page(req, res) {
       ],
       folders: [],
       images: [],
+      selectedFolderId: null,
+      selectedFolder: null,
       formError: resolveApiErrorMessage(error),
     });
   }

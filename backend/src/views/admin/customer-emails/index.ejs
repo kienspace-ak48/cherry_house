@@ -1,0 +1,231 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Gửi email khách hàng</h2>
+    <p class="text-body-secondary mb-0 small">
+      Chọn khách hàng (từng người hoặc toàn bộ danh sách đang lọc), soạn email tùy chỉnh hoặc gửi mã giảm giá.
+    </p>
+  </div>
+  <a href="/admin/users" class="btn btn-outline-secondary btn-sm">← Danh sách khách</a>
+</div>
+
+<% if (typeof formError !== 'undefined' && formError) { %>
+<div class="alert alert-danger"><%= formError %></div>
+<% } %>
+
+<div class="card admin-card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/customer-emails" class="row g-2 align-items-end" id="customerEmailFilterForm">
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="searchQ">Tìm kiếm</label>
+        <input class="form-control form-control-sm" type="search" id="searchQ" name="q" value="<%= searchQ %>" placeholder="Tên, email, SĐT…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterTier">Hạng thành viên</label>
+        <select class="form-select form-select-sm" id="filterTier" name="membershipTier">
+          <option value="">— Tất cả —</option>
+          <% membershipTiers.forEach(function(t) { %>
+          <option value="<%= t.value %>" <%= filterTier === t.value ? 'selected' : '' %>><%= t.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterProvider">Đăng nhập</label>
+        <select class="form-select form-select-sm" id="filterProvider" name="authProvider">
+          <option value="">— Tất cả —</option>
+          <% authProviders.forEach(function(p) { %>
+          <option value="<%= p.value %>" <%= filterProvider === p.value ? 'selected' : '' %>><%= p.label %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterActive">Trạng thái</label>
+        <select class="form-select form-select-sm" id="filterActive" name="isActive">
+          <option value="">— Tất cả —</option>
+          <option value="true" <%= filterActive === 'true' ? 'selected' : '' %>>Đang hoạt động</option>
+          <option value="false" <%= filterActive === 'false' ? 'selected' : '' %>>Đã khóa</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="filterBookingBanned">Đặt phòng</label>
+        <select class="form-select form-select-sm" id="filterBookingBanned" name="bookingBanned">
+          <option value="">— Tất cả —</option>
+          <option value="true" <%= filterBookingBanned === 'true' ? 'selected' : '' %>>Bị cấm</option>
+          <option value="false" <%= filterBookingBanned === 'false' ? 'selected' : '' %>>Được phép</option>
+        </select>
+      </div>
+      <div class="col-md-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
+        <a href="/admin/customer-emails" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="customerEmailActionBar" class="card admin-card mb-3 d-none">
+  <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <strong id="customerEmailSelectedCount">0</strong> khách được chọn
+      <span class="text-body-secondary small ms-2">(chỉ gửi tài khoản đang hoạt động)</span>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" id="btnOpenSendEmail">
+      <i class="fa-solid fa-paper-plane me-1"></i> Soạn &amp; gửi email
+    </button>
+  </div>
+</div>
+
+<div class="card admin-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <strong>Danh sách khách hàng</strong>
+    <span class="badge text-bg-secondary"><%= users.length %> tài khoản</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0 align-middle" id="customerEmailTable">
+        <thead class="table-light">
+          <tr>
+            <th style="width:42px">
+              <input class="form-check-input" type="checkbox" id="selectAllCustomers" title="Chọn tất cả">
+            </th>
+            <th>Khách hàng</th>
+            <th>Email</th>
+            <th>Hạng</th>
+            <th>Booking</th>
+            <th>Trạng thái</th>
+            <th>Đăng ký</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!users.length) { %>
+          <tr><td colspan="7" class="text-center text-body-secondary py-4">Không có khách hàng phù hợp</td></tr>
+          <% } else { users.forEach(function(u) { %>
+          <tr class="<%= u.isActive ? '' : 'text-body-secondary' %>">
+            <td>
+              <input
+                class="form-check-input customer-row-check"
+                type="checkbox"
+                value="<%= u.id %>"
+                data-email="<%= u.email %>"
+                data-name="<%= u.fullName %>"
+                data-active="<%= u.isActive ? '1' : '0' %>"
+                <%= u.isActive ? '' : 'disabled title="Tài khoản đã khóa"' %>
+              >
+            </td>
+            <td>
+              <span class="fw-semibold"><%= u.fullName %></span><br>
+              <small class="text-body-secondary">ID <%= u.id %></small>
+            </td>
+            <td>
+              <%= u.email %><br>
+              <small class="text-body-secondary"><%= u.phone || '—' %></small>
+            </td>
+            <td><span class="badge bg-primary-subtle text-primary-emphasis"><%= tierLabel(u.membershipTier) %></span></td>
+            <td><%= u._count?.bookings ?? 0 %></td>
+            <td>
+              <% if (u.isActive) { %>
+              <span class="badge bg-success">Active</span>
+              <% } else { %>
+              <span class="badge bg-danger">Khóa</span>
+              <% } %>
+            </td>
+            <td><small><%= formatDateTime(u.createdAt) %></small></td>
+          </tr>
+          <% }); } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div
+  id="sendEmailModal"
+  class="admin-modal d-none align-items-center justify-content-center"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="sendEmailModalTitle"
+>
+  <div class="admin-modal-dialog admin-email-compose-dialog bg-white rounded-3 shadow-lg">
+    <div class="d-flex justify-content-between align-items-center border-bottom px-4 py-3">
+      <h5 class="mb-0 fw-semibold" id="sendEmailModalTitle">Gửi email</h5>
+      <button type="button" class="btn btn-sm btn-light" data-send-email-close aria-label="Đóng">×</button>
+    </div>
+    <div class="px-4 py-3 overflow-auto" style="max-height:min(70vh,640px)">
+      <p class="small text-body-secondary mb-3">
+        Gửi tới <strong id="sendEmailRecipientCount">0</strong> khách. Dùng <code>{{guest_name}}</code> trong tiêu đề/nội dung để chèn tên.
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label" for="emailType">Loại email</label>
+        <select class="form-select" id="emailType">
+          <option value="custom">Email tùy chỉnh</option>
+          <option value="promo">Mã giảm giá (template sẵn)</option>
+        </select>
+      </div>
+
+      <div id="customEmailFields">
+        <div class="mb-3">
+          <label class="form-label" for="customSubject">Tiêu đề email <span class="text-danger">*</span></label>
+          <input class="form-control" id="customSubject" maxlength="255" placeholder="[Cherry House] Tin vui dành cho {{guest_name}}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="customEventName">Tiêu đề trong email <span class="text-danger">*</span></label>
+          <input class="form-control" id="customEventName" maxlength="255" placeholder="Ưu đãi đặc biệt dành cho bạn">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="customContent1">Nội dung chính <span class="text-danger">*</span></label>
+          <textarea class="form-control" id="customContent1" rows="4" placeholder="Cherry House gửi bạn thông tin ưu đãi…"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="customContent2">Nội dung phụ</label>
+          <textarea class="form-control" id="customContent2" rows="2" placeholder="Cảm ơn bạn đã đồng hành cùng Cherry House."></textarea>
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="customShowCta" checked>
+          <label class="form-check-label" for="customShowCta">Hiện nút CTA</label>
+        </div>
+        <div id="customCtaFields" class="row g-3 mb-2">
+          <div class="col-md-5">
+            <label class="form-label" for="customCtaLabel">Nhãn nút</label>
+            <input class="form-control" id="customCtaLabel" value="Đặt phòng ngay">
+          </div>
+          <div class="col-md-7">
+            <label class="form-label" for="customCtaUrl">Đường dẫn</label>
+            <input class="form-control" id="customCtaUrl" value="<%= defaultCtaUrl %>">
+          </div>
+        </div>
+        <p class="small text-body-secondary mb-0">
+          Khung email dùng layout Cherry House. Chỉnh mẫu mặc định tại
+          <a href="/admin/email-templates/marketing_custom" target="_blank" rel="noopener">Mẫu email → Marketing</a>.
+        </p>
+      </div>
+
+      <div id="promoEmailFields" class="d-none">
+        <div class="mb-3">
+          <label class="form-label" for="promoCodeId">Mã giảm giá <span class="text-danger">*</span></label>
+          <select class="form-select" id="promoCodeId">
+            <option value="">— Chọn mã —</option>
+            <% promos.forEach(function(p) { %>
+            <option value="<%= p.id %>">
+              <%= p.code %> · <%= formatDiscountText(p) %> · <%= formatDateVi(p.validFrom) %> – <%= formatDateVi(p.validTo) %>
+            </option>
+            <% }); %>
+          </select>
+        </div>
+        <p class="small text-body-secondary mb-0">
+          Nội dung lấy từ template
+          <a href="/admin/email-templates/promo_coupon" target="_blank" rel="noopener">Mã giảm giá</a>.
+          <% if (!promos.length) { %>
+          <span class="text-warning d-block mt-1">Chưa có mã active — <a href="/admin/promo-codes/new">tạo mã mới</a>.</span>
+          <% } %>
+        </p>
+      </div>
+    </div>
+    <div class="border-top px-4 py-3 d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-light" data-send-email-close>Hủy</button>
+      <button type="button" class="btn btn-primary" id="btnConfirmSendEmail">
+        <i class="fa-solid fa-paper-plane me-1"></i> Gửi email
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin-customer-emails.js"></script>

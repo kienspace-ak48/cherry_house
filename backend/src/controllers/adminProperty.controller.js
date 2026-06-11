@@ -1,4 +1,5 @@
 const propertyService = require('../services/property.service');
+const catalogCountService = require('../services/catalogCount.service');
 const { renderAdminPage, kindLabel } = require('../utils/adminRender');
 
 function parsePropertyFormBody(body) {
@@ -8,8 +9,6 @@ function parsePropertyFormBody(body) {
     : [];
 
   const priceFromVnd = Number.parseInt(body.priceFromVnd, 10);
-  const roomCount = Number.parseInt(body.roomCount, 10);
-  const branchCount = Number.parseInt(body.branchCount, 10);
   const reviewCount = Number.parseInt(body.reviewCount, 10);
   const rating = Number.parseFloat(body.rating);
 
@@ -23,8 +22,6 @@ function parsePropertyFormBody(body) {
     description: body.description,
     address: body.address,
     priceFromVnd: Number.isNaN(priceFromVnd) ? 0 : priceFromVnd,
-    roomCount: Number.isNaN(roomCount) ? 0 : roomCount,
-    branchCount: Number.isNaN(branchCount) ? 0 : branchCount,
     rating: Number.isNaN(rating) ? 0 : rating,
     reviewCount: Number.isNaN(reviewCount) ? 0 : reviewCount,
     heroImageUrl: body.heroImageUrl || null,
@@ -63,6 +60,8 @@ function formatHighlightsForTextarea(highlights) {
 async function list(req, res) {
   try {
     const properties = await propertyService.listProperties(req.query);
+    await Promise.all(properties.map((p) => catalogCountService.syncPropertyCounts(p.id)));
+    const refreshed = await propertyService.listProperties(req.query);
     renderAdminPage(req, res, 'admin/properties/index', {
       pageTitle: 'Cơ sở lưu trú',
       adminPage: 'properties',
@@ -70,7 +69,7 @@ async function list(req, res) {
         { label: 'Dashboard', href: '/admin' },
         { label: 'Cơ sở lưu trú' },
       ],
-      properties,
+      properties: refreshed,
       kindLabel,
       flash: req.query.flash || null,
       msg: req.query.msg || null,
@@ -133,6 +132,8 @@ async function editForm(req, res) {
     if (!property) {
       return res.redirect('/admin/properties?flash=notfound');
     }
+    await catalogCountService.syncPropertyCounts(property.id);
+    const refreshed = await propertyService.getPropertyById(req.params.id);
     renderAdminPage(req, res, 'admin/properties/form', {
       pageTitle: 'Sửa cơ sở',
       adminPage: 'properties',
@@ -142,8 +143,8 @@ async function editForm(req, res) {
         { label: property.name },
       ],
       mode: 'edit',
-      property,
-      highlightsText: formatHighlightsForTextarea(property.highlights),
+      property: refreshed,
+      highlightsText: formatHighlightsForTextarea(refreshed.highlights),
     });
   } catch (error) {
     res.redirect(`/admin/properties?flash=error&msg=${encodeURIComponent(error.message)}`);

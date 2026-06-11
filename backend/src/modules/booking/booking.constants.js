@@ -3,13 +3,14 @@ const BOOKING_STATUSES = new Set([
   'draft',
   'pending_payment',
   'confirmed',
+  'checked_in',
   'cancelled',
   'completed',
   'no_show',
 ]);
 
 /** Trạng thái chiếm phòng — dùng cho kiểm tra overlap & occupancy */
-const OCCUPYING_STATUSES = ['pending_payment', 'confirmed'];
+const OCCUPYING_STATUSES = ['pending_payment', 'confirmed', 'checked_in'];
 
 /** Giữ chỗ mặc định khi tạo booking chờ thanh toán (phút) */
 const DEFAULT_HOLD_MINUTES = 15;

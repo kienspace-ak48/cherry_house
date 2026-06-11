@@ -1,6 +1,8 @@
 const { getClientAppUrl, getPublicSiteUrl } = require('../config/appUrl.config');
 const prisma = require('../config/prisma.config');
 const seoRepository = require('../repositories/seo.repository');
+const { resolvePageKeyFromPath } = require('../utils/routePageKey.util');
+const { resolveTemplate, buildCanonicalUrl, toAbsoluteUrl } = require('../utils/seoTemplate.util');
 
 const DEFAULT_PAGE_TEMPLATES = [
   {
@@ -164,6 +166,20 @@ function resolvePublicAssetUrl(path, siteUrl) {
   return `${base}${raw.startsWith('/') ? raw : `/${raw}`}`;
 }
 
+/** Zalo / Facebook link preview — chỉ tin JPG, PNG (đôi khi GIF). */
+const OG_UNSUPPORTED_IMAGE = /\.(avif|webp|svg)$/i;
+
+function assertOgImageSupported(path) {
+  const raw = String(path || '').trim();
+  if (!raw) return null;
+  if (OG_UNSUPPORTED_IMAGE.test(raw.split('?')[0])) {
+    throw new Error(
+      'Ảnh OG nên dùng JPG hoặc PNG. Zalo/Facebook không hiển thị preview với AVIF, WebP hoặc SVG.',
+    );
+  }
+  return raw;
+}
+
 function buildDefaultGlobal(req) {
   const siteUrl = defaultSiteUrl(req);
   return {
@@ -174,7 +190,7 @@ function buildDefaultGlobal(req) {
       'Homestay, mini stay và villa đồng bộ thương hiệu Cherry House. Tìm theo địa điểm, chọn chi nhánh và đặt phòng trực tuyến.',
     defaultKeywords:
       'cherry house, homestay việt nam, đặt phòng online, mini stay, villa',
-    ogImageUrl: '/favicon/android-chrome-512x512.png',
+    ogImageUrl: '/og_seo.png',
     twitterSite: null,
     themeColor: '#9f1239',
     organizationName: 'Cherry House',
@@ -258,6 +274,54 @@ async function getPublicConfig(req) {
   };
 }
 
+/** Meta SEO cho crawler (Zalo, Facebook…) — inject vào index.html trước khi React chạy */
+async function resolveSpaMeta(req) {
+  await ensureDefaults(req);
+  const globalRow = await seoRepository.getGlobalSettings();
+  const global = serializeGlobal(globalRow);
+  const siteUrl = global?.siteUrl || defaultSiteUrl(req);
+  const pathname = req.path || '/';
+  const pageKey = resolvePageKeyFromPath(pathname);
+
+  let pageTemplate = null;
+  if (pageKey) {
+    const row = await seoRepository.getPageTemplateByKey(pageKey);
+    if (row?.isActive) {
+      pageTemplate = serializePageTemplate(row, siteUrl);
+    }
+  }
+
+  const vars = { siteName: global?.siteName || 'Cherry House' };
+  const title = pageTemplate?.titleTemplate
+    ? resolveTemplate(pageTemplate.titleTemplate, vars)
+    : global?.defaultTitle || vars.siteName;
+  const description = pageTemplate?.descriptionTemplate
+    ? resolveTemplate(pageTemplate.descriptionTemplate, vars)
+    : global?.defaultDescription || '';
+  const robots = pageTemplate?.robots
+    || (global?.allowIndexing === false ? 'noindex, nofollow' : 'index, follow');
+
+  const keywords = pageTemplate?.keywordsTemplate
+    ? resolveTemplate(pageTemplate.keywordsTemplate, vars)
+    : global?.defaultKeywords || '';
+
+  const ogImage =
+    (pageTemplate?.ogImageUrl && String(pageTemplate.ogImageUrl).trim())
+      ? pageTemplate.ogImageUrl
+      : global?.ogImageUrl || toAbsoluteUrl('/og_seo.png', siteUrl);
+
+  return {
+    title: title || global?.defaultTitle || vars.siteName,
+    description: description || global?.defaultDescription || '',
+    keywords,
+    robots,
+    canonical: buildCanonicalUrl(pathname, siteUrl),
+    ogImage,
+    siteName: global?.siteName || 'Cherry House',
+    twitterSite: global?.twitterSite || '',
+  };
+}
+
 function parseGlobalFormBody(body, req) {
   let siteUrl = trimStr(body.siteUrl, 500).replace(/\/$/, '');
   if (isLegacyDevSiteUrl(siteUrl)) {
@@ -270,7 +334,7 @@ function parseGlobalFormBody(body, req) {
     defaultTitle: trimStr(body.defaultTitle, 255),
     defaultDescription: trimStr(body.defaultDescription),
     defaultKeywords: trimStr(body.defaultKeywords, 500) || null,
-    ogImageUrl: trimStr(body.ogImageUrl, 500) || null,
+    ogImageUrl: assertOgImageSupported(trimStr(body.ogImageUrl, 500) || null),
     twitterSite: trimStr(body.twitterSite, 120) || null,
     themeColor: trimStr(body.themeColor, 20) || null,
     organizationName: trimStr(body.organizationName, 255) || null,
@@ -289,7 +353,7 @@ function parsePageFormBody(body) {
     descriptionTemplate: trimStr(body.descriptionTemplate),
     keywordsTemplate: trimStr(body.keywordsTemplate, 500) || null,
     robots: trimStr(body.robots, 40) || 'index, follow',
-    ogImageUrl: trimStr(body.ogImageUrl, 500) || null,
+    ogImageUrl: assertOgImageSupported(trimStr(body.ogImageUrl, 500) || null),
     isActive: body.isActive === '1' || body.isActive === true || body.isActive === 'on',
   };
 }
@@ -448,6 +512,7 @@ async function buildSitemapXml(req) {
 module.exports = {
   ensureDefaults,
   getPublicConfig,
+  resolveSpaMeta,
   getAdminBundle,
   updateGlobalSettings,
   updatePageTemplate,

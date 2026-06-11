@@ -10,6 +10,9 @@
   ? selectedBranch.propertyId
   : (typeof preselectPropertyId !== 'undefined' ? preselectPropertyId : ''); %>
 <% const selectedRoomTypeId = r.roomTypeId || (typeof preselectRoomTypeId !== 'undefined' ? preselectRoomTypeId : ''); %>
+<% const galleryUrls = Array.isArray(r.galleryImages) ? r.galleryImages.filter(Boolean) : []; %>
+<% const extraParas = Array.isArray(r.extraParagraphs) ? r.extraParagraphs.filter(Boolean) : []; %>
+<% const rtc = typeof roomTypeCatalog !== 'undefined' ? roomTypeCatalog : []; %>
 <% function numField(val) {
   if (isCreate && (val === 0 || val === null || val === undefined)) return '';
   if (val === null || val === undefined) return '';
@@ -88,7 +91,10 @@
                 <option value="<%= rt.id %>" <%= String(selectedRoomTypeId) === String(rt.id) ? 'selected' : '' %>><%= rt.title %> (<%= rt.category %>)</option>
                 <% }); %>
               </select>
-              <div class="form-text">Mẫu phòng (Standard, Deluxe…) — mô tả chung, dùng chung nhiều phòng vật lý.</div>
+              <div class="form-text">
+                Mẫu phòng (Standard, Deluxe…) — gallery & mô tả chi tiết.
+                <a href="/admin/room-types" target="_blank" rel="noopener">Quản lý loại phòng</a>
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label" for="code">Mã phòng <span class="text-danger">*</span></label>
@@ -134,15 +140,16 @@
               <input class="form-control" type="number" min="0" id="maxChildren" name="maxChildren" value="<%= r.maxChildren ?? 0 %>">
             </div>
             <div class="col-12">
-              <label class="form-label" for="description">Mô tả <span class="text-danger">*</span></label>
+              <label class="form-label" for="description">Mô tả ngắn (dòng đầu trang chi tiết) <span class="text-danger">*</span></label>
               <textarea
                 class="form-control"
                 id="description"
                 name="description"
-                rows="3"
+                rows="2"
                 required
-                placeholder="Phòng 101 — tầng 1, view vườn, giường đôi, ban công nhỏ"
+                placeholder="Phòng 101 — tầng 1, view vườn"
               ><%= r.description || '' %></textarea>
+              <div class="form-text">Hiển thị nổi bật đầu phần mô tả. Thêm đoạn bổ sung bên dưới.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="altText">Alt text ảnh (SEO / accessibility)</label>
@@ -151,20 +158,123 @@
           </div>
         </div>
       </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Ảnh trang chi tiết</strong>
+          <span class="badge text-bg-light text-body-secondary fw-normal">Tối đa 5</span>
+        </div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-3">
+            Khách xem trên hero & lưới ảnh. Nếu không thêm ảnh nào → dùng <strong>ảnh đại diện</strong> (cột phải) rồi gallery <strong>loại phòng</strong>, cuối cùng là ảnh mặc định.
+          </p>
+          <div id="roomGalleryList" class="d-flex flex-column gap-3" data-max-rows="5">
+            <% const galleryRows = galleryUrls.length ? galleryUrls : ['']; %>
+            <% galleryRows.forEach(function(url, idx) { %>
+            <div class="gallery-row border rounded p-3" data-gallery-row>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small fw-semibold" data-gallery-label>Ảnh <%= idx + 1 %></span>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-gallery-row>×</button>
+              </div>
+              <%- include('galleryImagePicker', {
+                fieldId: 'galleryImageUrl_' + idx,
+                fieldName: 'galleryImageUrl[]',
+                value: url,
+                label: 'Ảnh chi tiết',
+              }) %>
+            </div>
+            <% }); %>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addRoomGalleryRow">+ Thêm ảnh</button>
+        </div>
+      </div>
+
+      <template id="roomGalleryRowTemplate">
+        <div class="gallery-row border rounded p-3" data-gallery-row>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small fw-semibold" data-gallery-label>Ảnh</span>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-remove-gallery-row>×</button>
+          </div>
+          <div class="gallery-image-picker" data-gallery-picker>
+            <label class="form-label">Ảnh chi tiết</label>
+            <div class="gallery-image-picker-preview mb-2 d-none" data-gallery-picker-preview>
+              <img src="" alt="" class="gallery-image-picker-thumb rounded border" data-gallery-picker-preview-img>
+            </div>
+            <input type="hidden" class="gallery-image-picker-input" name="galleryImageUrl[]" value="" data-gallery-picker-input>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>
+                <i class="fa-solid fa-images me-1"></i>Chọn từ gallery
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-gallery-picker-clear>
+                <i class="fa-solid fa-xmark me-1"></i>Xóa ảnh
+              </button>
+            </div>
+            <div class="form-text" data-gallery-picker-path-text>Chưa chọn ảnh.</div>
+          </div>
+        </div>
+      </template>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Mô tả bổ sung</strong>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="addExtraParagraphRow">+ Đoạn văn</button>
+        </div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-3">Các đoạn thêm sau mô tả ngắn — cộng với mô tả từ <strong>loại phòng</strong>.</p>
+          <div id="extraParagraphList" class="d-flex flex-column gap-3">
+            <% const paraRows = extraParas.length ? extraParas : []; %>
+            <% if (!paraRows.length) { %>
+            <div class="extra-paragraph-row" data-extra-paragraph-row>
+              <div class="input-group">
+                <textarea class="form-control" name="extraParagraph[]" rows="2" placeholder="Không gian rộng, ban công nhìn vườn..."></textarea>
+                <button type="button" class="btn btn-outline-danger" data-remove-extra-paragraph-row>×</button>
+              </div>
+            </div>
+            <% } %>
+            <% paraRows.forEach(function(p) { %>
+            <div class="extra-paragraph-row" data-extra-paragraph-row>
+              <div class="input-group">
+                <textarea class="form-control" name="extraParagraph[]" rows="2" placeholder="Không gian rộng, ban công nhìn vườn..."><%= p %></textarea>
+                <button type="button" class="btn btn-outline-danger" data-remove-extra-paragraph-row>×</button>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <template id="extraParagraphRowTemplate">
+        <div class="extra-paragraph-row" data-extra-paragraph-row>
+          <div class="input-group">
+            <textarea class="form-control" name="extraParagraph[]" rows="2" placeholder="Không gian rộng, ban công nhìn vườn..."></textarea>
+            <button type="button" class="btn btn-outline-danger" data-remove-extra-paragraph-row>×</button>
+          </div>
+        </div>
+      </template>
     </div>
 
     <div class="col-lg-4">
+      <div class="card admin-card mb-4" id="roomTypePreviewCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Tổng quan từ loại phòng</strong>
+          <a href="/admin/room-types" id="roomTypeEditLink" class="btn btn-link btn-sm" target="_blank" rel="noopener">Sửa loại</a>
+        </div>
+        <div class="card-body small" id="roomTypePreviewBody">
+          <p class="text-body-secondary mb-0">Chọn loại phòng để xem diện tích, giường, tiện nghi…</p>
+        </div>
+      </div>
+
       <div class="card admin-card mb-4">
-        <div class="card-header"><strong>Ảnh & hiển thị</strong></div>
+        <div class="card-header"><strong>Ảnh đại diện (danh sách đặt phòng)</strong></div>
         <div class="card-body">
           <div class="mb-3">
             <%- include('galleryImagePicker', {
               fieldId: 'imageUrl',
               fieldName: 'imageUrl',
               value: r.imageUrl || '',
-              label: 'Ảnh phòng',
+              label: 'Thumbnail phòng',
             }) %>
-            <div class="form-text mt-1">Ảnh riêng cho phòng này — hiển thị khi khách chọn phòng.</div>
+            <div class="form-text mt-1">Dùng khi chưa có gallery chi tiết — hiển thị ở bước chọn phòng.</div>
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= r.isActive !== false ? 'checked' : '' %>>
@@ -174,6 +284,18 @@
         </div>
       </div>
 
+      <% if (typeof previewUrl !== 'undefined' && previewUrl) { %>
+      <div class="card admin-card mb-4 border-primary border-opacity-25">
+        <div class="card-header"><strong>Xem trước trang chi tiết</strong></div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-3">Mở trang chi tiết phòng trên website (tab mới).</p>
+          <a href="<%= previewUrl %>" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm w-100">
+            <i class="fa-solid fa-up-right-from-square me-1"></i> Xem chi tiết phòng
+          </a>
+        </div>
+      </div>
+      <% } %>
+
       <div class="d-grid gap-2">
         <button type="submit" class="btn btn-primary"><%= submitLabel %></button>
         <a href="/admin/rooms" class="btn btn-outline-secondary">Hủy</a>
@@ -182,6 +304,26 @@
   </div>
 </form>
 
+<script type="application/json" id="roomTypeCatalogData"><%- JSON.stringify(rtc.map(function(rt) {
+  return {
+    id: rt.id,
+    title: rt.title,
+    badge: rt.badge,
+    areaSqm: rt.areaSqm,
+    bedLabel: rt.bedLabel,
+    capacityLabel: rt.capacityLabel,
+    checkInTime: rt.checkInTime,
+    checkOutTime: rt.checkOutTime,
+    paragraphs: Array.isArray(rt.paragraphs) ? rt.paragraphs : [],
+    policyBullets: Array.isArray(rt.policyBullets) ? rt.policyBullets : [],
+    amenities: (rt.amenities || []).map(function(row) {
+      return row.amenity ? row.amenity.label : '';
+    }).filter(Boolean),
+    galleryCount: (rt.gallery || []).length,
+  };
+})) %></script>
+
+<script src="/admin/js/admin-room-form.js"></script>
 <script>
   (function roomFormBranchCascade() {
     const propertySelect = document.getElementById('filterPropertyId');

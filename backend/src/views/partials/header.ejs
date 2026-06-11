@@ -35,7 +35,17 @@
           <div class="dropdown-header bg-body-tertiary text-body-secondary fw-semibold rounded-top mb-0 py-3">
             <% if (typeof user !== 'undefined' && user && user.email) { %>
             <div class="small text-truncate" style="max-width: 14rem;"><%= user.email %></div>
-            <div class="small mt-1"><span class="badge text-bg-secondary"><%= user.role || '' %></span></div>
+            <div class="small mt-1 d-flex flex-wrap gap-1">
+              <span class="badge text-bg-secondary"><%=
+                user.role === 'super_admin' ? 'Super Admin'
+                : user.role === 'admin' ? 'Admin'
+                : user.role === 'staff' ? 'Nhân viên'
+                : (user.role || '')
+              %></span>
+              <% if (typeof isStaff !== 'undefined' && isStaff && user.branchName) { %>
+              <span class="badge text-bg-info"><%= user.branchName %></span>
+              <% } %>
+            </div>
             <% } else { %>
             <div class="small text-truncate" style="max-width: 14rem;">Admin</div>
             <% } %>

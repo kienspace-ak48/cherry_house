@@ -96,12 +96,47 @@ function toPublicProperty(property, options = {}) {
   return base;
 }
 
+const DEFAULT_ROOM_IMAGE =
+  'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1400&q=80';
+
+const MAX_ROOM_GALLERY = 5;
+
+function toDetailSlug(code) {
+  return String(code).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+function parseStringList(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => String(item).trim()).filter(Boolean);
+}
+
+function buildRoomGallery(room, rt) {
+  const out = [];
+  const roomGallery = parseStringList(room.galleryImages);
+
+  if (roomGallery.length) {
+    out.push(...roomGallery.slice(0, MAX_ROOM_GALLERY));
+  } else {
+    if (room.imageUrl) out.push(room.imageUrl);
+    if (rt?.gallery?.length) {
+      for (const item of rt.gallery) {
+        if (item.imageUrl && !out.includes(item.imageUrl) && out.length < MAX_ROOM_GALLERY) {
+          out.push(item.imageUrl);
+        }
+      }
+    }
+  }
+
+  if (!out.length) out.push(DEFAULT_ROOM_IMAGE);
+  return out.slice(0, MAX_ROOM_GALLERY);
+}
+
 function toPublicRoom(room) {
   const rt = room.roomType;
   return {
     id: room.id,
     code: room.code,
-    detailSlug: room.code.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    detailSlug: toDetailSlug(room.code),
     branchId: room.branch?.code ?? null,
     branchDbId: room.branchId,
     propertySlug: room.branch?.property?.slug ?? null,
@@ -121,10 +156,94 @@ function toPublicRoom(room) {
   };
 }
 
+function toPublicRoomDetail(room) {
+  const rt = room.roomType;
+  const detailSlug = toDetailSlug(room.code);
+  const branch = room.branch ? toPublicBranch(room.branch) : null;
+  const property = room.branch?.property
+    ? {
+        id: room.branch.property.id,
+        slug: room.branch.property.slug,
+        name: room.branch.property.name,
+        city: room.branch.property.city,
+        region: room.branch.property.region ?? null,
+        kind: room.branch.property.kind,
+        kindLabel: PROPERTY_KIND_LABELS[room.branch.property.kind] ?? room.branch.property.kind,
+        rating: num(room.branch.property.rating),
+        reviewCount: room.branch.property.reviewCount ?? 0,
+      }
+    : null;
+
+  const gallery = buildRoomGallery(room, rt);
+
+  const extraParagraphs = parseStringList(room.extraParagraphs);
+  const typeParagraphs = Array.isArray(rt?.paragraphs) ? rt.paragraphs.filter(Boolean) : [];
+  const paragraphs = [];
+  if (room.description) paragraphs.push(room.description);
+  for (const p of extraParagraphs) {
+    if (!paragraphs.includes(p)) paragraphs.push(p);
+  }
+  for (const p of typeParagraphs) {
+    if (!paragraphs.includes(p)) paragraphs.push(p);
+  }
+
+  const amenities = rt?.amenities?.length
+    ? rt.amenities.map((row) => ({
+        icon: row.amenity.icon,
+        label: row.amenity.label,
+      }))
+    : [];
+
+  const policyBullets = Array.isArray(rt?.policyBullets)
+    ? rt.policyBullets.filter(Boolean)
+    : [];
+
+  return {
+    id: room.id,
+    code: room.code,
+    slug: detailSlug,
+    detailSlug,
+    badge: rt?.badge ?? 'Cherry House',
+    title: rt?.title ?? room.code,
+    subtitle: room.code,
+    roomTypeTitle: rt?.title ?? null,
+    roomTypeSlug: rt?.slug ?? null,
+    category: rt?.category ?? null,
+    areaSqm: rt?.areaSqm ?? 0,
+    bedLabel: rt?.bedLabel ?? '',
+    capacityLabel: rt?.capacityLabel ?? `Tối đa ${room.maxAdults} người lớn`,
+    paragraphs,
+    amenities,
+    policyBullets,
+    checkIn: rt?.checkInTime ?? '14:00',
+    checkOut: rt?.checkOutTime ?? '12:00',
+    priceVnd: room.priceVnd,
+    basePriceVnd: rt?.basePriceVnd ?? room.priceVnd,
+    status: room.status,
+    maxAdults: room.maxAdults,
+    maxChildren: room.maxChildren,
+    gallery,
+    image: gallery[0] ?? room.imageUrl ?? DEFAULT_ROOM_IMAGE,
+    alt: room.altText ?? room.code,
+    description: room.description,
+    branch,
+    property,
+    propertySlug: property?.slug ?? null,
+    branchCode: room.branch?.code ?? null,
+    branchDbId: room.branchId,
+    roomTypeId: room.roomTypeId,
+    isActive: room.isActive,
+  };
+}
+
 module.exports = {
   PROPERTY_KIND_LABELS,
   toPublicProperty,
   toPublicBranch,
   toPublicRoom,
+  toPublicRoomDetail,
   toPublicMapPin,
+  toDetailSlug,
+  DEFAULT_ROOM_IMAGE,
+  MAX_ROOM_GALLERY,
 };

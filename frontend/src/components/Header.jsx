@@ -4,6 +4,7 @@ import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
 import { DEFAULT_HEADER_NAV_LINKS } from '../constants/headerNavLinks';
 import { getHeaderBookingHref } from '../lib/bookingContext';
 import { getClientUser, isClientLoggedIn } from '../lib/authStorage';
+import ProfileAvatar from './profile/ProfileAvatar';
 
 const linkClass = (isActive) =>
   [
@@ -34,13 +35,6 @@ function isNavItemActive(location, item) {
   if (!pathOnly || pathOnly === '/') return false;
 
   return pathname === pathOnly || pathname.startsWith(`${pathOnly}/`);
-}
-
-function shortName(fullName) {
-  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return 'Thành viên';
-  if (parts.length === 1) return parts[0];
-  return parts[parts.length - 1];
 }
 
 function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
@@ -94,10 +88,15 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
             {loggedIn ? (
               <Link
                 to="/profile"
-                className="hidden rounded-lg px-4 py-2 font-bold text-primary transition-all hover:bg-primary/5 lg:block"
+                className="rounded-lg p-1 transition-all hover:bg-primary/5"
                 onClick={closeMenu}
+                aria-label={`Tài khoản — ${clientUser?.fullName || 'Thành viên'}`}
               >
-                {shortName(clientUser?.fullName)}
+                <ProfileAvatar
+                  fullName={clientUser?.fullName}
+                  avatarUrl={clientUser?.avatarUrl}
+                  size="xs"
+                />
               </Link>
             ) : (
               <>
@@ -170,10 +169,18 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
                     <NavLink
                       to="/profile"
                       className={() =>
-                        linkClass(isNavItemActive(location, { to: '/profile' }))
+                        [
+                          linkClass(isNavItemActive(location, { to: '/profile' })),
+                          'flex items-center gap-2',
+                        ].join(' ')
                       }
                       onClick={closeMenu}
                     >
+                      <ProfileAvatar
+                        fullName={clientUser?.fullName}
+                        avatarUrl={clientUser?.avatarUrl}
+                        size="xs"
+                      />
                       Tài khoản
                     </NavLink>
                   </li>

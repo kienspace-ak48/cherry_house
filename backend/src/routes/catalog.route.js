@@ -17,6 +17,7 @@ router.get('/branches/:id', catalogController.getBranchById);
 
 /** Phòng (inventory) */
 router.get('/rooms', catalogController.listRooms);
+router.get('/rooms/detail', catalogController.getRoomDetail);
 router.get('/rooms/:id', catalogController.getRoomById);
 
 module.exports = router;

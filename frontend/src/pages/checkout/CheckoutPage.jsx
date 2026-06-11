@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import bookingApi from '../../api/bookingApi';
 import checkoutApi from '../../api/checkoutApi';
+import promoApi from '../../api/promoApi';
 import { submitSepayForm } from '../../lib/submitSepayForm';
 import BookingBreadcrumbs from '../../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../../components/booking/BookingProgress';
@@ -28,32 +29,23 @@ const GUEST_LABEL = {
 };
 
 /**
- * Phương thức thanh toán đang bật:
- * - card → VNPay redirect (thẻ / ATM trên cổng VNPay)
- *
- * Tạm tắt:
- * - bank   → SePay chuyển khoản QR
- * - wallet → VNPay QR / Momo-ZaloPay (chưa tích hợp ví thật)
+ * Phương thức thanh toán:
+ * - card → VNPay
+ * - momo → cổng MoMo, nhập thẻ (payWithATM / payWithCC theo cấu hình backend)
  */
 const PAY_OPTIONS = [
   {
     id: 'card',
     icon: 'credit_card',
-    title: 'Thẻ tín dụng / Ghi nợ',
-    subtitle: 'Thanh toán qua VNPay (Visa, Mastercard, JCB, ATM)',
+    title: 'Thẻ / ATM qua VNPay',
+    subtitle: 'Visa, Mastercard, JCB, thẻ ATM nội địa',
   },
-  // {
-  //   id: 'bank',
-  //   icon: 'account_balance',
-  //   title: 'Chuyển khoản ngân hàng',
-  //   subtitle: 'Quét QR chuyển khoản qua SePay — tạm tắt',
-  // },
-  // {
-  //   id: 'wallet',
-  //   icon: 'qr_code_2',
-  //   title: 'Ví điện tử (Momo/ZaloPay)',
-  //   subtitle: 'Chưa tích hợp — sẽ bật khi có cổng Momo/ZaloPay',
-  // },
+  {
+    id: 'momo',
+    icon: 'account_balance',
+    title: 'Thẻ ATM qua MoMo',
+    subtitle: 'Nhập số thẻ Napas trên cổng thanh toán MoMo',
+  },
 ];
 
 function fmtMoneyCompact(amountVnd) {
@@ -151,6 +143,10 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [qrModal, setQrModal] = useState(null);
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [promoError, setPromoError] = useState(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const checkInIso = searchParams.get('checkIn') || context.checkIn || '';
   const checkOutIso = searchParams.get('checkOut') || context.checkOut || '';
@@ -221,12 +217,17 @@ export default function CheckoutPage() {
 
   const pricing = useMemo(() => {
     const roomSubtotal = pricePerNight * nights;
+    const discountVal = appliedPromo?.discountVnd ?? 0;
+    const totalVal = appliedPromo?.totalVnd ?? roomSubtotal;
     return {
-      totalVal: roomSubtotal,
+      subtotalVal: roomSubtotal,
+      discountVal,
+      totalVal,
       subtotalFormatted: fmtMoneyCompact(roomSubtotal),
+      discountFormatted: discountVal ? fmtMoneyCompact(discountVal) : null,
       pricePerNightFormatted: fmtMoneyCompact(pricePerNight),
     };
-  }, [pricePerNight, nights]);
+  }, [pricePerNight, nights, appliedPromo]);
 
   const checkInFmt = formatViBookingDate(checkInDate);
   const checkOutFmt = formatViBookingDate(checkOutDate);
@@ -291,6 +292,47 @@ export default function CheckoutPage() {
     };
   }, [checkInIso, checkOutIso, slug, context.property, context.branch]);
 
+  useEffect(() => {
+    setAppliedPromo(null);
+    setPromoError(null);
+  }, [checkInIso, checkOutIso, slug, context.property, context.branch, pricePerNight, nights]);
+
+  async function handleApplyPromo() {
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError('Vui lòng nhập mã giảm giá.');
+      setAppliedPromo(null);
+      return;
+    }
+    if (!pricePerNight || nights < 1) {
+      setPromoError('Chọn ngày nhận/trả phòng trước khi áp dụng mã.');
+      return;
+    }
+
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      const res = await promoApi.validate(code, pricePerNight * nights);
+      if (!res?.success || !res.data) {
+        setAppliedPromo(null);
+        setPromoError(res?.message || 'Mã không hợp lệ.');
+        return;
+      }
+      setAppliedPromo(res.data);
+    } catch (err) {
+      setAppliedPromo(null);
+      setPromoError(err?.message || 'Không áp dụng được mã giảm giá.');
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  function handleClearPromo() {
+    setPromoInput('');
+    setAppliedPromo(null);
+    setPromoError(null);
+  }
+
   async function handleConfirm() {
     if (!canConfirm || submitting) return;
 
@@ -315,6 +357,7 @@ export default function CheckoutPage() {
         guestPhone: contact.phone.trim(),
         guestEmail: contact.email.trim(),
         specialNote: note.trim() || undefined,
+        promoCode: appliedPromo?.code || undefined,
         paymentMethod: payment,
       });
 
@@ -633,6 +676,46 @@ export default function CheckoutPage() {
                   <span className="text-sm font-medium">{guestLine}</span>
                 </div>
 
+                <div className="rounded-xl border border-outline-variant/15 bg-surface-container/40 p-3">
+                  <label className="mb-2 block text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+                    Mã giảm giá
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                      placeholder="VD: CHERRY10"
+                      className="min-w-0 flex-1 rounded-lg border border-outline-variant/20 bg-white px-3 py-2 text-sm uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyPromo}
+                      disabled={promoLoading || !pricePerNight || nights < 1}
+                      className="shrink-0 rounded-lg bg-primary/10 px-3 py-2 text-xs font-bold text-primary disabled:opacity-50"
+                    >
+                      {promoLoading ? '...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                  {appliedPromo ? (
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-room-available">
+                        Đã áp dụng <code>{appliedPromo.code}</code>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleClearPromo}
+                        className="text-on-surface-variant underline"
+                      >
+                        Gỡ
+                      </button>
+                    </div>
+                  ) : null}
+                  {promoError ? (
+                    <p className="mt-2 text-xs font-medium text-error">{promoError}</p>
+                  ) : null}
+                </div>
+
                 <div className="space-y-2 text-xs text-on-surface-variant">
                   {pricePerNight > 0 ? (
                     <div className="flex justify-between">
@@ -650,6 +733,12 @@ export default function CheckoutPage() {
                         : '—'}
                     </span>
                   </div>
+                  {appliedPromo && pricing.discountVal > 0 ? (
+                    <div className="flex justify-between font-medium text-room-available">
+                      <span>Giảm giá ({appliedPromo.code})</span>
+                      <span>-{pricing.discountFormatted}</span>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex items-end justify-between border-t border-outline-variant/10 pt-4">
                   <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase opacity-65">

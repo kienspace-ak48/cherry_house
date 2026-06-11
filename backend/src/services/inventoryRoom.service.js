@@ -1,8 +1,30 @@
 const inventoryRoomRepository = require('../repositories/inventoryRoom.repository');
+const catalogCountService = require('./catalogCount.service');
 const { httpError, parseId, parseOptionalBoolean, parseOptionalId } = require('../utils/http');
 const { mapPrismaError } = require('../utils/crud');
 
 const ROOM_STATUSES = new Set(['available', 'pending', 'booked']);
+const MAX_GALLERY_IMAGES = 5;
+
+function parseStringList(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    return raw.split('\n').map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function parseGalleryImages(body) {
+  const urls = parseStringList(body.galleryImageUrl).slice(0, MAX_GALLERY_IMAGES);
+  return urls.length ? urls : null;
+}
+
+function parseExtraParagraphs(body) {
+  const lines = parseStringList(body.extraParagraph).filter(Boolean);
+  return lines.length ? lines : null;
+}
 
 function parseStatus(raw) {
   const status = typeof raw === 'string' ? raw.trim() : '';
@@ -62,6 +84,8 @@ function assertCreatePayload(body) {
       body.imageUrl !== undefined && body.imageUrl !== null
         ? String(body.imageUrl).trim() || null
         : null,
+    galleryImages: parseGalleryImages(body),
+    extraParagraphs: parseExtraParagraphs(body),
     altText:
       body.altText !== undefined && body.altText !== null
         ? String(body.altText).trim() || null
@@ -92,6 +116,12 @@ function buildUpdatePayload(body) {
   }
   if (body.imageUrl !== undefined) {
     data.imageUrl = body.imageUrl === null ? null : String(body.imageUrl).trim() || null;
+  }
+  if (body.galleryImageUrl !== undefined) {
+    data.galleryImages = parseGalleryImages(body);
+  }
+  if (body.extraParagraph !== undefined) {
+    data.extraParagraphs = parseExtraParagraphs(body);
   }
   if (body.altText !== undefined) {
     data.altText = body.altText === null ? null : String(body.altText).trim() || null;
@@ -125,8 +155,11 @@ async function getById(idRaw) {
 }
 
 async function create(body) {
+  const payload = assertCreatePayload(body);
   try {
-    return await inventoryRoomRepository.create(assertCreatePayload(body));
+    const room = await inventoryRoomRepository.create(payload);
+    await catalogCountService.syncAfterRoomChange(room.branchId);
+    return room;
   } catch (error) {
     mapPrismaError(error, 'Inventory room not found');
   }
@@ -134,8 +167,12 @@ async function create(body) {
 
 async function update(idRaw, body) {
   const id = parseId(idRaw);
+  const existing = await inventoryRoomRepository.findById(id);
+  if (!existing) throw httpError('Inventory room not found', 404);
   try {
-    return await inventoryRoomRepository.update(id, buildUpdatePayload(body));
+    const room = await inventoryRoomRepository.update(id, buildUpdatePayload(body));
+    await catalogCountService.syncAfterRoomChange(room.branchId, existing.branchId);
+    return room;
   } catch (error) {
     mapPrismaError(error, 'Inventory room not found');
   }
@@ -143,8 +180,11 @@ async function update(idRaw, body) {
 
 async function remove(idRaw) {
   const id = parseId(idRaw);
+  const existing = await inventoryRoomRepository.findById(id);
+  if (!existing) throw httpError('Inventory room not found', 404);
   try {
-    return await inventoryRoomRepository.remove(id);
+    await inventoryRoomRepository.remove(id);
+    await catalogCountService.syncAfterRoomChange(existing.branchId);
   } catch (error) {
     mapPrismaError(error, 'Inventory room not found');
   }

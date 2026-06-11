@@ -9,6 +9,9 @@
   <a href="<%= user ? '/admin/users/' + user.id : '/admin/users' %>" class="btn btn-outline-secondary btn-sm">← Quay lại</a>
 </div>
 
+<% if (typeof flash !== 'undefined' && flash === 'error' && typeof msg !== 'undefined' && msg) { %>
+<div class="alert alert-danger"><%= msg %></div>
+<% } %>
 <% if (typeof formError !== 'undefined' && formError) { %>
 <div class="alert alert-danger"><%= formError %></div>
 <% } %>
@@ -39,6 +42,15 @@
                 <option value="<%= t.value %>" <%= form.membershipTier === t.value ? 'selected' : '' %>><%= t.label %></option>
                 <% }); %>
               </select>
+            </div>
+            <div class="col-12">
+              <%- include('../../partials/admin/galleryImagePicker', {
+                fieldId: 'avatarUrl',
+                fieldName: 'avatarUrl',
+                value: form.avatarUrl,
+                label: 'Ảnh đại diện (tùy chọn)',
+              }) %>
+              <div class="form-text">Chọn từ gallery hoặc để trống — Google avatar giữ nguyên nếu không đổi.</div>
             </div>
           </div>
         </div>
@@ -80,6 +92,27 @@
         </div>
       </div>
       <button type="submit" class="btn btn-primary w-100">Lưu thay đổi</button>
+
+      <% if (typeof isSuperAdmin !== 'undefined' && isSuperAdmin && user) { %>
+      <div class="card admin-card mt-4 border-danger">
+        <div class="card-header bg-danger-subtle text-danger"><strong>Vùng nguy hiểm</strong></div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-3">
+            Xóa vĩnh viễn tài khoản <strong><%= user.fullName %></strong>.
+            Booking cũ vẫn giữ nhưng không còn gắn user. Chỉ <code>super_admin</code> được phép.
+          </p>
+          <form
+            method="POST"
+            action="/admin/users/<%= user.id %>/delete"
+            onsubmit="return confirm('Xóa vĩnh viễn tài khoản <%= user.fullName %> (<%= user.email %>)? Hành động không hoàn tác.');"
+          >
+            <button type="submit" class="btn btn-outline-danger w-100">
+              <i class="fa-solid fa-trash-can me-1"></i> Xóa tài khoản
+            </button>
+          </form>
+        </div>
+      </div>
+      <% } %>
     </div>
   </div>
 </form>

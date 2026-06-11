@@ -1,0 +1,244 @@
+<% const rt = typeof roomType !== 'undefined' ? roomType : {}; %>
+<% const cats = typeof roomCategories !== 'undefined' ? roomCategories : []; %>
+<% const amenities = typeof allAmenities !== 'undefined' ? allAmenities : []; %>
+<% const isCreate = typeof mode !== 'undefined' && mode === 'create'; %>
+<% const galleryItems = Array.isArray(rt.gallery) ? rt.gallery : []; %>
+<% const galleryUrls = galleryItems.map(function(g) { return g.imageUrl || g; }).filter(Boolean); %>
+<% const paragraphs = Array.isArray(rt.paragraphs) ? rt.paragraphs : []; %>
+<% const policies = Array.isArray(rt.policyBullets) ? rt.policyBullets : []; %>
+<% const linkedAmenityIds = (rt.amenities || []).map(function(row) {
+  return row.amenityId || (row.amenity && row.amenity.id);
+}).filter(Boolean); %>
+<% function numField(val) {
+  if (isCreate && (val === 0 || val === null || val === undefined)) return '';
+  if (val === null || val === undefined) return '';
+  return val;
+} %>
+
+<form method="POST" action="<%= formAction %>" class="admin-crud-form" id="roomTypeForm" novalidate>
+  <% if (typeof formError !== 'undefined' && formError) { %>
+  <div class="alert alert-danger"><%= formError %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Thông tin cơ bản</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="title">Tên loại phòng <span class="text-danger">*</span></label>
+              <input class="form-control" id="title" name="title" value="<%= rt.title || '' %>" placeholder="Standard Garden View" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="badge">Badge / nhãn nổi bật <span class="text-danger">*</span></label>
+              <input class="form-control" id="badge" name="badge" value="<%= rt.badge || '' %>" placeholder="Phổ thông · View vườn" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="slug">Slug <span class="text-danger">*</span></label>
+              <input class="form-control" id="slug" name="slug" value="<%= rt.slug || '' %>" placeholder="standard-garden" <%= isCreate ? '' : 'readonly' %>>
+              <div class="form-text">Chỉ chữ thường, số và dấu gạch ngang.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="category">Danh mục <span class="text-danger">*</span></label>
+              <select class="form-select" id="category" name="category" required>
+                <% cats.forEach(function(c) { %>
+                <option value="<%= c.value %>" <%= (rt.category || 'Standard') === c.value ? 'selected' : '' %>><%= c.label %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="areaSqm">Diện tích (m²) <span class="text-danger">*</span></label>
+              <input class="form-control" type="number" min="1" id="areaSqm" name="areaSqm" value="<%= numField(rt.areaSqm) %>" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="bedLabel">Giường <span class="text-danger">*</span></label>
+              <input class="form-control" id="bedLabel" name="bedLabel" value="<%= rt.bedLabel || '' %>" placeholder="1 giường king" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="capacityLabel">Sức chứa <span class="text-danger">*</span></label>
+              <input class="form-control" id="capacityLabel" name="capacityLabel" value="<%= rt.capacityLabel || '' %>" placeholder="2 người lớn + 1 trẻ em" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="basePriceVnd">Giá gốc (VND)</label>
+              <input class="form-control" type="number" min="0" step="1000" id="basePriceVnd" name="basePriceVnd" value="<%= numField(rt.basePriceVnd) %>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="checkInTime">Check-in</label>
+              <input class="form-control" id="checkInTime" name="checkInTime" value="<%= rt.checkInTime || '14:00' %>">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="checkOutTime">Check-out</label>
+              <input class="form-control" id="checkOutTime" name="checkOutTime" value="<%= rt.checkOutTime || '12:00' %>">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Gallery ảnh phòng</strong>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="addGalleryRow">+ Thêm ảnh</button>
+        </div>
+        <div class="card-body">
+          <p class="small text-body-secondary">Ảnh hiển thị trên trang chi tiết — ảnh phòng vật lý (nếu có) sẽ được ưu tiên lên đầu.</p>
+          <div id="galleryList" class="d-flex flex-column gap-3">
+            <% const galleryRows = galleryUrls.length ? galleryUrls : ['']; %>
+            <% galleryRows.forEach(function(url, idx) { %>
+            <div class="gallery-row border rounded p-3" data-gallery-row>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small fw-semibold" data-gallery-label>Ảnh <%= idx + 1 %></span>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-gallery-row>×</button>
+              </div>
+              <%- include('galleryImagePicker', {
+                fieldId: 'galleryImageUrl_' + idx,
+                fieldName: 'galleryImageUrl[]',
+                value: url,
+                label: 'Ảnh gallery',
+              }) %>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <template id="galleryRowTemplate">
+    <div class="gallery-row border rounded p-3" data-gallery-row>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small fw-semibold" data-gallery-label>Ảnh</span>
+        <button type="button" class="btn btn-outline-danger btn-sm" data-remove-gallery-row>×</button>
+      </div>
+      <div class="gallery-image-picker" data-gallery-picker>
+        <label class="form-label">Ảnh gallery</label>
+        <div class="gallery-image-picker-preview mb-2 d-none" data-gallery-picker-preview>
+          <img src="" alt="" class="gallery-image-picker-thumb rounded border" data-gallery-picker-preview-img>
+        </div>
+        <input type="hidden" class="gallery-image-picker-input" name="galleryImageUrl[]" value="" data-gallery-picker-input>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-primary btn-sm" data-gallery-picker-open>
+            <i class="fa-solid fa-images me-1"></i>Chọn từ gallery
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-gallery-picker-clear>
+            <i class="fa-solid fa-xmark me-1"></i>Xóa ảnh
+          </button>
+        </div>
+        <div class="form-text" data-gallery-picker-path-text>Chưa chọn ảnh — mở gallery để chọn.</div>
+      </div>
+    </div>
+  </template>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Mô tả chi tiết</strong>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="addParagraphRow">+ Đoạn văn</button>
+        </div>
+        <div class="card-body">
+          <div id="paragraphList" class="d-flex flex-column gap-3">
+            <% const paraRows = paragraphs.length ? paragraphs : ['']; %>
+            <% paraRows.forEach(function(p, idx) { %>
+            <div class="paragraph-row" data-paragraph-row>
+              <label class="form-label small" data-paragraph-label>Đoạn <%= idx + 1 %></label>
+              <div class="input-group">
+                <textarea class="form-control" name="paragraph[]" rows="2" placeholder="Mô tả không gian, view, trải nghiệm..."><%= p %></textarea>
+                <button type="button" class="btn btn-outline-danger" data-remove-paragraph-row>×</button>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <template id="paragraphRowTemplate">
+    <div class="paragraph-row" data-paragraph-row>
+      <label class="form-label small" data-paragraph-label>Đoạn</label>
+      <div class="input-group">
+        <textarea class="form-control" name="paragraph[]" rows="2" placeholder="Mô tả không gian, view, trải nghiệm..."></textarea>
+        <button type="button" class="btn btn-outline-danger" data-remove-paragraph-row>×</button>
+      </div>
+    </div>
+  </template>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Chính sách hủy / lưu trú</strong>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="addPolicyRow">+ Điều khoản</button>
+        </div>
+        <div class="card-body">
+          <div id="policyList" class="d-flex flex-column gap-3">
+            <% const policyRows = policies.length ? policies : ['']; %>
+            <% policyRows.forEach(function(p, idx) { %>
+            <div class="policy-row" data-policy-row>
+              <label class="form-label small" data-policy-label>Điều khoản <%= idx + 1 %></label>
+              <div class="input-group">
+                <input class="form-control" name="policyBullet[]" value="<%= p %>" placeholder="Hủy miễn phí trước 48 giờ...">
+                <button type="button" class="btn btn-outline-danger" data-remove-policy-row>×</button>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <template id="policyRowTemplate">
+    <div class="policy-row" data-policy-row>
+      <label class="form-label small" data-policy-label>Điều khoản</label>
+      <div class="input-group">
+        <input class="form-control" name="policyBullet[]" placeholder="Hủy miễn phí trước 48 giờ...">
+        <button type="button" class="btn btn-outline-danger" data-remove-policy-row>×</button>
+      </div>
+    </div>
+  </template>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Tiện nghi phòng</strong></div>
+        <div class="card-body">
+          <% if (!amenities.length) { %>
+          <p class="small text-body-secondary mb-0">Chưa có tiện nghi trong hệ thống. Thêm qua API hoặc seed.</p>
+          <% } else { %>
+          <div class="d-flex flex-column gap-2">
+            <% amenities.forEach(function(a) { %>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="amenityId"
+                value="<%= a.id %>"
+                id="amenity_<%= a.id %>"
+                <%= linkedAmenityIds.includes(a.id) ? 'checked' : '' %>
+              >
+              <label class="form-check-label" for="amenity_<%= a.id %>">
+                <code class="small me-1"><%= a.icon %></code>
+                <%= a.label %>
+              </label>
+            </div>
+            <% }); %>
+          </div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header"><strong>Hiển thị</strong></div>
+        <div class="card-body">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="isActive" name="isActive" value="on" <%= rt.isActive !== false ? 'checked' : '' %>>
+            <label class="form-check-label" for="isActive">Active (dùng cho phòng mới)</label>
+          </div>
+          <% if (rt._count && rt._count.rooms) { %>
+          <p class="small text-body-secondary mt-3 mb-0">
+            Đang gắn với <strong><%= rt._count.rooms %></strong> phòng vật lý.
+            <a href="/admin/rooms?roomTypeId=<%= rt.id %>">Xem phòng</a>
+          </p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary"><%= submitLabel %></button>
+        <a href="/admin/room-types" class="btn btn-outline-secondary">Hủy</a>
+      </div>
+    </div>
+  </div>
+</form>

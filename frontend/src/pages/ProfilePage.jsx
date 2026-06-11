@@ -46,7 +46,6 @@ const INITIAL_FORM = {
 };
 
 const PLACEHOLDER_LABELS = {
-  transactions: 'Danh sách giao dịch',
   notifications: 'Thông báo',
   settings: 'Cài đặt nâng cao',
 };
@@ -63,7 +62,6 @@ const SIDEBAR = [
   { id: 'account', icon: 'person', label: 'Thông tin tài khoản' },
   { id: 'password', icon: 'lock', label: 'Mật khẩu & Bảo mật' },
   { id: 'bookings', icon: 'event_available', label: 'Đặt chỗ của tôi' },
-  { id: 'transactions', icon: 'list_alt', label: 'Danh sách giao dịch' },
   { id: 'notifications', icon: 'notifications', label: 'Thông báo' },
   { id: 'settings', icon: 'settings', label: 'Cài đặt', hasDividerBelow: true },
 ];

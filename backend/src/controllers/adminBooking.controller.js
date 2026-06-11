@@ -1,13 +1,24 @@
 const bookingService = require('../modules/booking/booking.service');
+const { generateBookingQrDataUrl } = require('../utils/bookingQr.util');
+const {
+  mergeScopeFilters,
+  scopeCatalogLists,
+  assertBookingInScope,
+  assertRoomInScope,
+  getAdminDataScope,
+} = require('../utils/adminScope.util');
 const propertyService = require('../services/property.service');
 const branchService = require('../services/branch.service');
 const inventoryRoomService = require('../services/inventoryRoom.service');
 const { renderAdminPage } = require('../utils/adminRender');
 const { parseId } = require('../utils/http');
 
+const BOOKING_PAGE_SIZE = 20;
+
 const BOOKING_STATUSES = [
   { value: 'pending_payment', label: 'Chờ thanh toán' },
-  { value: 'confirmed', label: 'Đã xác nhận' },
+  { value: 'confirmed', label: 'Chưa check-in' },
+  { value: 'checked_in', label: 'Đã check-in' },
   { value: 'completed', label: 'Hoàn tất' },
   { value: 'cancelled', label: 'Đã hủy' },
   { value: 'no_show', label: 'Không đến' },
@@ -22,6 +33,7 @@ function statusBadgeClass(status) {
   const map = {
     pending_payment: 'warning',
     confirmed: 'success',
+    checked_in: 'primary',
     completed: 'info',
     cancelled: 'danger',
     no_show: 'secondary',
@@ -122,13 +134,13 @@ function bookingToForm(booking) {
   };
 }
 
-async function loadFormContext() {
+async function loadFormContext(admin) {
   const [properties, branches, rooms] = await Promise.all([
     propertyService.listProperties(),
     branchService.listBranches(),
     inventoryRoomService.list({ isActive: true }),
   ]);
-  return { properties, branches, rooms };
+  return scopeCatalogLists(admin, { properties, branches, rooms });
 }
 
 async function list(req, res) {
@@ -143,29 +155,41 @@ async function list(req, res) {
     const checkInFrom = req.query.checkInFrom ? String(req.query.checkInFrom) : '';
     const checkInTo = req.query.checkInTo ? String(req.query.checkInTo) : '';
 
-    const [bookings, properties, branches, rooms] = await Promise.all([
-      bookingService.list({
-        status: filterStatus || undefined,
-        propertyId: filterPropertyId || undefined,
-        branchId: filterBranchId || undefined,
-        roomId: filterRoomId || undefined,
-        userId: filterUserId || undefined,
-        code: filterCode || undefined,
-        q: searchQ || undefined,
-        checkInFrom: checkInFrom || undefined,
-        checkInTo: checkInTo || undefined,
-      }),
-      propertyService.listProperties(),
-      branchService.listBranches(),
-      inventoryRoomService.list({ isActive: true }),
-    ]);
+    const listQuery = {
+      status: filterStatus || undefined,
+      propertyId: filterPropertyId || undefined,
+      branchId: filterBranchId || undefined,
+      roomId: filterRoomId || undefined,
+      userId: filterUserId || undefined,
+      code: filterCode || undefined,
+      q: searchQ || undefined,
+      checkInFrom: checkInFrom || undefined,
+      checkInTo: checkInTo || undefined,
+      page: req.query.page,
+      pageSize: BOOKING_PAGE_SIZE,
+    };
 
+    const scopedQuery = mergeScopeFilters(req.admin || req.user, listQuery);
+
+    const actor = req.admin || req.user;
+    const [bookingPage, catalog] = await Promise.all([
+      bookingService.listPage(scopedQuery),
+      loadFormContext(actor),
+    ]);
+    const { properties, branches, rooms } = catalog;
+
+    const bookings = bookingPage.items;
+
+    const scope = getAdminDataScope(actor);
+    const scopedBranches = branches;
     const filterBranches = filterPropertyId
-      ? branches.filter((b) => String(b.propertyId) === filterPropertyId)
-      : branches;
+      ? scopedBranches.filter((b) => String(b.propertyId) === filterPropertyId)
+      : scopedBranches;
     const filterRooms = filterBranchId
       ? rooms.filter((r) => String(r.branchId) === filterBranchId)
-      : rooms;
+      : scope.branchId
+        ? rooms.filter((r) => r.branchId === scope.branchId)
+        : rooms;
 
     const listQueryBase = {
       status: filterStatus,
@@ -187,6 +211,10 @@ async function list(req, res) {
         { label: 'Đặt phòng' },
       ],
       bookings,
+      bookingTotal: bookingPage.total,
+      page: bookingPage.page,
+      totalPages: bookingPage.totalPages,
+      pageSize: bookingPage.pageSize,
       properties,
       branches,
       rooms,
@@ -220,6 +248,10 @@ async function list(req, res) {
         { label: 'Đặt phòng' },
       ],
       bookings: [],
+      bookingTotal: 0,
+      page: 1,
+      totalPages: 1,
+      pageSize: BOOKING_PAGE_SIZE,
       properties: [],
       branches: [],
       rooms: [],
@@ -254,6 +286,16 @@ async function detail(req, res) {
     if (!booking) {
       return res.redirect('/admin/bookings?flash=notfound');
     }
+    assertBookingInScope(req.admin || req.user, booking);
+
+    let bookingQrDataUrl = '';
+    if (booking.status === 'confirmed' || booking.payment?.status === 'paid') {
+      try {
+        bookingQrDataUrl = await generateBookingQrDataUrl(booking.bookingCode);
+      } catch (_err) {
+        bookingQrDataUrl = '';
+      }
+    }
 
     renderAdminPage(req, res, 'admin/bookings/detail', {
       pageTitle: `Booking ${booking.bookingCode}`,
@@ -264,6 +306,7 @@ async function detail(req, res) {
         { label: booking.bookingCode },
       ],
       booking,
+      bookingQrDataUrl,
       bookingStatuses: BOOKING_STATUSES,
       statusLabel,
       statusBadgeClass,
@@ -271,6 +314,7 @@ async function detail(req, res) {
       formatDateTime,
       formatVnd,
       flash: req.query.flash || null,
+      msg: req.query.msg || null,
     });
   } catch (error) {
     res.redirect(`/admin/bookings?flash=error&msg=${encodeURIComponent(error.message)}`);
@@ -278,7 +322,7 @@ async function detail(req, res) {
 }
 
 async function createForm(req, res) {
-  const { properties, branches, rooms } = await loadFormContext();
+  const { properties, branches, rooms } = await loadFormContext(req.admin || req.user);
   const prefill = emptyBooking();
   if (req.query.roomId) prefill.roomId = req.query.roomId;
   if (req.query.checkIn) prefill.checkIn = req.query.checkIn;
@@ -305,11 +349,15 @@ async function createForm(req, res) {
 
 async function create(req, res) {
   try {
+    const actor = req.admin || req.user;
     const payload = parseBookingFormBody(req.body);
+    const { rooms } = await loadFormContext(actor);
+    const room = rooms.find((r) => String(r.id) === String(payload.roomId));
+    if (room) assertRoomInScope(actor, room);
     const created = await bookingService.createAdmin(payload);
     res.redirect(`/admin/bookings/${created.id}?flash=created`);
   } catch (error) {
-    const { properties, branches, rooms } = await loadFormContext();
+    const { properties, branches, rooms } = await loadFormContext(req.admin || req.user);
     renderAdminPage(req, res, 'admin/bookings/form', {
       pageTitle: 'Tạo booking thủ công',
       adminPage: 'bookings',
@@ -333,11 +381,13 @@ async function create(req, res) {
 
 async function editForm(req, res) {
   try {
+    const actor = req.admin || req.user;
     const booking = await bookingService.getById(req.params.id);
     if (!booking) {
       return res.redirect('/admin/bookings?flash=notfound');
     }
-    const { properties, branches, rooms } = await loadFormContext();
+    assertBookingInScope(actor, booking);
+    const { properties, branches, rooms } = await loadFormContext(actor);
 
     renderAdminPage(req, res, 'admin/bookings/form', {
       pageTitle: `Sửa ${booking.bookingCode}`,
@@ -366,11 +416,21 @@ async function editForm(req, res) {
 
 async function update(req, res) {
   try {
+    const actor = req.admin || req.user;
     parseId(req.params.id);
-    await bookingService.update(req.params.id, parseBookingFormBody(req.body));
+    const existing = await bookingService.getById(req.params.id);
+    if (!existing) {
+      return res.redirect('/admin/bookings?flash=notfound');
+    }
+    assertBookingInScope(actor, existing);
+    const payload = parseBookingFormBody(req.body);
+    const { rooms } = await loadFormContext(actor);
+    const room = rooms.find((r) => String(r.id) === String(payload.roomId));
+    if (room) assertRoomInScope(actor, room);
+    await bookingService.update(req.params.id, payload);
     res.redirect(`/admin/bookings/${req.params.id}?flash=updated`);
   } catch (error) {
-    const { properties, branches, rooms } = await loadFormContext();
+    const { properties, branches, rooms } = await loadFormContext(req.admin || req.user);
     let bookingCode = '';
     try {
       const existing = await bookingService.getById(req.params.id);
@@ -404,6 +464,11 @@ async function update(req, res) {
 async function patchStatus(req, res) {
   try {
     const id = req.params.id;
+    const existing = await bookingService.getById(id);
+    if (!existing) {
+      return res.redirect('/admin/bookings?flash=notfound');
+    }
+    assertBookingInScope(req.admin || req.user, existing);
     await bookingService.patchStatus(id, { status: req.body.status });
     const redirectTo = req.body.redirect || `/admin/bookings/${id}`;
     res.redirect(`${redirectTo}?flash=status_updated`);
@@ -412,17 +477,163 @@ async function patchStatus(req, res) {
   }
 }
 
-async function calendar(req, res) {
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function reception(req, res) {
   try {
-    const [properties, branches] = await Promise.all([
-      propertyService.listProperties(),
-      branchService.listBranches(),
+    const actor = req.admin || req.user;
+    const scope = getAdminDataScope(actor);
+    const today = todayIsoDate();
+
+    const scopedToday = mergeScopeFilters(actor, {
+      checkInFrom: today,
+      checkInTo: today,
+      status: 'confirmed',
+      pageSize: 30,
+    });
+    const scopedDepartures = mergeScopeFilters(actor, {
+      checkOutFrom: today,
+      checkOutTo: today,
+      status: 'confirmed',
+      pageSize: 30,
+    });
+
+    const [arrivalsPage, departuresPage, catalog] = await Promise.all([
+      bookingService.listPage(scopedToday),
+      bookingService.listPage(scopedDepartures),
+      loadFormContext(actor),
     ]);
 
-    const filterPropertyId = req.query.propertyId ? String(req.query.propertyId) : '';
-    const filterBranchId = req.query.branchId ? String(req.query.branchId) : '';
+    renderAdminPage(req, res, 'admin/bookings/reception', {
+      pageTitle: 'Lễ tân',
+      adminPage: 'bookings-reception',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Đặt phòng', href: '/admin/bookings' },
+        { label: 'Lễ tân' },
+      ],
+      arrivals: arrivalsPage.items,
+      departures: departuresPage.items,
+      branchName: actor?.branchName || catalog.branches.find((b) => b.id === scope.branchId)?.name || '',
+      bookingStatuses: BOOKING_STATUSES,
+      statusLabel,
+      statusBadgeClass,
+      formatDateOnly,
+      formatDateTime,
+      formatVnd,
+      flash: req.query.flash || null,
+      msg: req.query.msg || null,
+    });
+  } catch (error) {
+    renderAdminPage(req, res, 'admin/bookings/reception', {
+      pageTitle: 'Lễ tân',
+      adminPage: 'bookings-reception',
+      breadcrumbs: [
+        { label: 'Dashboard', href: '/admin' },
+        { label: 'Đặt phòng', href: '/admin/bookings' },
+        { label: 'Lễ tân' },
+      ],
+      arrivals: [],
+      departures: [],
+      branchName: '',
+      bookingStatuses: BOOKING_STATUSES,
+      statusLabel,
+      statusBadgeClass,
+      formatDateOnly,
+      formatDateTime,
+      formatVnd,
+      flash: 'error',
+      msg: error.message,
+    });
+  }
+}
+
+async function lookupAjax(req, res) {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q) {
+      return res.json({ success: true, data: [] });
+    }
+    const scoped = mergeScopeFilters(req.admin || req.user, {});
+    const items = await bookingService.lookupForStaff(q, scoped);
+    return res.json({ success: true, data: items });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
+async function markPaidCounter(req, res) {
+  try {
+    const id = req.params.id;
+    const existing = await bookingService.getById(id);
+    if (!existing) {
+      return res.redirect('/admin/bookings/reception?flash=notfound');
+    }
+    assertBookingInScope(req.admin || req.user, existing);
+    const staffId = req.admin?.id || req.user?.id || 'staff';
+    await bookingService.confirmPaymentAtCounter(id, `STAFF-${staffId}`);
+    const redirectTo = req.body.redirect || `/admin/bookings/${id}`;
+    res.redirect(`${redirectTo}?flash=status_updated&msg=${encodeURIComponent('Đã xác nhận thanh toán tại quầy')}`);
+  } catch (error) {
+    const redirectTo = req.body.redirect || '/admin/bookings/reception';
+    res.redirect(`${redirectTo}?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function checkInGuest(req, res) {
+  try {
+    const id = req.params.id;
+    const existing = await bookingService.getById(id);
+    if (!existing) {
+      return res.redirect('/admin/bookings?flash=notfound');
+    }
+    assertBookingInScope(req.admin || req.user, existing);
+    await bookingService.checkInGuest(id);
+    const redirectTo = req.body.redirect || `/admin/bookings/${id}`;
+    res.redirect(`${redirectTo}?flash=status_updated&msg=${encodeURIComponent('Đã check-in khách')}`);
+  } catch (error) {
+    const redirectTo = req.body.redirect || `/admin/bookings/${req.params.id}`;
+    res.redirect(`${redirectTo}?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function checkOutGuest(req, res) {
+  try {
+    const id = req.params.id;
+    const existing = await bookingService.getById(id);
+    if (!existing) {
+      return res.redirect('/admin/bookings?flash=notfound');
+    }
+    assertBookingInScope(req.admin || req.user, existing);
+    await bookingService.checkOutGuest(id);
+    const redirectTo = req.body.redirect || `/admin/bookings/${id}`;
+    res.redirect(`${redirectTo}?flash=status_updated&msg=${encodeURIComponent('Đã check-out khách')}`);
+  } catch (error) {
+    const redirectTo = req.body.redirect || `/admin/bookings/${req.params.id}`;
+    res.redirect(`${redirectTo}?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function calendar(req, res) {
+  try {
+    const actor = req.admin || req.user;
+    const { properties, branches } = await loadFormContext(actor);
+    const scope = getAdminDataScope(actor);
+
+    let filterPropertyId = req.query.propertyId ? String(req.query.propertyId) : '';
+    let filterBranchId = req.query.branchId ? String(req.query.branchId) : '';
     const from = req.query.from ? String(req.query.from) : '';
     const to = req.query.to ? String(req.query.to) : '';
+
+    if (scope.branchId) {
+      filterBranchId = String(scope.branchId);
+      filterPropertyId = String(scope.propertyId || properties[0]?.id || '');
+    }
 
     const filterBranches = filterPropertyId
       ? branches.filter((b) => String(b.propertyId) === filterPropertyId)
@@ -479,6 +690,11 @@ module.exports = {
   editForm,
   update,
   patchStatus,
+  reception,
+  lookupAjax,
+  markPaidCounter,
+  checkInGuest,
+  checkOutGuest,
   calendar,
   statusLabel,
   statusBadgeClass,

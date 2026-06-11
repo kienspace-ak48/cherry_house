@@ -101,8 +101,8 @@ function assertCreatePayload(body) {
     description,
     address,
     priceFromVnd,
-    roomCount: Number.isInteger(body.roomCount) ? body.roomCount : 0,
-    branchCount: Number.isInteger(body.branchCount) ? body.branchCount : 0,
+    roomCount: 0,
+    branchCount: 0,
     rating: body.rating !== undefined ? Number(body.rating) : 0,
     reviewCount: Number.isInteger(body.reviewCount) ? body.reviewCount : 0,
     heroImageUrl:
@@ -159,18 +159,6 @@ function buildUpdatePayload(body) {
       throw httpError('priceFromVnd must be a non-negative integer');
     }
     data.priceFromVnd = priceFromVnd;
-  }
-  if (body.roomCount !== undefined) {
-    if (!Number.isInteger(body.roomCount) || body.roomCount < 0) {
-      throw httpError('roomCount must be a non-negative integer');
-    }
-    data.roomCount = body.roomCount;
-  }
-  if (body.branchCount !== undefined) {
-    if (!Number.isInteger(body.branchCount) || body.branchCount < 0) {
-      throw httpError('branchCount must be a non-negative integer');
-    }
-    data.branchCount = body.branchCount;
   }
   if (body.rating !== undefined) {
     const rating = Number(body.rating);

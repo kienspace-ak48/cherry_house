@@ -1,0 +1,28 @@
+<%
+  const currentPage = typeof staffPage !== 'undefined' ? staffPage : '';
+%>
+<aside class="staff-sidebar" id="staffSidebar">
+  <div class="staff-brand">
+    <span class="staff-brand-icon"><i class="fa-solid fa-concierge-bell"></i></span>
+    <div>
+      <strong>Cherry House</strong>
+      <small>Lễ tân</small>
+    </div>
+  </div>
+  <nav class="staff-nav">
+    <a href="/staff/reception" class="staff-nav-link<%= currentPage === 'reception' ? ' active' : '' %>">
+      <i class="fa-solid fa-qrcode"></i> Lễ tân
+    </a>
+    <a href="/staff/bookings" class="staff-nav-link<%= currentPage === 'bookings' ? ' active' : '' %>">
+      <i class="fa-solid fa-list"></i> Đặt phòng
+    </a>
+    <a href="/staff/bookings/calendar" class="staff-nav-link<%= currentPage === 'calendar' ? ' active' : '' %>">
+      <i class="fa-solid fa-calendar-days"></i> Lịch phòng
+    </a>
+  </nav>
+  <form method="POST" action="/staff/logout" class="staff-logout-form">
+    <button type="submit" class="staff-nav-link staff-logout-btn">
+      <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+    </button>
+  </form>
+</aside>

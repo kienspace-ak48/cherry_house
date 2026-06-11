@@ -12,7 +12,7 @@ function formatDateOnly(date) {
 
 function pickPrimaryBooking(bookings) {
   if (!bookings.length) return null;
-  const confirmed = bookings.find((b) => b.status === 'confirmed');
+  const confirmed = bookings.find((b) => b.status === 'confirmed' || b.status === 'checked_in');
   return confirmed ?? bookings[0];
 }
 
@@ -21,7 +21,7 @@ function deriveOccupancy(room, bookingsByRoomId) {
   const active = bookingsByRoomId.get(room.id) ?? [];
   if (!active.length) return 'available';
   const primary = pickPrimaryBooking(active);
-  if (primary?.status === 'confirmed') return 'booked';
+  if (primary?.status === 'confirmed' || primary?.status === 'checked_in') return 'booked';
   return 'held';
 }
 

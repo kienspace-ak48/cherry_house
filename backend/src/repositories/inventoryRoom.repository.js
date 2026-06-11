@@ -1,7 +1,15 @@
 const prisma = require('../config/prisma.config');
 
 const roomInclude = {
-  branch: { select: { id: true, code: true, name: true, propertyId: true } },
+  branch: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      propertyId: true,
+      property: { select: { id: true, slug: true, name: true } },
+    },
+  },
   roomType: { select: { id: true, slug: true, title: true, category: true } },
 };
 
@@ -23,6 +31,38 @@ const catalogRoomInclude = {
       category: true,
       capacityLabel: true,
       bedLabel: true,
+    },
+  },
+};
+
+const catalogDetailRoomInclude = {
+  branch: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      address: true,
+      tagline: true,
+      propertyId: true,
+      property: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          city: true,
+          region: true,
+          kind: true,
+          rating: true,
+          reviewCount: true,
+        },
+      },
+      mapPin: true,
+    },
+  },
+  roomType: {
+    include: {
+      gallery: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
+      amenities: { include: { amenity: true } },
     },
   },
 };
@@ -67,6 +107,26 @@ function findByIdForCatalog(id) {
   });
 }
 
+function findAllForCatalogDetail(filters = {}) {
+  /** @type {import('../generated/prisma').Prisma.InventoryRoomWhereInput} */
+  const where = {};
+  if (filters.branchId) where.branchId = filters.branchId;
+  if (filters.isActive !== undefined) where.isActive = filters.isActive;
+
+  return prisma.inventoryRoom.findMany({
+    where,
+    orderBy: [{ branchId: 'asc' }, { code: 'asc' }],
+    include: catalogDetailRoomInclude,
+  });
+}
+
+function findByIdForCatalogDetail(id) {
+  return prisma.inventoryRoom.findUnique({
+    where: { id },
+    include: catalogDetailRoomInclude,
+  });
+}
+
 function findById(id) {
   return prisma.inventoryRoom.findUnique({
     where: { id },
@@ -96,8 +156,10 @@ function remove(id) {
 module.exports = {
   findAll,
   findAllForCatalog,
+  findAllForCatalogDetail,
   findById,
   findByIdForCatalog,
+  findByIdForCatalogDetail,
   findByBranchAndCode,
   create,
   update,
