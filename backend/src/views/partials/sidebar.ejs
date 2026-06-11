@@ -4,7 +4,7 @@
   const catalogOpen = ['properties', 'branches', 'rooms', 'room-types'].includes(currentPage) ? ' show' : '';
   const bookingOpen = ['bookings', 'bookings-calendar', 'bookings-reception', 'promo-codes'].includes(currentPage) ? ' show' : '';
   const usersOpen = ['users', 'contact-messages'].includes(currentPage) ? ' show' : '';
-  const systemOpen = ['accounts', 'backups'].includes(currentPage) ? ' show' : '';
+  const systemOpen = ['accounts', 'backups', 'exports'].includes(currentPage) ? ' show' : '';
 %>
 <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
   <div class="sidebar-header border-bottom">
@@ -55,6 +55,9 @@
         <li class="nav-item"><a class="nav-link<%= currentPage === 'promo-codes' ? ' active' : '' %>" href="/admin/promo-codes"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Mã giảm giá</a></li>
         <% } %>
         <li class="nav-item"><a class="nav-link" href="/admin/bookings/new"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tạo booking</a></li>
+        <% if (typeof isStaff !== 'undefined' && isStaff) { %>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'exports' ? ' active' : '' %>" href="/admin/exports"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Xuất analytics</a></li>
+        <% } %>
       </ul>
     </li>
 
@@ -92,6 +95,7 @@
       </a>
       <ul class="nav-group-items compact">
         <li class="nav-item"><a class="nav-link<%= currentPage === 'accounts' ? ' active' : '' %>" href="/admin/accounts"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tài khoản CMS</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'exports' ? ' active' : '' %>" href="/admin/exports"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Xuất analytics</a></li>
         <% if (typeof isSuperAdmin !== 'undefined' && isSuperAdmin) { %>
         <li class="nav-item"><a class="nav-link<%= currentPage === 'backups' ? ' active' : '' %>" href="/admin/backups"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Backup DB</a></li>
         <% } %>

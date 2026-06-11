@@ -2,6 +2,10 @@ const { runWithTools } = require('./gemini.service');
 const { executeTool } = require('./chatBot.tools.service');
 const { assertGeminiConfigured } = require('../config/gemini.config');
 const chatBotConfigService = require('./chatBotConfig.service');
+const {
+  buildSmartFallbackReply,
+  needsSmartFallback,
+} = require('./chatBot.fallback.service');
 
 const TOOL_DECLARATIONS = [
   {
@@ -63,6 +67,24 @@ const TOOL_DECLARATIONS = [
       required: ['propertySlug', 'branchCode'],
     },
   },
+  {
+    name: 'get_room_quote',
+    description:
+      'Giá và trạng thái một phòng cụ thể theo mã (kể cả đã đặt/giữ chỗ). Dùng khi khách hỏi giá phòng X, VD: HN-102, HK-102.',
+    parameters: {
+      type: 'object',
+      properties: {
+        roomCode: { type: 'string', description: 'Mã phòng, VD: HN-102' },
+        city: { type: 'string', description: 'Thành phố để thu hẹp tìm kiếm' },
+        propertySlug: { type: 'string' },
+        branchCode: { type: 'string' },
+        branchNameHint: { type: 'string', description: 'Tên chi nhánh, VD: Hoàn Kiếm' },
+        checkIn: { type: 'string' },
+        checkOut: { type: 'string' },
+      },
+      required: ['roomCode'],
+    },
+  },
 ];
 
 function sanitizeHistory(history) {
@@ -110,8 +132,14 @@ async function chat(input) {
     executeTool,
   });
 
+  let finalReply = reply;
+  if (needsSmartFallback(finalReply)) {
+    const fallback = await buildSmartFallbackReply({ message, toolsUsed });
+    if (fallback) finalReply = fallback;
+  }
+
   return {
-    reply,
+    reply: finalReply,
     toolsUsed: toolsUsed.map((t) => t.name),
   };
 }

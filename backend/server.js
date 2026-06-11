@@ -6,24 +6,25 @@ const HOSTNAME = '0.0.0.0';
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 const app = require('./src/app');
 const prisma = require('./src/config/prisma.config');
-const { isDbConnectionError } = require('./src/utils/http');
+const { isDbConnectionError, formatDbErrorDetail } = require('./src/utils/http');
 
 async function checkDatabaseConnection() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     console.log('✅ MySQL connected');
   } catch (error) {
-    const detail =
-      error?.cause?.cause?.message
-      || error?.cause?.message
-      || error?.message
-      || String(error);
-    console.error('❌ MySQL unavailable — API sẽ trả lỗi 503 cho các request cần DB.');
+    const detail = formatDbErrorDetail(error);
+    console.error('❌ MySQL unavailable — API/chatbot sẽ trả lỗi 503 cho các request cần DB.');
     console.error(`   → ${detail}`);
     if (isDbConnectionError(error) && /access denied/i.test(detail)) {
       console.error('   → Sai user/mật khẩu trong DATABASE_URL. Tạo user MySQL riêng (không dùng root socket).');
+    } else if (isDbConnectionError(error) && /unknown database/i.test(detail)) {
+      console.error('   → Database chưa tồn tại. Chạy: npm run db:migrate && npm run db:seed');
+    } else if (isDbConnectionError(error) && /rsa public key|allowpublickeyretrieval/i.test(detail)) {
+      console.error('   → Thêm vào DATABASE_URL: ?allowPublicKeyRetrieval=true (hoặc dùng user mysql_native_password).');
     } else if (isDbConnectionError(error)) {
-      console.error('   → Kiểm tra MySQL đang chạy và DATABASE_URL trong backend/.env');
+      console.error('   → VPS Linux: sudo systemctl status mysql (hoặc mariadb) → start nếu stopped.');
+      console.error('   → Kiểm tra DATABASE_URL trong backend/.env (ưu tiên 127.0.0.1:3306).');
     }
   }
 }

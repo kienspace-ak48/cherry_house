@@ -4,6 +4,9 @@
     <p class="text-body-secondary mb-0 small">Danh sách booking — lọc theo trạng thái, ngày, phòng.</p>
   </div>
   <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/exports<%= typeof exportQuery !== 'undefined' ? exportQuery : '' %>" class="btn btn-success btn-sm">
+      <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel
+    </a>
     <a href="/admin/bookings/reception" class="btn btn-outline-primary btn-sm">
       <i class="fa-solid fa-qrcode me-1"></i> Lễ tân
     </a>
@@ -79,6 +82,14 @@
       <div class="col-md-2">
         <label class="form-label small mb-1" for="filterCode">Mã booking</label>
         <input class="form-control form-control-sm" type="text" id="filterCode" name="code" value="<%= filterCode %>" placeholder="CH-…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="exportFrom">Export từ (ngày tạo)</label>
+        <input class="form-control form-control-sm" type="date" id="exportFrom" name="from" value="<%= typeof exportFrom !== 'undefined' ? exportFrom : '' %>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="exportTo">Export đến</label>
+        <input class="form-control form-control-sm" type="date" id="exportTo" name="to" value="<%= typeof exportTo !== 'undefined' ? exportTo : '' %>">
       </div>
       <div class="col-md-auto d-flex gap-2">
         <button type="submit" class="btn btn-primary btn-sm">Lọc</button>

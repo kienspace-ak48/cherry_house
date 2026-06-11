@@ -16,6 +16,8 @@ const { assertUserCanBook } = require('../../services/userBookingGuard.service')
 const checkoutService = require('../checkout/checkout.service');
 const { sendBookingConfirmationEmail } = require('../../services/bookingEmail.service');
 const { parseBookingCodeFromScan } = require('../../utils/bookingQr.util');
+const { saveBookingSignatureFromDataUrl } = require('../../utils/bookingSignature.util');
+const bookingCheckInRepository = require('../../repositories/bookingCheckIn.repository');
 
 function parseStatus(raw) {
   const status = typeof raw === 'string' ? raw.trim() : '';
@@ -402,7 +404,7 @@ async function confirmPaymentAtCounter(idRaw, staffRef = 'counter') {
   return formatBookingDetail(await bookingRepository.findById(id));
 }
 
-async function checkInGuest(idRaw) {
+async function checkInGuest(idRaw, options = {}) {
   const id = parseId(idRaw);
   const existing = await bookingRepository.findById(id);
   if (!existing) throw httpError('Booking not found', 404);
@@ -419,8 +421,44 @@ async function checkInGuest(idRaw) {
   if (!isPaid) {
     throw httpError('Khách chưa thanh toán — xác nhận thanh toán trước khi check-in', 409);
   }
-  const row = await bookingRepository.updateStatus(id, 'checked_in');
-  return formatBookingDetail(row);
+
+  const signatureDataUrl = typeof options.signatureDataUrl === 'string'
+    ? options.signatureDataUrl.trim()
+    : '';
+  if (!signatureDataUrl) {
+    throw httpError('Cần chữ ký khách để hoàn tất check-in', 400);
+  }
+
+  const signaturePath = await saveBookingSignatureFromDataUrl(id, signatureDataUrl);
+  const staffAdminId = options.staffAdminId != null ? Number(options.staffAdminId) : null;
+  const staffName = typeof options.staffName === 'string' ? options.staffName.trim() : '';
+
+  await prisma.$transaction(async (tx) => {
+    await tx.booking.update({
+      where: { id },
+      data: { status: 'checked_in' },
+    });
+    await tx.bookingCheckIn.create({
+      data: {
+        bookingId: id,
+        userId: existing.userId,
+        guestName: existing.guestName,
+        guestPhone: existing.guestPhone,
+        guestEmail: existing.guestEmail,
+        bookingCode: existing.bookingCode,
+        propertyName: existing.propertyName,
+        branchName: existing.branchName,
+        roomCode: existing.roomCode,
+        signaturePath,
+        checkedInByAdminId: Number.isInteger(staffAdminId) && staffAdminId > 0
+          ? staffAdminId
+          : null,
+        staffName: staffName || null,
+      },
+    });
+  });
+
+  return formatBookingDetail(await bookingRepository.findById(id));
 }
 
 async function checkOutGuest(idRaw) {

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import bookingApi from '../../api/bookingApi';
 import checkoutApi from '../../api/checkoutApi';
 import promoApi from '../../api/promoApi';
+import walletApi from '../../api/walletApi';
 import { submitSepayForm } from '../../lib/submitSepayForm';
 import BookingBreadcrumbs from '../../components/booking/BookingBreadcrumbs';
 import BookingProgress from '../../components/booking/BookingProgress';
@@ -47,6 +48,13 @@ const PAY_OPTIONS = [
     subtitle: 'Nhập số thẻ Napas trên cổng thanh toán MoMo',
   },
 ];
+
+const WALLET_PAY_OPTION = {
+  id: 'cherry_wallet',
+  icon: 'account_balance_wallet',
+  title: 'Ví Cherry House',
+  subtitle: 'Thanh toán bằng số dư ví nội bộ',
+};
 
 function fmtMoneyCompact(amountVnd) {
   return `${new Intl.NumberFormat('vi-VN').format(Math.round(amountVnd))}đ`;
@@ -147,6 +155,13 @@ export default function CheckoutPage() {
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promoError, setPromoError] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
+  const [wallet, setWallet] = useState({ loading: false, balanceVnd: null, error: null });
+
+  const loggedIn = isClientLoggedIn();
+  const payOptions = useMemo(
+    () => (loggedIn ? [...PAY_OPTIONS, WALLET_PAY_OPTION] : PAY_OPTIONS),
+    [loggedIn],
+  );
 
   const checkInIso = searchParams.get('checkIn') || context.checkIn || '';
   const checkOutIso = searchParams.get('checkOut') || context.checkOut || '';
@@ -167,6 +182,41 @@ export default function CheckoutPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!loggedIn) {
+      setWallet({ loading: false, balanceVnd: null, error: null });
+      if (payment === 'cherry_wallet') setPayment('card');
+      return undefined;
+    }
+
+    let cancelled = false;
+    setWallet((w) => ({ ...w, loading: true, error: null }));
+    walletApi
+      .getSummary()
+      .then((data) => {
+        if (!cancelled) {
+          setWallet({
+            loading: false,
+            balanceVnd: Number(data?.balanceVnd) || 0,
+            error: null,
+          });
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setWallet({
+            loading: false,
+            balanceVnd: null,
+            error: err?.message || 'Không tải được số dư ví.',
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
 
   /** Đồng bộ ngày từ URL context (trang chủ → booking → checkout) */
   useEffect(() => {
@@ -232,9 +282,15 @@ export default function CheckoutPage() {
   const checkInFmt = formatViBookingDate(checkInDate);
   const checkOutFmt = formatViBookingDate(checkOutDate);
 
+  const walletInsufficient =
+    payment === 'cherry_wallet'
+    && wallet.balanceVnd != null
+    && wallet.balanceVnd < pricing.totalVal;
+
   const canConfirm =
     availability.status === 'available'
-    && Boolean(checkInIso && checkOutIso && slug && context.property && context.branch);
+    && Boolean(checkInIso && checkOutIso && slug && context.property && context.branch)
+    && (payment !== 'cherry_wallet' || (wallet.balanceVnd != null && !walletInsufficient));
 
   function handleDateChange({ checkIn, checkOut }) {
     setSearchParams(
@@ -378,6 +434,11 @@ export default function CheckoutPage() {
           amountVnd: result.amountVnd,
           expireMinutes: result.qr.expireMinutes ?? 15,
         });
+        return;
+      }
+
+      if (result.action === 'confirmed' && result.redirectUrl) {
+        window.location.href = result.redirectUrl;
         return;
       }
 
@@ -565,13 +626,18 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-3" role="radiogroup" aria-label="Chọn cổng thanh toán">
-                {PAY_OPTIONS.map((opt) => {
+                {payOptions.map((opt) => {
                   const selected = payment === opt.id;
+                  const isWallet = opt.id === 'cherry_wallet';
+                  const walletDisabled =
+                    isWallet
+                    && (wallet.loading || wallet.balanceVnd == null || wallet.balanceVnd < pricing.totalVal);
                   return (
                     <label
                       key={opt.id}
                       className={[
-                        'relative flex cursor-pointer items-center rounded-xl border border-transparent bg-surface-container-lowest p-4 transition-all hover:bg-surface-container-low',
+                        'relative flex items-center rounded-xl border border-transparent bg-surface-container-lowest p-4 transition-all',
+                        walletDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-surface-container-low',
                         selected ? 'border-primary/20 bg-surface-container-low' : '',
                       ].join(' ')}
                     >
@@ -580,13 +646,26 @@ export default function CheckoutPage() {
                         name="payment"
                         checked={selected}
                         className="sr-only"
+                        disabled={walletDisabled}
                         onChange={() => setPayment(opt.id)}
                       />
                       <div className="flex flex-1 items-center gap-3">
                         <span className="material-symbols-outlined scale-105 text-xl text-primary">{opt.icon}</span>
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-bold text-on-surface">{opt.title}</span>
-                          <span className="text-xs text-on-surface-variant">{opt.subtitle}</span>
+                          <span className="text-xs text-on-surface-variant">
+                            {isWallet && wallet.balanceVnd != null
+                              ? `Số dư: ${fmtMoneyCompact(wallet.balanceVnd)}`
+                              : opt.subtitle}
+                          </span>
+                          {isWallet && walletInsufficient ? (
+                            <span className="text-xs font-semibold text-error">
+                              Không đủ số dư (cần {fmtMoneyCompact(pricing.totalVal)})
+                            </span>
+                          ) : null}
+                          {isWallet && wallet.error ? (
+                            <span className="text-xs text-error">{wallet.error}</span>
+                          ) : null}
                         </div>
                       </div>
                       <div

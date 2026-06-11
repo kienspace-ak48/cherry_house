@@ -1,5 +1,8 @@
 const bookingService = require('../modules/booking/booking.service');
 const { generateBookingQrDataUrl } = require('../utils/bookingQr.util');
+const bookingCheckInService = require('../services/bookingCheckIn.service');
+const bookingCancelService = require('../modules/refund/bookingCancel.service');
+const { evaluateRefundPolicy, policyLabel, vnNow } = require('../modules/refund/refundPolicy.service');
 const {
   mergeScopeFilters,
   scopeCatalogLists,
@@ -66,6 +69,23 @@ function buildBookingsListQuery(parts = {}) {
   });
   const qs = params.toString();
   return qs ? `?${qs}` : '';
+}
+
+function defaultExportDateRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return { from: `${y}-${m}-01`, to: `${y}-${m}-${d}` };
+}
+
+function buildExportQuery(parts = {}) {
+  const defaults = defaultExportDateRange();
+  return buildBookingsListQuery({
+    from: parts.from || defaults.from,
+    to: parts.to || defaults.to,
+    ...parts,
+  });
 }
 
 function parseBookingFormBody(body) {
@@ -154,6 +174,9 @@ async function list(req, res) {
     const searchQ = req.query.q ? String(req.query.q).trim() : '';
     const checkInFrom = req.query.checkInFrom ? String(req.query.checkInFrom) : '';
     const checkInTo = req.query.checkInTo ? String(req.query.checkInTo) : '';
+    const exportRange = defaultExportDateRange();
+    const exportFrom = req.query.from ? String(req.query.from) : exportRange.from;
+    const exportTo = req.query.to ? String(req.query.to) : exportRange.to;
 
     const listQuery = {
       status: filterStatus || undefined,
@@ -201,6 +224,8 @@ async function list(req, res) {
       q: searchQ,
       checkInFrom,
       checkInTo,
+      from: exportFrom,
+      to: exportTo,
     };
 
     renderAdminPage(req, res, 'admin/bookings/index', {
@@ -229,6 +254,8 @@ async function list(req, res) {
       searchQ,
       checkInFrom,
       checkInTo,
+      exportFrom,
+      exportTo,
       bookingStatuses: BOOKING_STATUSES,
       statusLabel,
       statusBadgeClass,
@@ -236,6 +263,7 @@ async function list(req, res) {
       formatVnd,
       buildBookingsListQuery,
       listQueryBase,
+      exportQuery: buildExportQuery(listQueryBase),
       flash: req.query.flash || null,
       msg: req.query.msg || null,
     });
@@ -297,6 +325,21 @@ async function detail(req, res) {
       }
     }
 
+    const checkInRecord = await bookingCheckInService.getByBookingId(booking.id);
+    let cancelPreview = null;
+    if (bookingCancelService.CANCELLABLE_STATUSES.has(booking.status)) {
+      try {
+        const policy = evaluateRefundPolicy(booking, booking.payment, vnNow());
+        cancelPreview = {
+          ...policy,
+          policyLabel: policyLabel(policy.policyCode),
+          canCancel: true,
+        };
+      } catch (_err) {
+        cancelPreview = null;
+      }
+    }
+
     renderAdminPage(req, res, 'admin/bookings/detail', {
       pageTitle: `Booking ${booking.bookingCode}`,
       adminPage: 'bookings',
@@ -307,6 +350,8 @@ async function detail(req, res) {
       ],
       booking,
       bookingQrDataUrl,
+      checkInRecord,
+      cancelPreview,
       bookingStatuses: BOOKING_STATUSES,
       statusLabel,
       statusBadgeClass,
@@ -461,6 +506,23 @@ async function update(req, res) {
   }
 }
 
+async function cancelBooking(req, res) {
+  try {
+    const id = req.params.id;
+    const result = await bookingCancelService.cancelBooking({
+      bookingIdRaw: id,
+      actor: req.admin || req.user,
+      cancelledBy: 'admin',
+    });
+    const msg = result.refundAmountVnd > 0
+      ? `Đã hủy — hoàn ${result.refundAmountVnd.toLocaleString('vi-VN')}đ vào ví`
+      : 'Đã hủy booking';
+    res.redirect(`/admin/bookings/${id}?flash=status_updated&msg=${encodeURIComponent(msg)}`);
+  } catch (error) {
+    res.redirect(`/admin/bookings/${req.params.id}?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
 async function patchStatus(req, res) {
   try {
     const id = req.params.id;
@@ -593,7 +655,15 @@ async function checkInGuest(req, res) {
       return res.redirect('/admin/bookings?flash=notfound');
     }
     assertBookingInScope(req.admin || req.user, existing);
-    await bookingService.checkInGuest(id);
+    const signatureDataUrl = typeof req.body.signatureDataUrl === 'string'
+      ? req.body.signatureDataUrl.trim()
+      : '';
+    const actor = req.admin || req.user;
+    await bookingService.checkInGuest(id, {
+      signatureDataUrl,
+      staffAdminId: actor?.id,
+      staffName: actor?.fullName || actor?.email,
+    });
     const redirectTo = req.body.redirect || `/admin/bookings/${id}`;
     res.redirect(`${redirectTo}?flash=status_updated&msg=${encodeURIComponent('Đã check-in khách')}`);
   } catch (error) {
@@ -690,6 +760,7 @@ module.exports = {
   editForm,
   update,
   patchStatus,
+  cancelBooking,
   reception,
   lookupAjax,
   markPaidCounter,

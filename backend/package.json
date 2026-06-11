@@ -11,7 +11,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy && prisma generate",
     "db:migrate:dev": "prisma migrate dev",
-    "db:seed": "prisma generate && node prisma/seed.js",
+    "db:test": "node scripts/test-db.js",
+    "db:reset": "prisma generate && node prisma/reset-data.js",
+    "db:seed": "prisma generate && node prisma/reset-data.js && node prisma/seed.js",
     "postinstall": "prisma generate"
   },
   "keywords": [],
@@ -27,6 +29,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "ejs": "^6.0.1",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-ejs-layouts": "^2.5.1",
     "google-auth-library": "^10.6.2",

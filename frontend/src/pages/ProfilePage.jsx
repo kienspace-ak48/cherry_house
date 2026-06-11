@@ -6,6 +6,7 @@ import { isClientLoggedIn } from '../lib/authStorage';
 import { logoutClient, refreshClientProfile } from '../api/authApi';
 import ProfileAvatar from '../components/profile/ProfileAvatar';
 import ProfileBookingsSection from '../components/profile/ProfileBookingsSection';
+import ProfileWalletSection from '../components/profile/ProfileWalletSection';
 
 const LINKED_FB_ICON =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBGKAj9tFjrVNtHuetTn1tT05psaCScaszQwrT8NfC5yR91owVK3aK99Mg5xBVIADDUy11BDyzf-xJzzVLNvyfUVSG0O2jqGalZBDiu17nqaE-aedGBMnbYszZumtfGf6c9my3eezp_nVTK8Mx3Id5a909Kz2YjPav7SeWywQ0uNdt-XUuwYR9CZz39VfqAlrUJmyagxPwIgoad4GiV1p2bnb7yKH8cRIlKIi18fenp7DYdBakuiCZvtPftY1iLDPHzbJAsuGj4iQ';
@@ -62,6 +63,7 @@ const SIDEBAR = [
   { id: 'account', icon: 'person', label: 'Thông tin tài khoản' },
   { id: 'password', icon: 'lock', label: 'Mật khẩu & Bảo mật' },
   { id: 'bookings', icon: 'event_available', label: 'Đặt chỗ của tôi' },
+  { id: 'wallet', icon: 'account_balance_wallet', label: 'Ví của tôi' },
   { id: 'notifications', icon: 'notifications', label: 'Thông báo' },
   { id: 'settings', icon: 'settings', label: 'Cài đặt', hasDividerBelow: true },
 ];
@@ -261,6 +263,7 @@ function ProfilePage() {
     if (section === 'overview') return 'Tài khoản của bạn';
     if (section === 'password') return 'Mật khẩu & bảo mật';
     if (section === 'bookings') return 'Đặt chỗ của tôi';
+    if (section === 'wallet') return 'Ví Cherry House';
     return 'Thông tin tài khoản';
   })();
 
@@ -362,6 +365,8 @@ function ProfilePage() {
               <ProfilePlaceholderCard title={PLACEHOLDER_LABELS[section]} />
             ) : section === 'bookings' ? (
               <ProfileBookingsSection />
+            ) : section === 'wallet' ? (
+              <ProfileWalletSection />
             ) : section === 'overview' ? (
               <ProfileOverviewSection
                 profileContact={profileContact}

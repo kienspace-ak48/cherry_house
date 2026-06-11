@@ -111,6 +111,10 @@ body > .wrapper > .body .admin-view-root {
   min-height: 280px;
 }
 
+.dashboard-chart-wrap-sm {
+  min-height: 220px;
+}
+
 .dashboard-alert-item {
   border-left: 4px solid transparent;
 }

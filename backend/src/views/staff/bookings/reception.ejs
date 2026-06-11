@@ -38,11 +38,7 @@
           <td><%= b.guestName %></td>
           <td><%= b.roomCode %></td>
           <td>
-            <a href="/staff/bookings/<%= b.id %>" class="staff-btn staff-btn-outline" style="padding:4px 8px;font-size:12px;">Mở</a>
-            <form method="POST" action="/staff/bookings/<%= b.id %>/check-in" style="display:inline;">
-              <input type="hidden" name="redirect" value="/staff/reception">
-              <button type="submit" class="staff-btn staff-btn-primary" style="padding:4px 8px;font-size:12px;">Check-in</button>
-            </form>
+            <a href="/staff/bookings/<%= b.id %>" class="staff-btn staff-btn-primary" style="padding:4px 8px;font-size:12px;">Check-in</a>
           </td>
         </tr>
         <% }); %>

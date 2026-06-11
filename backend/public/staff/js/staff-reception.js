@@ -31,7 +31,7 @@
       const paid = b.payment?.status === 'paid' || ['confirmed','checked_in'].includes(b.status);
       let actions = `<a href="/staff/bookings/${b.id}" class="staff-btn staff-btn-outline" style="padding:4px 8px;font-size:12px;">Chi tiết</a>`;
       if (b.status === 'confirmed' && paid) {
-        actions += `<form method="POST" action="/staff/bookings/${b.id}/check-in" style="display:inline;margin-left:4px;"><input type="hidden" name="redirect" value="/staff/reception"><button class="staff-btn staff-btn-primary" style="padding:4px 8px;font-size:12px;">Check-in</button></form>`;
+        actions += `<a href="/staff/bookings/${b.id}" class="staff-btn staff-btn-primary" style="padding:4px 8px;font-size:12px;margin-left:4px;">Check-in</a>`;
       }
       if (b.status === 'pending_payment' || !paid) {
         actions += `<form method="POST" action="/staff/bookings/${b.id}/mark-paid" style="display:inline;margin-left:4px;"><input type="hidden" name="redirect" value="/staff/reception"><button class="staff-btn staff-btn-success" style="padding:4px 8px;font-size:12px;">TT quầy</button></form>`;

@@ -35,10 +35,53 @@ function paymentMethodLabel(method) {
   if (method === 'bank') return 'Chuyển khoản';
   if (method === 'wallet') return 'Ví / QR';
   if (method === 'momo') return 'MoMo';
+  if (method === 'cherry_wallet') return 'Ví Cherry House';
   return method || '—';
 }
 
-function BookingCard({ booking }) {
+function CancelBookingModal({ booking, preview, loading, error, onClose, onConfirm }) {
+  if (!booking) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+        <h3 className="font-headline text-base font-bold text-on-surface">Hủy đặt phòng</h3>
+        <p className="mt-2 text-sm text-on-surface-variant">
+          Mã <strong>{booking.bookingCode}</strong> · {booking.propertyName}
+        </p>
+        {loading ? (
+          <p className="mt-4 text-sm text-on-surface-variant">Đang kiểm tra chính sách…</p>
+        ) : preview ? (
+          <div className="mt-4 rounded-lg border border-outline-variant/40 bg-surface-container-low/50 p-3 text-sm">
+            <p className="font-semibold text-on-surface">{preview.policy?.policyLabel || preview.policyLabel}</p>
+            <p className="mt-1 text-on-surface-variant">{preview.policy?.message || preview.message}</p>
+          </div>
+        ) : null}
+        {error ? <p className="mt-3 text-sm text-error">{error}</p> : null}
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            className="rounded-lg border border-outline-variant/40 px-4 py-2 text-xs font-bold text-on-surface"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-error px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+            onClick={onConfirm}
+            disabled={loading || !preview}
+          >
+            Xác nhận hủy
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingCard({ booking, onCancelRequest }) {
   const status = STATUS_META[booking.status] || {
     label: booking.status,
     tone: 'text-on-surface-variant bg-surface-container-low border-outline-variant/40',
@@ -116,6 +159,16 @@ function BookingCard({ booking }) {
             Xem mã QR check-in
           </Link>
         ) : null}
+        {['confirmed', 'pending_payment'].includes(booking.status) ? (
+          <button
+            type="button"
+            onClick={() => onCancelRequest?.(booking)}
+            className="inline-flex items-center gap-1 rounded-lg border border-error/40 bg-error/5 px-3 py-2 text-xs font-bold text-error"
+          >
+            <span className="material-symbols-outlined text-[16px]">cancel</span>
+            Hủy đặt phòng
+          </button>
+        ) : null}
       </div>
     </article>
   );
@@ -163,6 +216,11 @@ function BookingsPagination({ page, totalPages, total, pageSize, onPageChange, l
 export default function ProfileBookingsSection() {
   const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelPreview, setCancelPreview] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
   const [state, setState] = useState({
     loading: true,
     items: [],
@@ -204,7 +262,38 @@ export default function ProfileBookingsSection() {
     return () => {
       cancelled = true;
     };
-  }, [filter, page]);
+  }, [filter, page, reloadKey]);
+
+  async function handleCancelRequest(booking) {
+    setCancelTarget(booking);
+    setCancelPreview(null);
+    setCancelError(null);
+    setCancelLoading(true);
+    try {
+      const data = await bookingApi.cancelPreview(booking.id);
+      setCancelPreview(data);
+    } catch (err) {
+      setCancelError(err?.message || 'Không tải được chính sách hủy.');
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  async function handleConfirmCancel() {
+    if (!cancelTarget) return;
+    setCancelLoading(true);
+    setCancelError(null);
+    try {
+      await bookingApi.cancel(cancelTarget.id);
+      setCancelTarget(null);
+      setCancelPreview(null);
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setCancelError(err?.message || 'Không hủy được đặt phòng.');
+    } finally {
+      setCancelLoading(false);
+    }
+  }
 
   function handleFilterChange(nextFilter) {
     setFilter(nextFilter);
@@ -283,7 +372,7 @@ export default function ProfileBookingsSection() {
         <>
           <div className="space-y-3">
             {state.items.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} />
+              <BookingCard key={booking.id} booking={booking} onCancelRequest={handleCancelRequest} />
             ))}
           </div>
           <BookingsPagination
@@ -296,6 +385,19 @@ export default function ProfileBookingsSection() {
           />
         </>
       ) : null}
+
+      <CancelBookingModal
+        booking={cancelTarget}
+        preview={cancelPreview}
+        loading={cancelLoading}
+        error={cancelError}
+        onClose={() => {
+          setCancelTarget(null);
+          setCancelPreview(null);
+          setCancelError(null);
+        }}
+        onConfirm={handleConfirmCancel}
+      />
     </div>
   );
 }

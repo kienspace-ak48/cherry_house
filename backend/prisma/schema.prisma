@@ -43,6 +43,34 @@ enum PaymentMethod {
   bank
   wallet
   momo
+  cherry_wallet
+}
+
+enum WalletTransactionType {
+  refund
+  pay_booking
+  admin_adjust
+}
+
+enum RefundPolicyCode {
+  before_24h_full
+  within_24h_none
+  not_paid
+  admin_override
+}
+
+enum RefundDestination {
+  wallet
+}
+
+enum RefundStatus {
+  completed
+  skipped
+}
+
+enum CancelledBy {
+  user
+  admin
 }
 
 enum PaymentStatus {
@@ -281,6 +309,8 @@ model User {
   updatedAt      DateTime       @updatedAt @map("updated_at")
   bookings       Booking[]
   refreshTokens  RefreshToken[]
+  wallet         UserWallet?
+  walletTransactions WalletTransaction[]
 
   @@map("users")
 }
@@ -298,9 +328,10 @@ model Admin {
   isActive      Boolean        @default(true) @map("is_active")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
-  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  property      Property?      @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  refreshTokens RefreshToken[]
+  branch          Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  property        Property?        @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  refreshTokens   RefreshToken[]
+  bookingCheckIns BookingCheckIn[]
 
   @@index([branchId])
   @@index([propertyId])
@@ -375,13 +406,91 @@ model Booking {
   user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   room            InventoryRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
   property        Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  branch          Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Restrict)
   payment         Payment?
+  checkInRecord   BookingCheckIn?
+  refund          BookingRefund?
+  walletTransactions WalletTransaction[]
 
   @@index([userId])
   @@index([roomId])
   @@index([status])
   @@map("bookings")
+}
+
+// 12c. user_wallets — số dư ví nội bộ Cherry House
+model UserWallet {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique @map("user_id")
+  balanceVnd  Int      @default(0) @map("balance_vnd")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_wallets")
+}
+
+// 12d. wallet_transactions — sổ cái ví (bất biến)
+model WalletTransaction {
+  id              Int                   @id @default(autoincrement())
+  userId          Int                   @map("user_id")
+  amountVnd       Int                   @map("amount_vnd")
+  balanceAfterVnd Int                   @map("balance_after_vnd")
+  type            WalletTransactionType
+  bookingId       Int?                  @map("booking_id")
+  note            String?               @db.VarChar(500)
+  createdAt       DateTime              @default(now()) @map("created_at")
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking         Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([bookingId])
+  @@map("wallet_transactions")
+}
+
+// 12e. booking_refunds — audit hủy / hoàn tiền
+model BookingRefund {
+  id                 Int               @id @default(autoincrement())
+  bookingId          Int               @unique @map("booking_id")
+  userId             Int?              @map("user_id")
+  refundPercent      Int               @map("refund_percent")
+  refundAmountVnd    Int               @default(0) @map("refund_amount_vnd")
+  policyCode         RefundPolicyCode  @map("policy_code")
+  destination        RefundDestination @default(wallet)
+  status             RefundStatus      @default(skipped)
+  cancelledBy        CancelledBy       @map("cancelled_by")
+  hoursBeforeCheckIn Decimal?          @map("hours_before_check_in") @db.Decimal(8, 2)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  booking            Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("booking_refunds")
+}
+
+// 12b. booking_check_ins — chữ ký khách khi check-in tại lễ tân
+model BookingCheckIn {
+  id                 Int      @id @default(autoincrement())
+  bookingId          Int      @unique @map("booking_id")
+  userId             Int?     @map("user_id")
+  guestName          String   @map("guest_name") @db.VarChar(255)
+  guestPhone         String   @map("guest_phone") @db.VarChar(30)
+  guestEmail         String   @map("guest_email") @db.VarChar(255)
+  bookingCode        String   @map("booking_code") @db.VarChar(40)
+  propertyName       String   @map("property_name") @db.VarChar(255)
+  branchName         String   @map("branch_name") @db.VarChar(255)
+  roomCode           String   @map("room_code") @db.VarChar(50)
+  signaturePath      String   @map("signature_path") @db.VarChar(500)
+  checkedInAt        DateTime @default(now()) @map("checked_in_at")
+  checkedInByAdminId Int?     @map("checked_in_by_admin_id")
+  staffName          String?  @map("staff_name") @db.VarChar(255)
+  booking            Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  admin              Admin?   @relation(fields: [checkedInByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([guestEmail])
+  @@index([checkedInAt])
+  @@map("booking_check_ins")
 }
 
 // 13. payments

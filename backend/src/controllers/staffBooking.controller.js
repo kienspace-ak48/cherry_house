@@ -9,6 +9,7 @@ const {
   assertBranchInStaffScope,
 } = require('../utils/staffScope.util');
 const { generateBookingQrDataUrl } = require('../utils/bookingQr.util');
+const bookingCheckInService = require('../services/bookingCheckIn.service');
 
 const BOOKING_PAGE_SIZE = 20;
 
@@ -147,11 +148,14 @@ async function detail(req, res) {
       }
     }
 
+    const checkInRecord = await bookingCheckInService.getByBookingId(booking.id);
+
     renderStaffPage(req, res, 'staff/bookings/detail', {
       pageTitle: booking.bookingCode,
       staffPage: 'bookings',
       booking,
       bookingQrDataUrl,
+      checkInRecord,
       bookingStatuses: BOOKING_STATUSES,
       statusLabel,
       statusBadgeClass,
@@ -254,7 +258,14 @@ async function checkInGuest(req, res) {
     const existing = await bookingService.getById(req.params.id);
     if (!existing) return res.redirect('/staff/reception?flash=notfound');
     assertBookingInStaffScope(req.staff, existing);
-    await bookingService.checkInGuest(req.params.id);
+    const signatureDataUrl = typeof req.body.signatureDataUrl === 'string'
+      ? req.body.signatureDataUrl.trim()
+      : '';
+    await bookingService.checkInGuest(req.params.id, {
+      signatureDataUrl,
+      staffAdminId: req.staff?.id,
+      staffName: req.staff?.fullName || req.staff?.email,
+    });
     const redirectTo = req.body.redirect || `/staff/bookings/${req.params.id}`;
     res.redirect(`${redirectTo}?flash=ok&msg=${encodeURIComponent('Đã check-in khách')}`);
   } catch (error) {

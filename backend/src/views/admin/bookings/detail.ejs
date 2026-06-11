@@ -93,6 +93,23 @@
       </div>
     </div>
 
+    <% if (typeof checkInRecord !== 'undefined' && checkInRecord) { %>
+    <div class="card admin-card mb-4">
+      <div class="card-header"><strong>Chữ ký check-in</strong></div>
+      <div class="card-body">
+        <p class="small text-body-secondary mb-3">
+          <%= formatDateTime(checkInRecord.checkedInAt) %>
+          <% if (checkInRecord.staffName) { %> · NV: <%= checkInRecord.staffName %><% } %>
+        </p>
+        <div class="text-center">
+          <a href="<%= checkInRecord.signatureUrl %>" target="_blank" rel="noopener">
+            <img src="<%= checkInRecord.signatureUrl %>" alt="Chữ ký <%= booking.guestName %>" class="img-fluid border rounded bg-white p-2" style="max-height:220px;">
+          </a>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
     <div class="card admin-card">
       <div class="card-header"><strong>Giá &amp; thanh toán</strong></div>
       <div class="card-body">
@@ -151,12 +168,40 @@
         </form>
         <% } %>
         <% if (booking.status === 'confirmed' && isPaid) { %>
-        <form method="POST" action="/admin/bookings/<%= booking.id %>/check-in" class="mb-3">
-          <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
-          <button type="submit" class="btn btn-primary btn-sm w-100">
-            <i class="fa-solid fa-door-open me-1"></i> Check-in khách
+        <button type="button" id="checkin-start-btn" class="btn btn-primary btn-sm w-100 mb-3">
+          <i class="fa-solid fa-door-open me-1"></i> Bắt đầu check-in
+        </button>
+        <div id="checkin-signature-panel" class="border rounded p-3 mb-3 bg-white" hidden style="display:none;">
+          <p class="small text-center text-body-secondary mb-2">Khách ký tên vào ô bên dưới</p>
+          <div class="border border-2 border-danger rounded bg-white overflow-hidden">
+            <canvas id="checkin-signature-canvas" width="320" height="180" style="display:block;width:100%;height:180px;touch-action:none;cursor:crosshair;background:#fff;" aria-label="Vùng ký tên"></canvas>
+          </div>
+          <button type="button" id="checkin-signature-clear" class="btn btn-outline-secondary btn-sm w-100 mt-2">Xóa chữ ký</button>
+          <form id="checkin-signature-form" method="POST" action="/admin/bookings/<%= booking.id %>/check-in" class="mt-2 mb-0">
+            <input type="hidden" name="redirect" value="/admin/bookings/<%= booking.id %>">
+            <input type="hidden" name="signatureDataUrl" id="checkin-signature-data" value="">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="fa-solid fa-check me-1"></i> Hoàn tất check-in
+            </button>
+          </form>
+        </div>
+        <% } %>
+        <% if (typeof cancelPreview !== 'undefined' && cancelPreview && cancelPreview.canCancel) { %>
+        <div class="alert alert-light border small mb-3 py-2">
+          <strong>Chính sách hủy:</strong> <%= cancelPreview.policyLabel %><br>
+          <span class="text-body-secondary"><%= cancelPreview.message %></span>
+        </div>
+        <form method="POST" action="/admin/bookings/<%= booking.id %>/cancel" class="mb-3">
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100" onclick="return confirm('Hủy booking và xử lý hoàn tiền theo chính sách?');">
+            <i class="fa-solid fa-ban me-1"></i> Hủy &amp; hoàn ví
           </button>
         </form>
+        <% } %>
+        <% if (booking.refund) { %>
+        <div class="alert alert-info small py-2 mb-3">
+          Đã hủy · <%= booking.refund.refundAmountVnd > 0 ? formatVnd(booking.refund.refundAmountVnd) + ' vào ví' : 'Không hoàn tiền' %>
+          · <%= formatDateTime(booking.refund.createdAt) %>
+        </div>
         <% } %>
         <% if (booking.status === 'checked_in') { %>
         <form method="POST" action="/admin/bookings/<%= booking.id %>/check-out" class="mb-3">
@@ -186,3 +231,5 @@
     </div>
   </div>
 </div>
+
+<script src="/staff/js/staff-checkin-signature.js"></script>

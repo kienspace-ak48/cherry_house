@@ -40,6 +40,25 @@ function formatVnd(value) {
   return `${Math.round(n).toLocaleString('vi-VN')} đ`;
 }
 
+function normalizeRoomCode(raw) {
+  return String(raw || '').trim().toUpperCase();
+}
+
+function branchMatchesHint(branchName, hint) {
+  if (!hint) return true;
+  const a = stripDiacritics(branchName);
+  const b = stripDiacritics(hint);
+  return a.includes(b) || b.includes(a);
+}
+
+function roomCodesEquivalent(queryCode, actualCode, allowNumberOnly) {
+  const q = normalizeRoomCode(queryCode);
+  const a = normalizeRoomCode(actualCode);
+  if (q === a) return true;
+  if (!allowNumberOnly) return false;
+  return q.split('-').pop() === a.split('-').pop();
+}
+
 function buildBookingUrl({ propertySlug, branchCode, checkIn, checkOut, detailSlug }) {
   const base = getClientAppUrl();
   const params = new URLSearchParams();
@@ -221,6 +240,130 @@ async function searchAvailableRooms({
   };
 }
 
+async function getRoomQuote({
+  roomCode,
+  propertySlug,
+  branchCode,
+  city,
+  branchNameHint,
+  checkIn,
+  checkOut,
+} = {}) {
+  const code = normalizeRoomCode(roomCode);
+  if (!code) return { error: 'roomCode is required', message: 'Thiếu mã phòng.' };
+
+  if (checkIn && checkOut && checkOut <= checkIn) {
+    return { error: 'invalid_dates', message: 'Ngày trả phòng phải sau ngày nhận phòng.' };
+  }
+
+  const normalizedCity = city ? normalizeCity(city) : null;
+  const slugFilter = typeof propertySlug === 'string' ? propertySlug.trim() : '';
+  const branchFilter = typeof branchCode === 'string' ? branchCode.trim().toLowerCase() : '';
+  const branchHint = typeof branchNameHint === 'string' ? branchNameHint.trim() : '';
+
+  const properties = await catalogService.listProperties(
+    normalizedCity ? { city: normalizedCity } : {},
+  );
+
+  const matches = [];
+  for (const property of properties) {
+    if (slugFilter && property.slug !== slugFilter) continue;
+    for (const branch of property.subBranches || []) {
+      const bc = String(branch.code || branch.id).toLowerCase();
+      if (branchFilter && bc !== branchFilter) continue;
+      if (branchHint && !branchMatchesHint(branch.name, branchHint)) continue;
+
+      const rooms = await catalogService.listRooms({
+        propertySlug: property.slug,
+        branchCode: bc,
+      });
+
+      const allowNumberOnly = Boolean(branchHint || branchFilter || slugFilter);
+      for (const room of rooms) {
+        if (roomCodesEquivalent(code, room.code, allowNumberOnly)) {
+          matches.push({
+            property,
+            branch,
+            branchCode: bc,
+            room,
+          });
+        }
+      }
+    }
+  }
+
+  if (!matches.length) {
+    return {
+      error: 'room_not_found',
+      roomCode: code,
+      message: `Không tìm thấy phòng ${code}${normalizedCity ? ` tại ${normalizedCity}` : ''}.`,
+    };
+  }
+
+  if (matches.length > 1 && !branchHint && !branchFilter && !slugFilter) {
+    return {
+      error: 'ambiguous_room',
+      roomCode: code,
+      message: `Mã ${code} có ở nhiều chi nhánh — bạn nói rõ cơ sở/chi nhánh nhé.`,
+      matches: matches.slice(0, 5).map((m) => ({
+        roomCode: m.room.code,
+        propertyName: m.property.name,
+        branchName: m.branch.name,
+        branchCode: m.branchCode,
+      })),
+    };
+  }
+
+  const { property, branch, branchCode: bc, room } = matches[0];
+  let occupancy = 'dates_not_provided';
+  let nights = null;
+
+  if (checkIn && checkOut) {
+    try {
+      const occ = await getBranchOccupancy({
+        propertySlug: property.slug,
+        branchCode: bc,
+        from: checkIn,
+        to: checkOut,
+      });
+      const row = (occ.rooms || []).find((r) => roomCodesEquivalent(code, r.code, true));
+      occupancy = row?.occupancy || 'available';
+    } catch {
+      occupancy = 'dates_not_provided';
+    }
+    nights = Math.round(
+      (new Date(`${checkOut}T12:00:00`).getTime() - new Date(`${checkIn}T12:00:00`).getTime())
+        / 86400000,
+    );
+    if (nights < 1) nights = null;
+  }
+
+  const totalVnd = nights ? room.priceVnd * nights : null;
+
+  return {
+    roomCode: room.code,
+    propertyName: property.name,
+    propertySlug: property.slug,
+    branchName: branch.name,
+    branchCode: bc,
+    priceVnd: room.priceVnd,
+    priceLabel: formatVnd(room.priceVnd),
+    occupancy,
+    checkIn: checkIn || null,
+    checkOut: checkOut || null,
+    nights,
+    totalVnd,
+    totalLabel: totalVnd != null ? formatVnd(totalVnd) : null,
+    bookingUrl: buildBookingUrl({
+      propertySlug: property.slug,
+      branchCode: bc,
+      checkIn,
+      checkOut,
+      detailSlug: room.detailSlug,
+    }),
+  };
+}
+
 async function getBranchRoomStatus({ propertySlug, branchCode, checkIn, checkOut } = {}) {
   const slug = typeof propertySlug === 'string' ? propertySlug.trim() : '';
   const code = typeof branchCode === 'string' ? branchCode.trim() : '';
@@ -263,6 +406,7 @@ const TOOL_HANDLERS = {
   get_property_detail: getPropertyDetail,
   search_available_rooms: searchAvailableRooms,
   get_branch_room_status: getBranchRoomStatus,
+  get_room_quote: getRoomQuote,
 };
 
 async function executeTool(name, args) {
@@ -275,4 +419,8 @@ module.exports = {
   SUPPORTED_CITIES,
   executeTool,
   TOOL_HANDLERS,
+  getRoomQuote,
+  normalizeRoomCode,
+  formatVnd,
+  normalizeCity,
 };

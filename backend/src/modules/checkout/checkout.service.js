@@ -10,12 +10,14 @@ const momoPayService = require('../../services/momoPay.service');
 const bookingRepository = require('../booking/booking.repository');
 const { assertUserCanBook } = require('../../services/userBookingGuard.service');
 const { sendBookingConfirmationEmail } = require('../../services/bookingEmail.service');
+const userWalletService = require('../../services/userWallet.service');
 const { generateBookingQrDataUrl } = require('../../utils/bookingQr.util');
 const clientAuthService = require('../../auth/clientAuth.service');
+const { buildCheckoutResultUrl } = require('../../config/appUrl.config');
 const { calculateBookingPricing } = require('../../utils/pricing.util');
 
 /** Tạm tắt SePay — bỏ `bank` khỏi set cho đến khi bật lại */
-const PAYMENT_METHODS = new Set(['card', 'momo', 'wallet']);
+const PAYMENT_METHODS = new Set(['card', 'momo', 'wallet', 'cherry_wallet']);
 
 function generateBookingCode() {
   const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -25,7 +27,7 @@ function generateBookingCode() {
 function parsePaymentMethod(raw) {
   const method = typeof raw === 'string' ? raw.trim() : '';
   if (!PAYMENT_METHODS.has(method)) {
-    throw httpError('paymentMethod must be card, momo or wallet');
+    throw httpError('paymentMethod must be card, momo, wallet or cherry_wallet');
   }
   return method;
 }
@@ -244,6 +246,20 @@ async function startCheckout(req, body = {}) {
     guestEmail,
   });
 
+  if (paymentMethod === 'cherry_wallet') {
+    if (!Number.isInteger(userId) || userId < 1) {
+      throw httpError('Đăng nhập để thanh toán bằng ví Cherry House', 401);
+    }
+    const walletResult = await payWithCherryWallet({
+      room,
+      body: { ...body, guestName, guestPhone, guestEmail },
+      userId,
+      pricing,
+      availability,
+    });
+    return walletResult;
+  }
+
   const { booking, payment } = await createBookingWithPayment({
     room,
     body: { ...body, guestName, guestPhone, guestEmail },
@@ -274,6 +290,105 @@ async function startCheckout(req, body = {}) {
     },
     pricing,
     ...providerPayload,
+  };
+}
+
+async function payWithCherryWallet({ room, body, userId, pricing, availability }) {
+  const bookingCode = generateBookingCode();
+  const property = room.branch.property;
+  const checkIn = parseDateOnly(body.checkIn, 'checkIn');
+  const checkOut = parseDateOnly(body.checkOut, 'checkOut');
+  const nights = nightsBetween(checkIn, checkOut);
+  const guests = parseGuests(body.guests);
+
+  const confirmed = await prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.create({
+      data: {
+        bookingCode,
+        userId,
+        roomId: room.id,
+        propertyId: property.id,
+        branchId: room.branchId,
+        roomTypeId: room.roomTypeId,
+        roomCode: room.code,
+        propertyName: property.name,
+        branchName: room.branch.name,
+        checkIn,
+        checkOut,
+        nights,
+        adults: guests.adults,
+        children: guests.children,
+        guestName: body.guestName.trim(),
+        guestPhone: body.guestPhone.trim(),
+        guestEmail: body.guestEmail.trim(),
+        specialNote: body.specialNote ? String(body.specialNote).trim() || null : null,
+        pricePerNightVnd: pricing.pricePerNightVnd,
+        subtotalVnd: pricing.subtotalVnd,
+        serviceFeeVnd: pricing.serviceFeeVnd,
+        discountVnd: pricing.discountVnd,
+        totalVnd: pricing.totalVnd,
+        promoCode: pricing.promoCode,
+        status: 'confirmed',
+        holdExpiresAt: null,
+      },
+    });
+
+    await userWalletService.debitInTransaction(tx, {
+      userId,
+      amountVnd: pricing.totalVnd,
+      type: 'pay_booking',
+      bookingId: booking.id,
+      note: `Thanh toán ${bookingCode}`,
+    });
+
+    const payment = await tx.payment.create({
+      data: {
+        bookingId: booking.id,
+        method: 'cherry_wallet',
+        amountVnd: pricing.totalVnd,
+        status: 'paid',
+        paidAt: new Date(),
+        providerRef: `wallet:${bookingCode}`,
+      },
+    });
+
+    if (booking.promoCode) {
+      await tx.$executeRaw`
+        UPDATE promo_codes
+        SET used_count = used_count + 1
+        WHERE code = ${booking.promoCode}
+          AND (max_uses IS NULL OR used_count < max_uses)
+      `;
+    }
+
+    return { booking, payment };
+  });
+
+  const full = await bookingRepository.findById(confirmed.booking.id);
+  sendBookingConfirmationEmail(full).catch((err) => {
+    console.error('[checkout] wallet booking confirmation email failed:', err?.message || err);
+  });
+
+  const balanceVnd = await userWalletService.getBalance(userId);
+
+  return {
+    bookingId: confirmed.booking.id,
+    bookingCode: confirmed.booking.bookingCode,
+    paymentId: confirmed.payment.id,
+    paymentMethod: 'cherry_wallet',
+    amountVnd: pricing.totalVnd,
+    nights,
+    holdExpiresAt: null,
+    walletBalanceVnd: balanceVnd,
+    room: {
+      id: room.id,
+      code: room.code,
+      detailSlug: availability.room?.detailSlug,
+    },
+    pricing,
+    provider: 'cherry_wallet',
+    action: 'confirmed',
+    redirectUrl: buildCheckoutResultUrl(confirmed.booking.bookingCode, { payment: 'success' }),
   };
 }
 

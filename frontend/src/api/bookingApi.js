@@ -46,6 +46,16 @@ const bookingApi = {
     const res = await axiosClient.get('/bookings/me', { params });
     return res.data?.data ?? res.data;
   },
+
+  async cancelPreview(bookingId) {
+    const res = await axiosClient.get(`/bookings/${bookingId}/cancel-preview`);
+    return res.data?.data ?? res.data;
+  },
+
+  async cancel(bookingId) {
+    const res = await axiosClient.post(`/bookings/${bookingId}/cancel`);
+    return res.data?.data ?? res.data;
+  },
 };
 
 export default bookingApi;

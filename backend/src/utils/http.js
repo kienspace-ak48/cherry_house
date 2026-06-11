@@ -4,8 +4,21 @@ function httpError(message, statusCode = 400) {
   return err;
 }
 
+function collectDbErrorText(error) {
+  const parts = [];
+  let current = error;
+  let depth = 0;
+  while (current && depth < 6) {
+    if (current.message) parts.push(String(current.message));
+    if (current.code) parts.push(String(current.code));
+    current = current.cause;
+    depth += 1;
+  }
+  return parts.join(' | ').toLowerCase();
+}
+
 function isDbConnectionError(error) {
-  const message = String(error?.message || '').toLowerCase();
+  const blob = collectDbErrorText(error);
   const code = String(error?.code || '').toUpperCase();
 
   return (
@@ -13,13 +26,31 @@ function isDbConnectionError(error) {
     || code === 'ETIMEDOUT'
     || code === 'ENOTFOUND'
     || code === 'PROTOCOL_CONNECTION_LOST'
-    || message.includes('pool timeout')
-    || message.includes("can't reach database")
-    || message.includes('connection refused')
-    || message.includes('connect econnrefused')
-    || message.includes('econnrefused')
-    || message.includes('access denied for user')
+    || code === 'ER_ACCESS_DENIED_ERROR'
+    || code === 'ER_BAD_DB_ERROR'
+    || blob.includes('pool timeout')
+    || blob.includes("can't reach database")
+    || blob.includes('connection refused')
+    || blob.includes('econnrefused')
+    || blob.includes('access denied for user')
+    || blob.includes('unknown database')
+    || blob.includes('rsa public key')
+    || blob.includes('allowpublickeyretrieval')
+    || blob.includes('enotfound')
   );
+}
+
+function formatDbErrorDetail(error) {
+  const parts = [];
+  let current = error;
+  let depth = 0;
+  while (current && depth < 6) {
+    const msg = current.message || current.originalMessage;
+    if (msg && !parts.includes(msg)) parts.push(String(msg));
+    current = current.cause;
+    depth += 1;
+  }
+  return parts.join(' → ') || String(error);
 }
 
 function resolveApiErrorStatus(error) {
@@ -72,6 +103,7 @@ function parseOptionalId(raw, label = 'id') {
 module.exports = {
   httpError,
   isDbConnectionError,
+  formatDbErrorDetail,
   resolveApiErrorStatus,
   resolveApiErrorMessage,
   sendApiError,

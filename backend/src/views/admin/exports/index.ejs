@@ -1,0 +1,138 @@
+<div class="admin-page-head mb-4">
+  <h2>Xuất analytics Excel</h2>
+  <p class="text-body-secondary mb-0 small">Tải file .xlsx để phân tích — chọn khoảng ngày, bộ lọc và các sheet cần xuất.</p>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi khi xuất file' %></div>
+<% } %>
+
+<form method="GET" action="/admin/exports/analytics.xlsx" id="exportAnalyticsForm">
+  <div class="card admin-card mb-4">
+    <div class="card-header"><strong>Khoảng thời gian &amp; bộ lọc</strong></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label" for="exportFrom">Từ ngày (ngày tạo booking)</label>
+          <input class="form-control" type="date" id="exportFrom" name="from" value="<%= exportFrom %>" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="exportTo">Đến ngày</label>
+          <input class="form-control" type="date" id="exportTo" name="to" value="<%= exportTo %>" required>
+        </div>
+        <% if (!scopeLocked) { %>
+        <div class="col-md-3">
+          <label class="form-label" for="filterPropertyId">Cơ sở</label>
+          <select class="form-select" id="filterPropertyId" name="propertyId">
+            <option value="">— Tất cả —</option>
+            <% properties.forEach(function(prop) { %>
+            <option value="<%= prop.id %>" <%= filterPropertyId === String(prop.id) ? 'selected' : '' %>><%= prop.name %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="filterBranchId">Chi nhánh</label>
+          <select class="form-select" id="filterBranchId" name="branchId">
+            <option value="">— Tất cả —</option>
+            <% filterBranches.forEach(function(br) { %>
+            <option value="<%= br.id %>" data-property-id="<%= br.propertyId %>" <%= filterBranchId === String(br.id) ? 'selected' : '' %>><%= br.name %></option>
+            <% }); %>
+          </select>
+        </div>
+        <% } else { %>
+        <div class="col-md-6">
+          <label class="form-label">Phạm vi</label>
+          <p class="form-control-plaintext mb-0 small text-body-secondary">
+            Chỉ dữ liệu chi nhánh được gán cho tài khoản của bạn.
+          </p>
+          <% if (filterBranchId) { %>
+          <input type="hidden" name="branchId" value="<%= filterBranchId %>">
+          <% } %>
+          <% if (filterPropertyId) { %>
+          <input type="hidden" name="propertyId" value="<%= filterPropertyId %>">
+          <% } %>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="card admin-card mb-4">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <strong>Chọn sheet xuất</strong>
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-secondary" id="btnSelectAllSheets">Chọn tất cả</button>
+        <button type="button" class="btn btn-outline-secondary" id="btnClearAllSheets">Bỏ chọn</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row g-2">
+        <% exportSheets.forEach(function(sheet) { %>
+        <div class="col-md-6 col-lg-4">
+          <div class="form-check border rounded p-3 h-100">
+            <input
+              class="form-check-input sheet-checkbox"
+              type="checkbox"
+              name="sheets"
+              value="<%= sheet.id %>"
+              id="sheet-<%= sheet.id %>"
+              <%= selectedSheets.includes(sheet.id) ? 'checked' : '' %>
+            >
+            <label class="form-check-label w-100" for="sheet-<%= sheet.id %>">
+              <strong><%= sheet.label %></strong>
+              <br><small class="text-body-secondary"><%= sheet.description %></small>
+            </label>
+          </div>
+        </div>
+        <% }); %>
+      </div>
+      <p class="small text-body-secondary mt-3 mb-0">File luôn kèm sheet <strong>Hướng dẫn</strong> mô tả nội dung đã chọn.</p>
+    </div>
+    <div class="card-footer d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-success" id="btnExportSubmit">
+        <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel
+      </button>
+      <a href="/admin/exports" class="btn btn-outline-secondary">Đặt lại</a>
+    </div>
+  </div>
+</form>
+
+<script>
+  (function exportPage() {
+    const propertySelect = document.getElementById('filterPropertyId');
+    const branchSelect = document.getElementById('filterBranchId');
+
+    if (propertySelect && branchSelect) {
+      const allBranchOptions = Array.from(branchSelect.querySelectorAll('option[data-property-id]'));
+      propertySelect.addEventListener('change', () => {
+        const propertyId = propertySelect.value;
+        branchSelect.querySelectorAll('option[data-property-id]').forEach((opt) => opt.remove());
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '— Tất cả —';
+        branchSelect.appendChild(blank);
+        allBranchOptions.forEach((opt) => {
+          if (!propertyId || opt.dataset.propertyId === propertyId) {
+            branchSelect.appendChild(opt.cloneNode(true));
+          }
+        });
+        branchSelect.value = '';
+      });
+    }
+
+    document.getElementById('btnSelectAllSheets')?.addEventListener('click', () => {
+      document.querySelectorAll('.sheet-checkbox').forEach((cb) => { cb.checked = true; });
+    });
+    document.getElementById('btnClearAllSheets')?.addEventListener('click', () => {
+      document.querySelectorAll('.sheet-checkbox').forEach((cb) => { cb.checked = false; });
+    });
+
+    document.getElementById('exportAnalyticsForm')?.addEventListener('submit', (e) => {
+      const checked = document.querySelectorAll('.sheet-checkbox:checked');
+      if (!checked.length) {
+        e.preventDefault();
+        alert('Chọn ít nhất một sheet để xuất.');
+      }
+    });
+  })();
+</script>

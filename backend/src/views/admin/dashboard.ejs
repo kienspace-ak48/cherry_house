@@ -60,6 +60,68 @@
   </div>
 </div>
 
+<section class="mb-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h5 class="mb-0">Phân tích &amp; website</h5>
+      <small class="text-body-secondary" id="dash-analytics-period-hint">Theo chu kỳ biểu đồ phía trên</small>
+    </div>
+    <a href="/admin/exports" class="btn btn-sm btn-outline-secondary">Xuất Excel →</a>
+  </div>
+  <div class="row g-4 mb-2">
+    <div class="col-lg-4">
+      <div class="card admin-card h-100">
+        <div class="card-header"><strong>Trạng thái booking</strong></div>
+        <div class="card-body">
+          <div class="dashboard-chart-wrap dashboard-chart-wrap-sm">
+            <canvas id="dash-chart-status"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card admin-card h-100">
+        <div class="card-header"><strong>Doanh thu theo cổng thanh toán</strong></div>
+        <div class="card-body">
+          <div class="dashboard-chart-wrap dashboard-chart-wrap-sm">
+            <canvas id="dash-chart-payment"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card admin-card h-100">
+        <div class="card-header"><strong>Công suất phòng (14 ngày)</strong></div>
+        <div class="card-body">
+          <div class="dashboard-chart-wrap dashboard-chart-wrap-sm">
+            <canvas id="dash-chart-occupancy"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card admin-card h-100">
+        <div class="card-header"><strong>Doanh thu theo cơ sở</strong></div>
+        <div class="card-body">
+          <div class="dashboard-chart-wrap dashboard-chart-wrap-sm">
+            <canvas id="dash-chart-property"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card admin-card h-100">
+        <div class="card-header"><strong>Hoạt động website (8 tuần)</strong></div>
+        <div class="card-body">
+          <div class="dashboard-chart-wrap dashboard-chart-wrap-sm">
+            <canvas id="dash-chart-website"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card admin-card h-100">
@@ -183,7 +245,38 @@
 
 <script>
   (function dashboardPage() {
+    const CHART_COLORS = {
+      primary: 'rgba(168, 46, 66, 0.85)',
+      primaryLight: 'rgba(168, 46, 66, 0.55)',
+      success: 'rgba(25, 135, 84, 0.85)',
+      info: 'rgba(13, 202, 240, 0.85)',
+      warning: 'rgba(255, 193, 7, 0.9)',
+      danger: 'rgba(220, 53, 69, 0.85)',
+      secondary: 'rgba(108, 117, 125, 0.75)',
+      purple: 'rgba(111, 66, 193, 0.85)',
+      teal: 'rgba(32, 201, 151, 0.85)',
+    };
+
+    const STATUS_COLORS = [
+      CHART_COLORS.success,
+      CHART_COLORS.warning,
+      CHART_COLORS.info,
+      CHART_COLORS.primary,
+      CHART_COLORS.danger,
+      CHART_COLORS.secondary,
+      'rgba(173, 181, 189, 0.7)',
+    ];
+
+    const PAYMENT_COLORS = [
+      CHART_COLORS.primary,
+      CHART_COLORS.info,
+      CHART_COLORS.success,
+      CHART_COLORS.warning,
+      CHART_COLORS.teal,
+    ];
+
     let chartInstance = null;
+    const analyticsCharts = {};
     let currentPeriod = 'week';
 
     function bookingStatusLabel(status) {
@@ -244,6 +337,191 @@
               </div>`;
           }).join('')}
         </div>`;
+    }
+
+    function destroyChart(key) {
+      if (analyticsCharts[key]) {
+        analyticsCharts[key].destroy();
+        delete analyticsCharts[key];
+      }
+    }
+
+    function renderDoughnutChart(canvasId, key, labels, values, colors, tooltipFormat) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || typeof Chart === 'undefined') return;
+      destroyChart(key);
+      const wrap = canvas.parentElement;
+      if (!labels.length) {
+        destroyChart(key);
+        canvas.style.display = 'none';
+        let empty = wrap.querySelector('.dash-chart-empty');
+        if (!empty) {
+          empty = document.createElement('p');
+          empty.className = 'dash-chart-empty text-center text-body-secondary py-5 mb-0';
+          empty.textContent = 'Chưa có dữ liệu';
+          wrap.appendChild(empty);
+        }
+        return;
+      }
+      canvas.style.display = '';
+      const emptyEl = wrap.querySelector('.dash-chart-empty');
+      if (emptyEl) emptyEl.remove();
+      analyticsCharts[key] = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors.slice(0, values.length),
+            borderWidth: 1,
+            borderColor: '#fff',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const val = ctx.raw;
+                  if (tooltipFormat === 'vnd') return ` ${AdminApi.formatVnd(val)}`;
+                  return ` ${val}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function renderAnalyticsCharts(analytics, period) {
+      if (!analytics) return;
+
+      const periodHint = {
+        day: '7 ngày gần nhất',
+        week: '8 tuần gần nhất',
+        month: '12 tháng gần nhất',
+      };
+      document.getElementById('dash-analytics-period-hint').textContent =
+        `Booking & doanh thu: ${periodHint[period] || periodHint.week} · Công suất: 14 ngày`;
+
+      renderDoughnutChart(
+        'dash-chart-status',
+        'status',
+        analytics.bookingStatus?.labels || [],
+        analytics.bookingStatus?.values || [],
+        STATUS_COLORS,
+        'count',
+      );
+
+      renderDoughnutChart(
+        'dash-chart-payment',
+        'payment',
+        analytics.paymentMethods?.labels || [],
+        analytics.paymentMethods?.revenueVnd || [],
+        PAYMENT_COLORS,
+        'vnd',
+      );
+
+      const occCanvas = document.getElementById('dash-chart-occupancy');
+      if (occCanvas && typeof Chart !== 'undefined') {
+        destroyChart('occupancy');
+        const occ = analytics.occupancyTrend || { labels: [], rates: [] };
+        analyticsCharts.occupancy = new Chart(occCanvas, {
+          type: 'line',
+          data: {
+            labels: occ.labels,
+            datasets: [{
+              label: 'Công suất (%)',
+              data: occ.rates,
+              borderColor: CHART_COLORS.primary,
+              backgroundColor: CHART_COLORS.primaryLight,
+              fill: true,
+              tension: 0.35,
+              pointRadius: 2,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { callback: (v) => `${v}%` },
+              },
+            },
+          },
+        });
+      }
+
+      const propCanvas = document.getElementById('dash-chart-property');
+      if (propCanvas && typeof Chart !== 'undefined') {
+        destroyChart('property');
+        const prop = analytics.propertyRevenue || { labels: [], revenueVnd: [] };
+        analyticsCharts.property = new Chart(propCanvas, {
+          type: 'bar',
+          data: {
+            labels: prop.labels,
+            datasets: [{
+              label: 'Doanh thu',
+              data: prop.revenueVnd,
+              backgroundColor: CHART_COLORS.primaryLight,
+              borderColor: CHART_COLORS.primary,
+              borderWidth: 1,
+            }],
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    return ` ${AdminApi.formatVnd(ctx.raw)}`;
+                  },
+                },
+              },
+            },
+            scales: { x: { beginAtZero: true } },
+          },
+        });
+      }
+
+      const webCanvas = document.getElementById('dash-chart-website');
+      if (webCanvas && typeof Chart !== 'undefined') {
+        destroyChart('website');
+        const web = analytics.websiteActivity || { labels: [], contactMessages: [], newUsers: [] };
+        analyticsCharts.website = new Chart(webCanvas, {
+          type: 'bar',
+          data: {
+            labels: web.labels,
+            datasets: [
+              {
+                label: 'Tin liên hệ',
+                data: web.contactMessages,
+                backgroundColor: CHART_COLORS.info,
+              },
+              {
+                label: 'Khách mới',
+                data: web.newUsers,
+                backgroundColor: CHART_COLORS.success,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+          },
+        });
+      }
     }
 
     function renderChart(chart) {
@@ -316,7 +594,17 @@
     }
 
     function applyDashboard(data) {
-      const { todayStats, catalog, chart, movements, alerts, recentProperties, asOf, today } = data;
+      const {
+        todayStats,
+        catalog,
+        chart,
+        analytics,
+        movements,
+        alerts,
+        recentProperties,
+        asOf,
+        today,
+      } = data;
 
       document.getElementById('dash-as-of').textContent = `Cập nhật ${new Date(asOf).toLocaleString('vi-VN')} · ${today}`;
       document.getElementById('stat-bookings-today').textContent = todayStats.bookingsCreated;
@@ -331,6 +619,7 @@
       document.getElementById('stat-bookings').textContent = catalog.bookingsTotal;
 
       renderChart(chart);
+      renderAnalyticsCharts(analytics, chart?.period || currentPeriod);
       renderMovementTable(movements.checkInsToday, 'checkin-today-body', 'badge-checkin-count');
       renderMovementTable(movements.checkOutsToday, 'checkout-today-body', 'badge-checkout-count');
       renderAlerts(alerts);

@@ -17,6 +17,8 @@ const adminPromoCodeController = require('../controllers/adminPromoCode.controll
 const adminEmailTemplateController = require('../controllers/adminEmailTemplate.controller');
 const adminCustomerEmailController = require('../controllers/adminCustomerEmail.controller');
 const adminContactMessageController = require('../controllers/adminContactMessage.controller');
+const { analyticsExportController } = require('../modules/analyticsExport');
+const adminAnalyticsExportController = require('../controllers/adminAnalyticsExport.controller');
 const requireSuperAdmin = require('../middleware/requireSuperAdmin.middleware');
 const requireAdminManager = require('../middleware/requireAdminManager.middleware');
 const adminAccountController = require('../controllers/adminAccount.controller');
@@ -25,6 +27,9 @@ const { uploadImage } = require('../config/multer.config');
 router.get('/login', adminController.loginPage);
 
 router.get('/', adminController.dashboard);
+
+router.get('/exports', adminAnalyticsExportController.index);
+router.get('/exports/analytics.xlsx', analyticsExportController.downloadAnalytics);
 
 router.get('/properties', adminPropertyController.list);
 router.get('/properties/new', adminPropertyController.createForm);
@@ -68,6 +73,7 @@ router.get('/bookings/:id/edit', adminBookingController.editForm);
 router.post('/bookings/:id/mark-paid', adminBookingController.markPaidCounter);
 router.post('/bookings/:id/check-in', adminBookingController.checkInGuest);
 router.post('/bookings/:id/check-out', adminBookingController.checkOutGuest);
+router.post('/bookings/:id/cancel', adminBookingController.cancelBooking);
 router.post('/bookings/:id/status', adminBookingController.patchStatus);
 router.post('/bookings/:id', adminBookingController.update);
 router.get('/bookings/:id', adminBookingController.detail);
@@ -79,6 +85,7 @@ router.post('/contact-messages/:id/delete', adminContactMessageController.remove
 router.post('/contact-messages/:id', adminContactMessageController.update);
 
 router.get('/users/:id/edit', adminUserController.editForm);
+router.post('/users/:id/wallet-adjust', requireAdminManager, adminUserController.adjustWallet);
 router.post('/users/:id/delete', requireSuperAdmin, adminUserController.remove);
 router.post('/users/:id', adminUserController.update);
 router.get('/users/:id', adminUserController.detail);

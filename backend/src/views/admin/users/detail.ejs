@@ -22,6 +22,8 @@
 </div>
 
 <% if (typeof flash !== 'undefined' && flash === 'updated') { %><div class="alert alert-success">Đã cập nhật tài khoản.</div><% } %>
+<% if (typeof flash !== 'undefined' && flash === 'wallet_updated') { %><div class="alert alert-success">Đã cập nhật số dư ví.</div><% } %>
+<% if (typeof flash !== 'undefined' && flash === 'error') { %><div class="alert alert-danger"><%= msg || 'Có lỗi' %></div><% } %>
 
 <% if (user.bookingBanned) { %>
 <div class="alert alert-danger mb-4">
@@ -78,9 +80,91 @@
         </dl>
       </div>
     </div>
+
+    <% if (typeof walletSummary !== 'undefined' && walletSummary) { %>
+    <div class="card admin-card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Ví Cherry House</strong>
+        <span class="badge bg-success fs-6"><%= formatVnd(walletSummary.balanceVnd) %></span>
+      </div>
+      <div class="card-body">
+        <% if (typeof isAdminManager !== 'undefined' && isAdminManager) { %>
+        <form method="POST" action="/admin/users/<%= user.id %>/wallet-adjust" class="row g-2 mb-3">
+          <div class="col-12">
+            <label class="form-label small mb-1" for="walletAmount">Điều chỉnh số dư (VND, âm = trừ)</label>
+            <input class="form-control form-control-sm" type="number" id="walletAmount" name="amountVnd" step="1000" required>
+          </div>
+          <div class="col-12">
+            <input class="form-control form-control-sm" type="text" name="note" placeholder="Ghi chú (tuỳ chọn)">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-outline-primary btn-sm" onclick="return confirm('Xác nhận điều chỉnh ví?');">Cập nhật ví</button>
+          </div>
+        </form>
+        <% } %>
+        <% if (walletSummary.recentTransactions.length) { %>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Thời gian</th><th>Loại</th><th class="text-end">Số tiền</th></tr></thead>
+            <tbody>
+              <% walletSummary.recentTransactions.forEach(function(tx) { %>
+              <tr>
+                <td><small><%= formatDateTime(tx.createdAt) %></small></td>
+                <td><small><%= tx.type %><% if (tx.bookingCode) { %> · <code><%= tx.bookingCode %></code><% } %></small></td>
+                <td class="text-end <%= tx.amountVnd >= 0 ? 'text-success' : 'text-danger' %>"><%= tx.amountVnd >= 0 ? '+' : '' %><%= formatVnd(Math.abs(tx.amountVnd)) %></td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <% } else { %>
+        <p class="small text-body-secondary mb-0">Chưa có giao dịch ví.</p>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
   </div>
 
   <div class="col-lg-7">
+    <% if (typeof checkInHistory !== 'undefined' && checkInHistory.length) { %>
+    <div class="card admin-card mb-4">
+      <div class="card-header"><strong>Lịch sử check-in &amp; chữ ký</strong></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Thời gian</th>
+                <th>Mã / Phòng</th>
+                <th>Cơ sở</th>
+                <th>Chữ ký</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% checkInHistory.forEach(function(row) { %>
+              <tr>
+                <td><small><%= formatDateTime(row.checkedInAt) %></small>
+                  <% if (row.staffName) { %><br><small class="text-body-secondary">NV: <%= row.staffName %></small><% } %>
+                </td>
+                <td>
+                  <a href="/admin/bookings/<%= row.bookingId %>"><code><%= row.bookingCode %></code></a>
+                  <br><small><%= row.roomCode %></small>
+                </td>
+                <td><small><%= row.propertyName %><br><%= row.branchName %></small></td>
+                <td>
+                  <a href="<%= row.signatureUrl %>" target="_blank" rel="noopener" title="Xem chữ ký">
+                    <img src="<%= row.signatureUrl %>" alt="Chữ ký" width="72" height="48" class="border rounded bg-white" style="object-fit:contain;">
+                  </a>
+                </td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
     <div class="card admin-card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Lịch sử đặt phòng</strong>

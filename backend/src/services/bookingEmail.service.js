@@ -71,4 +71,44 @@ async function sendBookingConfirmationEmail(booking) {
   return { sent: result.success, ...result };
 }
 
-module.exports = { sendBookingConfirmationEmail };
+/**
+ * @param {object | null | undefined} booking
+ * @param {{ refundAmountVnd?: number; policyLabel?: string; walletBalanceVnd?: number | null; message?: string }} cancelResult
+ */
+async function sendBookingCancellationEmail(booking, cancelResult = {}) {
+  if (!booking?.guestEmail) {
+    return { sent: false, reason: 'no_email' };
+  }
+
+  const refundLine =
+    cancelResult.refundAmountVnd > 0
+      ? `Số tiền hoàn vào ví Cherry House: ${formatVnd(cancelResult.refundAmountVnd)}.`
+      : cancelResult.message || 'Không có khoản hoàn tiền cho lần hủy này.';
+
+  const balanceLine =
+    cancelResult.walletBalanceVnd != null
+      ? `Số dư ví hiện tại: ${formatVnd(cancelResult.walletBalanceVnd)}.`
+      : '';
+
+  const text = [
+    `Xin chào ${booking.guestName},`,
+    '',
+    `Booking ${booking.bookingCode} tại ${booking.propertyName} đã được hủy.`,
+    refundLine,
+    balanceLine,
+    '',
+    'Cảm ơn bạn đã sử dụng Cherry House.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const result = await mailService.sendMail({
+    to: booking.guestEmail,
+    subject: `[Cherry House] Đã hủy đặt phòng ${booking.bookingCode}`,
+    text,
+  });
+
+  return { sent: result.success, ...result };
+}
+
+module.exports = { sendBookingConfirmationEmail, sendBookingCancellationEmail };

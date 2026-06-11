@@ -2,6 +2,10 @@ const CNAME = 'mail.service.js ';
 const transporter = require('../config/sendMail.config');
 const emailTemplateService = require('./emailTemplate.service');
 const { EMAIL_TEMPLATE_KEYS } = require('../config/emailTemplate.defaults');
+const {
+  BOOKING_QR_EMAIL_CID,
+  buildQrInlineAttachment,
+} = require('../utils/bookingQr.util');
 
 function mailFrom() {
   const user = process.env.GMAIL_USER;
@@ -45,6 +49,7 @@ class MailService {
     resultUrl,
     qrCodeDataUrl,
   }) {
+    const qrAttachment = buildQrInlineAttachment(qrCodeDataUrl, BOOKING_QR_EMAIL_CID);
     const vars = {
       guest_name: guestName,
       booking_code: bookingCode,
@@ -62,13 +67,20 @@ class MailService {
       special_note: specialNote || '',
       result_url: resultUrl,
       cta_url: resultUrl,
-      qr_code_data_url: qrCodeDataUrl || '',
+      qr_code_cid: qrAttachment ? BOOKING_QR_EMAIL_CID : '',
+      qr_code_data_url: qrAttachment ? '' : (qrCodeDataUrl || ''),
     };
     const rendered = await emailTemplateService.render(
       EMAIL_TEMPLATE_KEYS.BOOKING_CONFIRMATION,
       vars,
     );
-    return this.sendMail({ to, subject: rendered.subject, text: rendered.text, html: rendered.html });
+    return this.sendMail({
+      to,
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
+      attachments: qrAttachment ? [qrAttachment] : [],
+    });
   }
 
   /** Gửi thông báo coupon — gọi từ admin/marketing khi cần */
@@ -115,6 +127,9 @@ class MailService {
         text: data.text,
         html: htmlContent,
       };
+      if (Array.isArray(data.attachments) && data.attachments.length) {
+        payload.attachments = data.attachments;
+      }
       const info = await transporter.sendMail(payload);
       console.log(CNAME, 'sendMail', info);
       return {

@@ -88,14 +88,17 @@ function buildPromoDetailTable(vars) {
 }
 
 function buildQrSection(config, vars) {
-  if (!config.showQr || !vars.qr_code_data_url) return '';
+  const imgSrc = vars.qr_code_cid
+    ? `cid:${String(vars.qr_code_cid).trim()}`
+    : vars.qr_code_data_url;
+  if (!config.showQr || !imgSrc) return '';
   const intro = interpolate(config.qrIntro || '', vars);
   const caption = interpolate(config.qrCaption || '', vars);
   const fallback = interpolate(config.qrFallback || '', vars);
   let html = '';
   if (intro) html += `<p style="margin:12px 0 8px;font-size:12px;text-align:center;">${intro}</p>`;
   html += `<p align="center" style="margin:12px 0">
-    <img src="${vars.qr_code_data_url}" width="200" alt="QR" style="display:block;margin:0 auto;border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.08);" />
+    <img src="${escapeHtml(imgSrc)}" width="200" alt="QR" style="display:block;margin:0 auto;border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.08);" />
   </p>`;
   if (fallback) html += `<p style="margin:8px 0;font-size:11px;text-align:center;color:#666;">${fallback}</p>`;
   if (caption) html += `<p style="margin:8px 0 0;font-size:11px;text-align:center;color:#888;">${caption}</p>`;

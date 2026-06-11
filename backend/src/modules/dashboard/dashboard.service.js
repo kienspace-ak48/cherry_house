@@ -182,6 +182,173 @@ async function buildBookingChart(period) {
   };
 }
 
+const BOOKING_STATUS_LABELS = {
+  confirmed: 'Đã xác nhận',
+  pending_payment: 'Chờ thanh toán',
+  completed: 'Hoàn tất',
+  checked_in: 'Đang lưu trú',
+  cancelled: 'Đã hủy',
+  no_show: 'Không đến',
+  draft: 'Nháp',
+};
+
+const PAYMENT_METHOD_LABELS = {
+  card: 'Thẻ / VNPay',
+  momo: 'MoMo',
+  bank: 'Chuyển khoản',
+  wallet: 'Ví QR',
+  cherry_wallet: 'Ví Cherry House',
+};
+
+async function buildBookingStatusChart(rangeStart) {
+  const rows = await prisma.booking.groupBy({
+    by: ['status'],
+    where: { createdAt: { gte: rangeStart } },
+    _count: { _all: true },
+  });
+
+  const order = [
+    'confirmed',
+    'pending_payment',
+    'completed',
+    'checked_in',
+    'cancelled',
+    'no_show',
+    'draft',
+  ];
+  const byStatus = Object.fromEntries(rows.map((r) => [r.status, r._count._all]));
+
+  const sorted = order
+    .filter((s) => byStatus[s])
+    .concat(rows.map((r) => r.status).filter((s) => !order.includes(s)));
+
+  return {
+    labels: sorted.map((s) => BOOKING_STATUS_LABELS[s] || s),
+    values: sorted.map((s) => byStatus[s] || 0),
+    statuses: sorted,
+  };
+}
+
+async function buildPaymentMethodChart(rangeStart) {
+  const payments = await prisma.payment.findMany({
+    where: { status: 'paid', paidAt: { gte: rangeStart } },
+    select: { method: true, amountVnd: true },
+  });
+
+  const totals = {};
+  for (const p of payments) {
+    totals[p.method] = (totals[p.method] || 0) + p.amountVnd;
+  }
+
+  const methods = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+  return {
+    labels: methods.map((m) => PAYMENT_METHOD_LABELS[m] || m),
+    revenueVnd: methods.map((m) => totals[m]),
+    methods,
+  };
+}
+
+async function buildOccupancyTrendChart(days = 14) {
+  const totalRooms = await prisma.inventoryRoom.count({ where: { isActive: true } });
+  const end = vnNow();
+  const labels = [];
+  const rates = [];
+
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(end);
+    d.setDate(d.getDate() - i);
+    const dateStr = vnDateOnly(d);
+    const occupied = await countOccupiedRoomsOn(dateStr);
+    labels.push(
+      new Intl.DateTimeFormat('vi-VN', { weekday: 'short', day: 'numeric', month: 'short' }).format(d),
+    );
+    rates.push(totalRooms ? Math.round((occupied / totalRooms) * 1000) / 10 : 0);
+  }
+
+  return { labels, rates, roomsTotal: totalRooms };
+}
+
+async function buildPropertyRevenueChart(rangeStart, limit = 6) {
+  const bookings = await prisma.booking.findMany({
+    where: {
+      payment: { status: 'paid', paidAt: { gte: rangeStart } },
+    },
+    select: {
+      propertyName: true,
+      payment: { select: { amountVnd: true } },
+    },
+  });
+
+  const totals = {};
+  for (const b of bookings) {
+    const name = b.propertyName || 'Khác';
+    totals[name] = (totals[name] || 0) + (b.payment?.amountVnd || 0);
+  }
+
+  const sorted = Object.entries(totals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+
+  return {
+    labels: sorted.map(([name]) => name),
+    revenueVnd: sorted.map(([, v]) => v),
+  };
+}
+
+async function buildWebsiteActivityChart() {
+  const buckets = buildChartBuckets('week').slice(-8);
+  const rangeStart = chartRangeStart('week');
+  const contactCounts = Object.fromEntries(buckets.map((b) => [b.key, 0]));
+  const userCounts = Object.fromEntries(buckets.map((b) => [b.key, 0]));
+
+  const [contacts, users] = await Promise.all([
+    prisma.contactMessage.findMany({
+      where: { createdAt: { gte: rangeStart } },
+      select: { createdAt: true },
+    }),
+    prisma.user.findMany({
+      where: { createdAt: { gte: rangeStart } },
+      select: { createdAt: true },
+    }),
+  ]);
+
+  for (const c of contacts) {
+    const key = bucketKeyForPeriod(c.createdAt, 'week');
+    if (key in contactCounts) contactCounts[key] += 1;
+  }
+  for (const u of users) {
+    const key = bucketKeyForPeriod(u.createdAt, 'week');
+    if (key in userCounts) userCounts[key] += 1;
+  }
+
+  return {
+    labels: buckets.map((b) => b.label),
+    contactMessages: buckets.map((b) => contactCounts[b.key]),
+    newUsers: buckets.map((b) => userCounts[b.key]),
+  };
+}
+
+async function buildAnalyticsCharts(period) {
+  const rangeStart = chartRangeStart(period);
+  const [bookingStatus, paymentMethods, occupancyTrend, propertyRevenue, websiteActivity] =
+    await Promise.all([
+      buildBookingStatusChart(rangeStart),
+      buildPaymentMethodChart(rangeStart),
+      buildOccupancyTrendChart(14),
+      buildPropertyRevenueChart(rangeStart),
+      buildWebsiteActivityChart(),
+    ]);
+
+  return {
+    period,
+    bookingStatus,
+    paymentMethods,
+    occupancyTrend,
+    propertyRevenue,
+    websiteActivity,
+  };
+}
+
 async function getDashboardOverview(chartPeriod = 'week') {
   const today = vnDateOnly();
   const todayBounds = vnDayBounds(today);
@@ -203,6 +370,7 @@ async function getDashboardOverview(chartPeriod = 'week') {
     stalePending,
     expiredHolds,
     chart,
+    analytics,
   ] = await Promise.all([
     Promise.all([
       prisma.property.count({ where: { isActive: true } }),
@@ -267,6 +435,7 @@ async function getDashboardOverview(chartPeriod = 'week') {
       take: 20,
     }),
     buildBookingChart(period),
+    buildAnalyticsCharts(period),
   ]);
 
   const [propertiesCount, branchesCount, roomsCount, bookingsTotal] = catalog;
@@ -337,6 +506,7 @@ async function getDashboardOverview(chartPeriod = 'week') {
       roomsAvailable: availableToday,
     },
     chart,
+    analytics,
     movements: {
       checkInsToday: checkInsToday.map(formatBookingBrief),
       checkOutsToday: checkOutsToday.map(formatBookingBrief),

@@ -1,4 +1,5 @@
 const bookingService = require('./booking.service');
+const bookingCancelService = require('../refund/bookingCancel.service');
 const { sendApiError } = require('../../utils/http');
 
 async function list(req, res) {
@@ -67,6 +68,32 @@ async function checkAvailability(req, res) {
   }
 }
 
+async function cancelPreview(req, res) {
+  try {
+    const data = await bookingCancelService.getCancelPreview(
+      req.params.id,
+      req.user,
+      'user',
+    );
+    res.json({ success: true, data });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+}
+
+async function cancel(req, res) {
+  try {
+    const data = await bookingCancelService.cancelBooking({
+      bookingIdRaw: req.params.id,
+      actor: req.user,
+      cancelledBy: 'user',
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+}
+
 async function getOccupancy(req, res) {
   try {
     const actor = req.admin || req.staff;
@@ -92,6 +119,8 @@ module.exports = {
   create,
   update,
   patchStatus,
+  cancelPreview,
+  cancel,
   checkAvailability,
   getOccupancy,
 };

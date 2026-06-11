@@ -16,7 +16,7 @@ const checkoutApi = {
    *   guestEmail: string;
    *   specialNote?: string;
    *   promoCode?: string | null;
-   *   paymentMethod: 'card' | 'momo' | 'bank' | 'wallet';
+   *   paymentMethod: 'card' | 'momo' | 'bank' | 'wallet' | 'cherry_wallet';
    * }} payload
    */
   async startPay(payload) {

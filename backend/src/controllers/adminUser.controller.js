@@ -2,6 +2,8 @@ const userService = require('../services/user.service');
 const bookingService = require('../modules/booking/booking.service');
 const promoCodeService = require('../services/promoCode.service');
 const customerEmailService = require('../services/customerEmail.service');
+const bookingCheckInService = require('../services/bookingCheckIn.service');
+const userWalletService = require('../services/userWallet.service');
 const { getClientAppUrl } = require('../config/appUrl.config');
 const { renderAdminPage } = require('../utils/adminRender');
 
@@ -178,6 +180,12 @@ async function detail(req, res) {
     }
 
     const bookings = await bookingService.list({ userId: user.id });
+    const checkInHistory = await bookingCheckInService.listGuestHistory({
+      userId: user.id,
+      guestEmail: user.email,
+      limit: 30,
+    });
+    const walletSummary = await userWalletService.getWalletSummary(user.id, 20);
 
     renderAdminPage(req, res, 'admin/users/detail', {
       pageTitle: user.fullName,
@@ -189,6 +197,8 @@ async function detail(req, res) {
       ],
       user,
       bookings,
+      checkInHistory,
+      walletSummary,
       membershipTiers: MEMBERSHIP_TIERS,
       authProviders: AUTH_PROVIDERS,
       tierLabel,
@@ -262,6 +272,21 @@ async function update(req, res) {
   }
 }
 
+async function adjustWallet(req, res) {
+  try {
+    const actor = req.admin || req.user;
+    if (actor?.role !== 'super_admin' && actor?.role !== 'admin') {
+      return res.redirect(`/admin/users/${req.params.id}?flash=forbidden`);
+    }
+    const amountVnd = Number(req.body.amountVnd);
+    const note = req.body.note ? String(req.body.note).trim() : '';
+    await userWalletService.adminAdjust(req.params.id, amountVnd, note, actor.email);
+    res.redirect(`/admin/users/${req.params.id}?flash=wallet_updated`);
+  } catch (error) {
+    res.redirect(`/admin/users/${req.params.id}?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
 async function remove(req, res) {
   try {
     const actor = req.admin || req.user;
@@ -280,5 +305,6 @@ module.exports = {
   detail,
   editForm,
   update,
+  adjustWallet,
   remove,
 };

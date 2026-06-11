@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { PrismaClient } = require('../src/generated/prisma');
-const { PrismaMariaDb } = require('@prisma/adapter-mariadb');
+const { createMariaDbAdapter } = require('../src/config/mariadb.config');
 const {
   IMG,
   BRANCH_COUNTS,
@@ -11,9 +11,10 @@ const {
   SAMPLE_ROOMS,
   ROOM_TYPES,
   AMENITIES,
-  LEGACY_PROPERTY_SLUGS,
+  mapsSearchUrl,
 } = require('./seed-data/test-catalog');
 
+const { resetSeedData } = require('./reset-data');
 const { hashPassword } = require('../src/utils/hashPassword.util');
 const { buildDefaultTemplates } = require('../src/config/emailTemplate.defaults');
 const catalogCountService = require('../src/services/catalogCount.service');
@@ -21,8 +22,7 @@ const { buildDefaultSettings: buildHomeHeroDefaults } = require('../src/services
 const { buildDefaultSettings: buildHomePageDefaults } = require('../src/services/homePage.service');
 const { buildDefaultSettings: buildChatBotDefaults } = require('../src/services/chatBotConfig.service');
 
-const adapter = new PrismaMariaDb(process.env.DATABASE_URL);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({ adapter: createMariaDbAdapter() });
 
 const TEST_PASSWORD = 'Test@123';
 
@@ -45,11 +45,19 @@ const SAMPLE_ADMINS = [
   },
   {
     email: 'staff.dalat@cherryhouse.vn',
-    fullName: 'NV Lễ tân Đà Lạt Centro',
+    fullName: 'NV Lễ tân Đà Lạt',
     role: 'staff',
     password: 'Staff@123',
-    propertySlug: 'cherry-dalat-centro',
-    branchKey: 'cherry-dalat-centro:dl-centro-hxh',
+    propertySlug: 'cherry-house-da-lat',
+    branchKey: 'cherry-house-da-lat:dl-hxh',
+  },
+  {
+    email: 'staff.sapa@cherryhouse.vn',
+    fullName: 'NV Sa Pa',
+    role: 'staff',
+    password: 'Staff@123',
+    propertySlug: 'cherry-house-sapa',
+    branchKey: 'cherry-house-sapa:sp-cm',
   },
   {
     email: 'staff.hanoi@cherryhouse.vn',
@@ -200,25 +208,37 @@ const CONTACT_MESSAGES = [
     fullName: 'Nguyễn Minh Anh',
     email: 'minhanh@example.com',
     phone: '0988111222',
-    message: 'Cho mình hỏi Cherry Đà Lạt Centro còn phòng cuối tuần 15–16/6 không ạ?',
+    message: 'Cherry Đà Lạt còn phòng cuối tuần 15–16/6 không ạ?',
     status: 'new',
+    createdAt: new Date('2026-06-01T09:15:00'),
   },
   {
     fullName: 'Trần Quốc Bảo',
     email: 'guest@cherryhouse.vn',
     phone: '0901234567',
-    message: 'Mình muốn đặt nhóm 8 người tại Skyline Valley, có hỗ trợ ghép phòng không?',
+    message: 'Nhóm 8 người đi Sa Pa tháng 5 — có ghép phòng tại Cầu Mây không?',
     status: 'read',
-    readAt: new Date('2026-05-28T10:00:00'),
+    readAt: new Date('2026-05-22T10:00:00'),
+    createdAt: new Date('2026-05-21T14:30:00'),
   },
   {
     fullName: 'Lê Thị Hương',
     email: 'huong.le@company.vn',
     phone: null,
-    message: 'Cảm ơn Cherry House đã phản hồi nhanh. Mình sẽ book qua website.',
+    message: 'Cảm ơn đã tư vấn villa Vũng Tàu. Mình đã book tháng 5.',
     status: 'replied',
-    readAt: new Date('2026-05-20T09:00:00'),
-    adminNote: 'Đã gọi lại — khách book HXH-101',
+    readAt: new Date('2026-05-18T09:00:00'),
+    adminNote: 'Đã gọi lại — khách book VT-101 (tháng 5)',
+    createdAt: new Date('2026-05-17T11:20:00'),
+  },
+  {
+    fullName: 'Phạm Văn Đức',
+    email: 'duc.pham@corp.vn',
+    phone: '0919888777',
+    message: 'Hỏi giá phòng Deluxe tại Cherry House Hà Nội Hoàn Kiếm.',
+    status: 'read',
+    readAt: new Date('2026-05-08T16:00:00'),
+    createdAt: new Date('2026-05-08T08:45:00'),
   },
   {
     fullName: 'Spam Bot',
@@ -226,32 +246,15 @@ const CONTACT_MESSAGES = [
     phone: '0000000000',
     message: 'Quảng cáo không liên quan…',
     status: 'archived',
-    readAt: new Date('2026-04-01T08:00:00'),
+    readAt: new Date('2026-05-02T08:00:00'),
     adminNote: 'Spam — lưu trữ',
+    createdAt: new Date('2026-05-01T23:10:00'),
   },
 ];
 
 function branchesForProperty(property, propertyIndex) {
   const count = BRANCH_COUNTS[propertyIndex] ?? property.branches.length;
   return property.branches.slice(0, count);
-}
-
-async function wipeTransactionalAndLegacy() {
-  await prisma.payment.deleteMany();
-  await prisma.booking.deleteMany();
-  await prisma.contactMessage.deleteMany();
-  await prisma.roomTypeAmenity.deleteMany();
-
-  const newSlugs = new Set(PROPERTIES.map((p) => p.slug));
-  for (const slug of LEGACY_PROPERTY_SLUGS) {
-    if (!newSlugs.has(slug)) {
-      await prisma.property.deleteMany({ where: { slug } });
-    }
-  }
-
-  for (const row of PROPERTIES) {
-    await prisma.property.deleteMany({ where: { slug: row.slug } });
-  }
 }
 
 async function seedProperties() {
@@ -327,6 +330,7 @@ async function seedBranches(propertyIds) {
 
       branchByKey[`${row.slug}:${branch.code}`] = saved;
 
+      const googleMapsUrl = mapsSearchUrl(branch.address, row.city);
       await prisma.branchMapPin.create({
         data: {
           branchId: saved.id,
@@ -335,8 +339,8 @@ async function seedBranches(propertyIds) {
           zoom: 15,
           label: saved.name,
           pinBadge: 'CH',
-          pinInfo: saved.tagline,
-          googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+          pinInfo: branch.address,
+          googleMapsUrl,
           embedUrl: null,
         },
       });
@@ -379,10 +383,10 @@ async function seedAmenities(propertyIds, roomTypeBySlug) {
   }
 
   const propertyAmenityMap = {
-    'cherry-dalat-centro': ['wifi', 'parking', 'breakfast', 'ac'],
-    'cherry-dalat-pine-retreat': ['wifi', 'parking', 'breakfast', 'ac', 'kitchen'],
-    'cherry-dalat-skyline': ['wifi', 'parking', 'breakfast', 'ac', 'pool'],
+    'cherry-house-da-lat': ['wifi', 'parking', 'breakfast', 'ac'],
     'cherry-house-ha-noi': ['wifi', 'ac', 'kitchen', 'workspace'],
+    'cherry-house-sapa': ['wifi', 'parking', 'breakfast', 'ac'],
+    'cherry-villa-vung-tau': ['wifi', 'parking', 'pool', 'kitchen'],
   };
 
   for (const [slug, icons] of Object.entries(propertyAmenityMap)) {
@@ -549,7 +553,13 @@ async function seedEmailTemplates() {
 
 async function seedContactMessages() {
   for (const msg of CONTACT_MESSAGES) {
-    await prisma.contactMessage.create({ data: msg });
+    const { createdAt, ...data } = msg;
+    await prisma.contactMessage.create({
+      data: {
+        ...data,
+        ...(createdAt ? { createdAt } : {}),
+      },
+    });
   }
 }
 
@@ -672,9 +682,84 @@ async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {
     );
 
   const roomSpecs = [
+    // --- Tháng 5/2026 (lịch sử) ---
     {
-      propertySlug: 'cherry-dalat-centro',
-      branchCode: 'dl-centro-hxh',
+      propertySlug: 'cherry-house-da-lat',
+      branchCode: 'dl-hxh',
+      roomCode: 'HXH-103',
+      userId: guest?.id,
+      status: 'completed',
+      payment: { method: 'momo', status: 'paid' },
+      checkIn: '2026-05-05',
+      checkOut: '2026-05-07',
+      createdAt: '2026-05-01T10:00:00',
+      paidAt: '2026-05-01T10:05:00',
+    },
+    {
+      propertySlug: 'cherry-house-sapa',
+      branchCode: 'sp-cm',
+      roomCode: 'SPA-101',
+      userId: standard?.id,
+      status: 'completed',
+      payment: { method: 'card', status: 'paid' },
+      checkIn: '2026-05-12',
+      checkOut: '2026-05-14',
+      createdAt: '2026-05-08T14:00:00',
+      paidAt: '2026-05-08T14:10:00',
+    },
+    {
+      propertySlug: 'cherry-villa-vung-tau',
+      branchCode: 'vt-sea',
+      roomCode: 'VT-101',
+      userId: guest?.id,
+      status: 'completed',
+      payment: { method: 'bank', status: 'paid' },
+      checkIn: '2026-05-20',
+      checkOut: '2026-05-22',
+      promoCode: 'SAVE100K',
+      createdAt: '2026-05-15T09:30:00',
+      paidAt: '2026-05-15T09:45:00',
+    },
+    {
+      propertySlug: 'cherry-house-ha-noi',
+      branchCode: 'hn-hk',
+      roomCode: 'HK-102',
+      userId: null,
+      status: 'no_show',
+      payment: { method: 'momo', status: 'paid' },
+      checkIn: '2026-05-18',
+      checkOut: '2026-05-19',
+      createdAt: '2026-05-10T11:00:00',
+      paidAt: '2026-05-10T11:02:00',
+    },
+    {
+      propertySlug: 'cherry-house-sapa',
+      branchCode: 'sp-fan',
+      roomCode: 'FAN-102',
+      userId: standard?.id,
+      status: 'cancelled',
+      payment: null,
+      checkIn: '2026-05-25',
+      checkOut: '2026-05-27',
+      createdAt: '2026-05-20T16:00:00',
+    },
+    {
+      propertySlug: 'cherry-house-da-lat',
+      branchCode: 'dl-dt',
+      roomCode: 'DT-101',
+      userId: guest?.id,
+      status: 'cancelled',
+      payment: { method: 'momo', status: 'refunded' },
+      refundDemo: true,
+      checkIn: '2026-05-28',
+      checkOut: '2026-05-30',
+      createdAt: '2026-05-22T08:00:00',
+      paidAt: '2026-05-22T08:05:00',
+    },
+    // --- Tháng 6/2026 (hiện tại) ---
+    {
+      propertySlug: 'cherry-house-da-lat',
+      branchCode: 'dl-hxh',
       roomCode: 'HXH-101',
       userId: guest?.id,
       status: 'confirmed',
@@ -682,56 +767,54 @@ async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {
       checkIn: '2026-06-10',
       checkOut: '2026-06-12',
       promoCode: 'CHERRY10',
+      createdAt: '2026-06-01T12:00:00',
+      paidAt: '2026-06-01T12:03:00',
     },
     {
-      propertySlug: 'cherry-dalat-centro',
-      branchCode: 'dl-centro-hxh',
+      propertySlug: 'cherry-house-sapa',
+      branchCode: 'sp-cm',
+      roomCode: 'SPA-102',
+      userId: guest?.id,
+      status: 'confirmed',
+      payment: { method: 'card', status: 'paid' },
+      checkIn: '2026-07-15',
+      checkOut: '2026-07-17',
+      createdAt: '2026-06-01T14:00:00',
+      paidAt: '2026-06-01T14:05:00',
+    },
+    {
+      propertySlug: 'cherry-house-da-lat',
+      branchCode: 'dl-hxh',
       roomCode: 'HXH-102',
       userId: null,
       status: 'pending_payment',
       payment: { method: 'bank', status: 'pending' },
       checkIn: '2026-06-20',
       checkOut: '2026-06-21',
+      createdAt: '2026-06-02T15:00:00',
     },
     {
-      propertySlug: 'cherry-dalat-skyline',
-      branchCode: 'dl-sky-valley',
-      roomCode: 'SKY-101',
+      propertySlug: 'cherry-villa-vung-tau',
+      branchCode: 'vt-sea',
+      roomCode: 'VT-102',
       userId: standard?.id,
       status: 'checked_in',
       payment: { method: 'card', status: 'paid' },
-      checkIn: '2026-05-30',
-      checkOut: '2026-06-02',
+      checkIn: '2026-06-01',
+      checkOut: '2026-06-03',
+      createdAt: '2026-05-28T10:00:00',
+      paidAt: '2026-05-28T10:08:00',
     },
     {
       propertySlug: 'cherry-house-ha-noi',
-      branchCode: 'hn-hoankiem',
-      roomCode: 'HN-101',
+      branchCode: 'hn-hk',
+      roomCode: 'HK-101',
       userId: guest?.id,
-      status: 'completed',
-      payment: { method: 'wallet', status: 'paid' },
-      checkIn: '2026-04-01',
-      checkOut: '2026-04-03',
-    },
-    {
-      propertySlug: 'cherry-dalat-skyline',
-      branchCode: 'dl-sky-valley',
-      roomCode: 'SKY-102',
-      userId: standard?.id,
-      status: 'cancelled',
+      status: 'draft',
       payment: null,
-      checkIn: '2026-07-01',
-      checkOut: '2026-07-03',
-    },
-    {
-      propertySlug: 'cherry-dalat-centro',
-      branchCode: 'dl-centro-night',
-      roomCode: 'CD-101',
-      userId: null,
-      status: 'no_show',
-      payment: { method: 'momo', status: 'paid' },
-      checkIn: '2026-03-15',
-      checkOut: '2026-03-16',
+      checkIn: '2026-06-25',
+      checkOut: '2026-06-27',
+      createdAt: '2026-06-03T09:00:00',
     },
   ];
 
@@ -753,8 +836,14 @@ async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {
     const checkOut = new Date(spec.checkOut);
     const nights = Math.round((checkOut - checkIn) / (24 * 60 * 60 * 1000));
     const subtotal = dbRoom.priceVnd * nights;
-    const discount = spec.promoCode === 'CHERRY10' ? Math.round(subtotal * 0.1) : 0;
-    const total = subtotal - discount;
+    let discount = 0;
+    if (spec.promoCode === 'CHERRY10') discount = Math.round(subtotal * 0.1);
+    if (spec.promoCode === 'SAVE100K') discount = 100_000;
+    const total = Math.max(0, subtotal - discount);
+
+    const guestUser = spec.userId
+      ? [guest, standard].find((u) => u?.id === spec.userId)
+      : null;
 
     const booking = await prisma.booking.create({
       data: {
@@ -772,10 +861,10 @@ async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {
         nights,
         adults: 2,
         children: 0,
-        guestName: spec.userId ? guest?.fullName || 'Khách seed' : 'Khách walk-in',
-        guestPhone: '0909000000',
-        guestEmail: spec.userId ? guest?.email || 'guest@test.vn' : 'walkin@test.vn',
-        specialNote: i === 0 ? 'Muốn check-in sớm 13h (seed)' : null,
+        guestName: guestUser?.fullName || 'Khách walk-in',
+        guestPhone: guestUser?.phone || '0909000000',
+        guestEmail: guestUser?.email || 'walkin@test.vn',
+        specialNote: spec.status === 'confirmed' ? 'Muốn check-in sớm 13h (seed)' : null,
         pricePerNightVnd: dbRoom.priceVnd,
         subtotalVnd: subtotal,
         serviceFeeVnd: 0,
@@ -783,18 +872,39 @@ async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {
         totalVnd: total,
         promoCode: spec.promoCode || null,
         status: spec.status,
+        ...(spec.createdAt ? { createdAt: new Date(spec.createdAt) } : {}),
       },
     });
 
+    let paymentRow = null;
     if (spec.payment) {
-      await prisma.payment.create({
+      const paidAt = spec.paidAt ? new Date(spec.paidAt) : null;
+      paymentRow = await prisma.payment.create({
         data: {
           bookingId: booking.id,
           method: spec.payment.method,
           amountVnd: total,
           status: spec.payment.status,
-          providerRef: spec.payment.status === 'paid' ? `seed-pay-${booking.id}` : null,
-          paidAt: spec.payment.status === 'paid' ? new Date() : null,
+          providerRef: ['paid', 'refunded'].includes(spec.payment.status)
+            ? `seed-pay-${booking.id}`
+            : null,
+          paidAt: paidAt || (spec.payment.status === 'paid' ? new Date() : null),
+        },
+      });
+    }
+
+    if (spec.refundDemo && spec.userId && paymentRow?.status === 'refunded') {
+      await prisma.bookingRefund.create({
+        data: {
+          bookingId: booking.id,
+          userId: spec.userId,
+          refundPercent: 100,
+          refundAmountVnd: total,
+          policyCode: 'before_24h_full',
+          destination: 'wallet',
+          status: 'completed',
+          cancelledBy: 'user',
+          hoursBeforeCheckIn: 120,
         },
       });
     }
@@ -805,10 +915,69 @@ async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {
   return created;
 }
 
-async function main() {
-  console.log('Cherry House seed — bộ test 4 cơ sở (3 Đà Lạt + 1 Hà Nội)…');
+async function seedUserWallets(userByEmail) {
+  const guest = userByEmail['guest@cherryhouse.vn'];
+  if (!guest) return 0;
 
-  await wipeTransactionalAndLegacy();
+  const refundedBooking = await prisma.booking.findFirst({
+    where: { bookingCode: 'CH-SEED-006', userId: guest.id, status: 'cancelled' },
+    include: { payment: true },
+  });
+
+  const refundAmount = refundedBooking?.totalVnd ?? 0;
+  const openingBalance = 500_000 + refundAmount;
+
+  const wallet = await prisma.userWallet.upsert({
+    where: { userId: guest.id },
+    update: { balanceVnd: openingBalance },
+    create: { userId: guest.id, balanceVnd: openingBalance },
+  });
+
+  await prisma.walletTransaction.deleteMany({ where: { userId: guest.id } });
+
+  let balance = 0;
+  if (refundAmount > 0 && refundedBooking) {
+    balance = refundAmount;
+    await prisma.walletTransaction.create({
+      data: {
+        userId: guest.id,
+        amountVnd: refundAmount,
+        balanceAfterVnd: balance,
+        type: 'refund',
+        bookingId: refundedBooking.id,
+        note: `Hoàn tiền hủy ${refundedBooking.bookingCode}`,
+      },
+    });
+  }
+
+  const topUp = openingBalance - balance;
+  if (topUp > 0) {
+    balance += topUp;
+    await prisma.walletTransaction.create({
+      data: {
+        userId: guest.id,
+        amountVnd: topUp,
+        balanceAfterVnd: balance,
+        type: 'admin_adjust',
+        note: 'Seed — số dư khởi tạo demo',
+      },
+    });
+  }
+
+  if (wallet.balanceVnd !== balance) {
+    await prisma.userWallet.update({
+      where: { userId: guest.id },
+      data: { balanceVnd: balance },
+    });
+  }
+
+  return 1;
+}
+
+async function main() {
+  console.log('Cherry House seed — 4 cơ sở (Đà Lạt · Hà Nội · Sa Pa · Vũng Tàu)…');
+
+  await resetSeedData(prisma);
 
   const propertyIds = await seedProperties();
   await seedPropertyGalleries(propertyIds);
@@ -826,6 +995,7 @@ async function main() {
   await seedMediaLibrary();
   await seedSingletonCms();
   const bookingCount = await seedBookings(userByEmail, branchByKey, roomTypeBySlug);
+  const walletCount = await seedUserWallets(userByEmail);
 
   const totalBranches = Object.keys(branchByKey).length;
   const totalRooms = SAMPLE_ROOMS.length;
@@ -837,8 +1007,10 @@ async function main() {
       `${totalBranches} chi nhánh`,
       `${roomCount}/${totalRooms} phòng`,
       `${bookingCount} booking`,
+      `${walletCount} wallet`,
       `${SAMPLE_USERS.length} users`,
       `${SAMPLE_ADMINS.length} admins`,
+      'booking tháng 5+6',
       `${SAMPLE_PROMOS.length} promo`,
       `${CONTACT_MESSAGES.length} contact messages`,
     ].join(' · '),

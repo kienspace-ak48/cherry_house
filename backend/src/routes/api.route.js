@@ -35,6 +35,7 @@ const clientAuthRoute = require('./clientAuth.route');
 const seoRoute = require('./seo.route');
 const chatBotRoute = require('./chatBot.route');
 const contactRoute = require('./contact.route');
+const walletRoute = require('./wallet.route');
 const homeHeroRoute = require('./homeHero.route');
 const prisma = require('../config/prisma.config');
 const { isDbConnectionError } = require('../utils/http');
@@ -110,6 +111,8 @@ router.use('/users', userRoute);
 router.use('/promo-codes', promoCodeRoute);
 
 router.use('/bookings', bookingRoute);
+
+router.use('/wallet', walletRoute);
 
 router.use('/checkout', checkoutRoute);
 

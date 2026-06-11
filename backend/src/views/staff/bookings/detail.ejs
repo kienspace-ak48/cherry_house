@@ -39,6 +39,18 @@
         <% } %>
       </div>
     </div>
+    <% if (checkInRecord) { %>
+    <div class="staff-card">
+      <div class="staff-card-head">Chữ ký check-in</div>
+      <div class="staff-card-body">
+        <p class="staff-muted" style="font-size:13px;margin:0 0 10px;">
+          <%= formatDateTime(checkInRecord.checkedInAt) %>
+          <% if (checkInRecord.staffName) { %> · NV: <%= checkInRecord.staffName %><% } %>
+        </p>
+        <img src="<%= checkInRecord.signatureUrl %>" alt="Chữ ký khách" style="max-width:100%;border:1px solid var(--staff-border);border-radius:8px;background:#fff;">
+      </div>
+    </div>
+    <% } %>
   </div>
   <div>
     <% if (bookingQrDataUrl) { %>
@@ -60,10 +72,25 @@
         </form>
         <% } %>
         <% if (booking.status === 'confirmed' && isPaid) { %>
-        <form method="POST" action="/staff/bookings/<%= booking.id %>/check-in">
-          <input type="hidden" name="redirect" value="/staff/bookings/<%= booking.id %>">
-          <button type="submit" class="staff-btn staff-btn-primary" style="width:100%;justify-content:center;">Check-in khách</button>
-        </form>
+        <button type="button" id="checkin-start-btn" class="staff-btn staff-btn-primary" style="width:100%;justify-content:center;">
+          Bắt đầu check-in
+        </button>
+        <div id="checkin-signature-panel" class="staff-checkin-panel" hidden style="display:none;">
+          <p style="font-size:13px;margin:0 0 10px;text-align:center;color:var(--staff-muted);">
+            Khách ký tên vào ô bên dưới
+          </p>
+          <div class="staff-signature-wrap">
+            <canvas id="checkin-signature-canvas" width="320" height="180" aria-label="Vùng ký tên"></canvas>
+          </div>
+          <button type="button" id="checkin-signature-clear" class="staff-btn staff-btn-outline" style="width:100%;justify-content:center;margin-top:10px;">Xóa chữ ký</button>
+          <form id="checkin-signature-form" method="POST" action="/staff/bookings/<%= booking.id %>/check-in" style="margin-top:10px;">
+            <input type="hidden" name="redirect" value="/staff/bookings/<%= booking.id %>">
+            <input type="hidden" name="signatureDataUrl" id="checkin-signature-data" value="">
+            <button type="submit" class="staff-btn staff-btn-primary" style="width:100%;justify-content:center;">
+              Hoàn tất check-in
+            </button>
+          </form>
+        </div>
         <% } %>
         <% if (booking.status === 'checked_in') { %>
         <form method="POST" action="/staff/bookings/<%= booking.id %>/check-out">
@@ -75,3 +102,29 @@
     </div>
   </div>
 </div>
+
+<style>
+  .staff-checkin-panel {
+    border: 1px solid var(--staff-border);
+    border-radius: 10px;
+    padding: 14px;
+    background: #fff;
+  }
+  .staff-signature-wrap {
+    border: 2px dashed #a82e42;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    width: 100%;
+  }
+  #checkin-signature-canvas {
+    display: block;
+    width: 100%;
+    height: 180px;
+    touch-action: none;
+    cursor: crosshair;
+    background: #fff;
+  }
+</style>
+
+<script src="/staff/js/staff-checkin-signature.js"></script>

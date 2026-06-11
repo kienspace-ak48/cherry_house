@@ -573,6 +573,10 @@ function RoomDetailPage() {
 
             <div className="mt-12 rounded-2xl bg-surface-container/80 p-6 md:p-8">
               <h2 className="font-headline text-lg font-bold text-on-surface">Chính sách hủy phòng</h2>
+              <p className="mt-3 text-sm text-on-surface-variant">
+                Hủy trước <strong>24 giờ</strong> nhận phòng (14:00): hoàn <strong>100%</strong> vào ví Cherry House.
+                Hủy trong vòng 24 giờ: không hoàn tiền. Ví dùng cho đặt phòng tiếp theo.
+              </p>
               {detail.policyBullets.length ? (
                 <ul className="mt-4 list-inside list-disc space-y-2 text-sm leading-relaxed text-on-surface-variant">
                   {detail.policyBullets.map((line, i) => (

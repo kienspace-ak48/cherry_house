@@ -3,6 +3,7 @@ const { OCCUPYING_STATUSES } = require('./booking.constants');
 
 const bookingInclude = {
   payment: true,
+  refund: true,
   user: { select: { id: true, email: true, fullName: true } },
   room: { select: { id: true, code: true, branchId: true, roomTypeId: true } },
   property: { select: { id: true, slug: true, name: true } },

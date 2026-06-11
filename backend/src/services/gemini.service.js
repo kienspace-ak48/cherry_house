@@ -151,7 +151,15 @@ async function runWithTools(input) {
 
     if (!calls.length) {
       const text = extractText(parts);
-      return { reply: text || 'Xin lỗi, tôi chưa trả lời được. Bạn thử hỏi lại nhé.', toolsUsed };
+      const finishReason = candidate?.finishReason || null;
+      if (!text && finishReason) {
+        console.warn('[gemini] empty text, finishReason:', finishReason);
+      }
+      return {
+        reply: text || 'Xin lỗi, tôi chưa trả lời được. Bạn thử hỏi lại nhé.',
+        toolsUsed,
+        finishReason,
+      };
     }
 
     workingContents.push({
@@ -167,7 +175,7 @@ async function runWithTools(input) {
       } catch (error) {
         result = { error: error.message || 'Tool failed' };
       }
-      toolsUsed.push({ name: call.name, args: call.args });
+      toolsUsed.push({ name: call.name, args: call.args, result });
       responseParts.push({
         functionResponse: {
           name: call.name,
