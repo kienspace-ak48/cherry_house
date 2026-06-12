@@ -51,7 +51,42 @@ function resolveBackupPath(filename) {
   return full;
 }
 
-function runMysqldump(config, outPath) {
+/** Cache — MariaDB mysqldump không hỗ trợ --set-gtid-purged (chỉ MySQL GTID). */
+let mysqldumpSupportsGtidPurgedCache = null;
+
+function detectMysqldumpSupportsGtidPurged(mysqldumpBin) {
+  if (mysqldumpSupportsGtidPurgedCache !== null) {
+    return Promise.resolve(mysqldumpSupportsGtidPurgedCache);
+  }
+  if (process.env.MYSQLDUMP_SET_GTID_PURGED === 'true') {
+    mysqldumpSupportsGtidPurgedCache = true;
+    return Promise.resolve(true);
+  }
+  if (process.env.MYSQLDUMP_SET_GTID_PURGED === 'false') {
+    mysqldumpSupportsGtidPurgedCache = false;
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    const proc = spawn(mysqldumpBin, ['--help'], { windowsHide: true });
+    let out = '';
+    const append = (chunk) => {
+      out += chunk.toString();
+    };
+    proc.stdout.on('data', append);
+    proc.stderr.on('data', append);
+    proc.on('error', () => {
+      mysqldumpSupportsGtidPurgedCache = false;
+      resolve(false);
+    });
+    proc.on('close', () => {
+      mysqldumpSupportsGtidPurgedCache = /set-gtid-purged/i.test(out);
+      resolve(mysqldumpSupportsGtidPurgedCache);
+    });
+  });
+}
+
+async function runMysqldump(config, outPath) {
   const mysqldumpBin = process.env.MYSQLDUMP_PATH || 'mysqldump';
   const args = [
     `-h${config.host}`,
@@ -60,10 +95,13 @@ function runMysqldump(config, outPath) {
     '--single-transaction',
     '--routines',
     '--triggers',
-    '--set-gtid-purged=OFF',
-    `--result-file=${outPath}`,
-    config.database,
   ];
+
+  if (await detectMysqldumpSupportsGtidPurged(mysqldumpBin)) {
+    args.push('--set-gtid-purged=OFF');
+  }
+
+  args.push(`--result-file=${outPath}`, config.database);
 
   return new Promise((resolve, reject) => {
     const proc = spawn(mysqldumpBin, args, {

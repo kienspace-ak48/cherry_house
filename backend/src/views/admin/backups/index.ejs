@@ -29,7 +29,7 @@
   <div class="card-body small text-body-secondary">
     <ul class="mb-0">
       <li>File lưu tại server: <code>backend/backups/</code> — không public qua web.</li>
-      <li>Cần <code>mysqldump</code> trong PATH hoặc cấu hình <code>MYSQLDUMP_PATH</code> trong <code>.env</code>.</li>
+      <li>Cần <code>mysqldump</code> trong PATH hoặc <code>MYSQLDUMP_PATH</code> trong <code>.env</code> (MariaDB VPS: không cần <code>--set-gtid-purged</code>).</li>
       <li>Nên tải file về và lưu ngoài server; xóa bản cũ định kỳ để tiết kiệm dung lượng.</li>
     </ul>
   </div>
