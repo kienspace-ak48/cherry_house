@@ -22,6 +22,7 @@ import {
   getDiscoveryListHref,
   getRoomDetailHref,
   hasDateRange,
+  normalizeBookingSearchParams,
   parseBookingContext,
   resolveSearchDestination,
 } from '../../lib/bookingContext';
@@ -162,6 +163,11 @@ function BookingPage() {
   const viewMode = searchParams.get('view') === 'cards' ? 'cards' : 'picker';
 
   const [selectedRoomId, setSelectedRoomId] = useState(null);
+
+  useEffect(() => {
+    const { params, changed } = normalizeBookingSearchParams(searchParams);
+    if (changed) setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!context.property) {

@@ -43,7 +43,7 @@ function CancelBookingModal({ booking, preview, loading, error, onClose, onConfi
   if (!booking) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
       <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
         <h3 className="font-headline text-base font-bold text-on-surface">Hủy đặt phòng</h3>
         <p className="mt-2 text-sm text-on-surface-variant">
@@ -69,7 +69,7 @@ function CancelBookingModal({ booking, preview, loading, error, onClose, onConfi
           </button>
           <button
             type="button"
-            className="rounded-lg bg-error px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+            className="rounded-lg bg-error px-4 py-2 text-xs font-bold text-on-error shadow-sm transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={onConfirm}
             disabled={loading || !preview}
           >
@@ -163,7 +163,7 @@ function BookingCard({ booking, onCancelRequest }) {
           <button
             type="button"
             onClick={() => onCancelRequest?.(booking)}
-            className="inline-flex items-center gap-1 rounded-lg border border-error/40 bg-error/5 px-3 py-2 text-xs font-bold text-error"
+            className="inline-flex items-center gap-1 rounded-lg border border-error/35 bg-error-container px-3 py-2 text-xs font-bold text-error transition-colors hover:bg-error/10"
           >
             <span className="material-symbols-outlined text-[16px]">cancel</span>
             Hủy đặt phòng

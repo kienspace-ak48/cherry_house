@@ -28,7 +28,7 @@ function HomeWhySection({ eyebrow, title, description, items }) {
           <div className="grid divide-y divide-black/10 md:grid-cols-3 md:divide-x md:divide-y-0">
             {items.map((item, index) => (
               <div key={`${item.number}-${index}`} className="px-6 py-8 md:px-8 md:py-10">
-                <p className="font-headline text-5xl font-extrabold leading-none text-primary/20 md:text-6xl">
+                <p className="font-headline text-5xl font-extrabold leading-none text-primary/50 md:text-6xl">
                   {item.number}
                 </p>
                 <h3 className="mt-4 font-headline text-lg font-bold text-on-surface md:text-xl">

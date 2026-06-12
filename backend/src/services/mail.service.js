@@ -30,6 +30,46 @@ class MailService {
     return this.sendMail({ to, subject: rendered.subject, text: rendered.text, html: rendered.html });
   }
 
+  async sendPasswordResetOtp({ to, fullName, otpCode }) {
+    const vars = {
+      full_name: fullName,
+      guest_name: fullName,
+      otp_code: otpCode,
+    };
+    const rendered = await emailTemplateService.render(
+      EMAIL_TEMPLATE_KEYS.REGISTRATION_OTP,
+      vars,
+    );
+    return this.sendMail({
+      to,
+      subject: '[Cherry House] Mã đặt lại mật khẩu',
+      text: `${rendered.text}\n\nNếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.`,
+      html: rendered.html,
+    });
+  }
+
+  async sendEmailChangeOtp({ to, fullName, otpCode, newEmail }) {
+    const vars = {
+      full_name: fullName,
+      guest_name: fullName,
+      otp_code: otpCode,
+    };
+    const rendered = await emailTemplateService.render(
+      EMAIL_TEMPLATE_KEYS.REGISTRATION_OTP,
+      vars,
+    );
+    const subject = '[Cherry House] Mã xác thực đổi email';
+    const extra = newEmail
+      ? `\n\nBạn đang yêu cầu đổi email đăng nhập sang: ${newEmail}`
+      : '';
+    return this.sendMail({
+      to,
+      subject,
+      text: `${rendered.text}${extra}`,
+      html: rendered.html,
+    });
+  }
+
   async sendBookingConfirmation({
     to,
     guestName,

@@ -116,6 +116,42 @@ async function changePassword(req, res) {
   }
 }
 
+async function requestPasswordReset(req, res) {
+  try {
+    const data = await clientAuthService.requestPasswordReset(req.body);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+}
+
+async function confirmPasswordReset(req, res) {
+  try {
+    const data = await clientAuthService.confirmPasswordReset(req.body);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+}
+
+async function requestEmailChange(req, res) {
+  try {
+    const data = await clientAuthService.requestEmailChange(req.user.id, req.body);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+}
+
+async function confirmEmailChange(req, res) {
+  try {
+    const data = await clientAuthService.confirmEmailChange(req.user.id, req.body);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+}
+
 module.exports = {
   sendRegisterOtp,
   verifyRegisterOtp,
@@ -128,4 +164,8 @@ module.exports = {
   me,
   updateMe,
   changePassword,
+  requestPasswordReset,
+  confirmPasswordReset,
+  requestEmailChange,
+  confirmEmailChange,
 };

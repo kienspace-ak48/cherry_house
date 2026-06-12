@@ -2,6 +2,8 @@ const prisma = require('../config/prisma.config');
 const authService = require('./auth.service');
 const adminAuthService = require('./adminAuth.service');
 const registrationOtpRepository = require('../repositories/registrationOtp.repository');
+const emailChangeOtpRepository = require('../repositories/emailChangeOtp.repository');
+const passwordResetOtpRepository = require('../repositories/passwordResetOtp.repository');
 const mailService = require('../services/mail.service');
 const { hashPassword, comparePassword } = require('../utils/hashPassword.util');
 const { generateOtpCode, hashOtp, verifyOtp } = require('../utils/otp.util');
@@ -252,10 +254,23 @@ async function handleGoogleMobile(idToken) {
   return upsertUserFromGooglePayload(payload);
 }
 
+function formatClientUser(user) {
+  const safe = authService.sanitizeUser(user);
+  const profileMeta =
+    safe.profileMeta && typeof safe.profileMeta === 'object' && !Array.isArray(safe.profileMeta)
+      ? safe.profileMeta
+      : null;
+  return {
+    ...safe,
+    phone: safe.phone || null,
+    profileMeta,
+  };
+}
+
 async function getMe(userId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.isActive) throw httpError('User not found', 404);
-  return authService.sanitizeUser(user);
+  return formatClientUser(user);
 }
 
 const PROFILE_META_KEYS = ['gender', 'birthDay', 'birthMonth', 'birthYear', 'city'];
@@ -288,6 +303,10 @@ async function updateMe(userId, body = {}) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.isActive) throw httpError('User not found', 404);
 
+  if (body.email !== undefined) {
+    throw httpError('Không thể đổi email tại đây', 400);
+  }
+
   /** @type {Record<string, unknown>} */
   const data = {};
 
@@ -313,7 +332,220 @@ async function updateMe(userId, body = {}) {
     where: { id: userId },
     data,
   });
-  return authService.sanitizeUser(updated);
+  return formatClientUser(updated);
+}
+
+async function assertNewEmailAvailable(newEmail, currentUserId) {
+  const existingUser = await prisma.user.findUnique({ where: { email: newEmail } });
+  if (existingUser && existingUser.id !== currentUserId) {
+    throw httpError('Email đã được sử dụng', 409);
+  }
+  const adminExists = await adminAuthService.findByEmail(newEmail);
+  if (adminExists) throw httpError('Email đã được sử dụng', 409);
+  const pendingReg = await registrationOtpRepository.findByEmail(newEmail);
+  if (pendingReg) throw httpError('Email đang trong quá trình đăng ký', 409);
+}
+
+async function requestEmailChange(userId, body = {}) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.isActive) throw httpError('User not found', 404);
+
+  const newEmail = normalizeEmail(body.newEmail);
+  if (!EMAIL_RE.test(newEmail)) throw httpError('Email mới không hợp lệ');
+  if (newEmail === normalizeEmail(user.email)) {
+    throw httpError('Email mới phải khác email hiện tại', 400);
+  }
+
+  await assertNewEmailAvailable(newEmail, userId);
+
+  const isLocal = user.authProvider === 'local' && user.passwordHash;
+  if (isLocal) {
+    const currentPassword = String(body.currentPassword || '');
+    if (!currentPassword) throw httpError('Vui lòng nhập mật khẩu hiện tại', 400);
+    const valid = await comparePassword(currentPassword, user.passwordHash);
+    if (!valid) throw httpError('Mật khẩu hiện tại không đúng', 400);
+  }
+
+  const otpCode = generateOtpCode();
+  const otpHash = await hashOtp(otpCode);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await emailChangeOtpRepository.upsertByUserId({
+    userId,
+    newEmail,
+    otpHash,
+    expiresAt,
+    attempts: 0,
+  });
+
+  const mailResult = await mailService.sendEmailChangeOtp({
+    to: user.email,
+    fullName: user.fullName,
+    otpCode,
+    newEmail,
+  });
+
+  const debugOtp = process.env.AUTH_DEBUG_OTP === 'true' ? otpCode : undefined;
+
+  if (!mailResult.success && !debugOtp) {
+    throw httpError('Không gửi được email OTP. Kiểm tra cấu hình GMAIL trên server.', 503);
+  }
+
+  return {
+    currentEmail: user.email,
+    newEmail,
+    expiresInMinutes: OTP_TTL_MS / 60000,
+    expiresAt: expiresAt.toISOString(),
+    message: 'Mã OTP đã gửi tới email hiện tại của bạn',
+    debugOtp,
+  };
+}
+
+async function confirmEmailChange(userId, body = {}) {
+  const otp = String(body.otp || '').trim();
+  if (!/^\d{6}$/.test(otp)) throw httpError('Mã OTP phải gồm 6 chữ số');
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.isActive) throw httpError('User not found', 404);
+
+  const record = await emailChangeOtpRepository.findByUserId(userId);
+  if (!record) {
+    throw httpError('Chưa có yêu cầu đổi email. Vui lòng bắt đầu lại.', 404);
+  }
+
+  if (record.expiresAt < new Date()) {
+    await emailChangeOtpRepository.removeByUserId(userId);
+    throw httpError('Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.', 410);
+  }
+
+  if (record.attempts >= MAX_OTP_ATTEMPTS) {
+    await emailChangeOtpRepository.removeByUserId(userId);
+    throw httpError('Nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới.', 429);
+  }
+
+  const valid = await verifyOtp(otp, record.otpHash);
+  if (!valid) {
+    await emailChangeOtpRepository.incrementAttempts(record.id, record.attempts + 1);
+    throw httpError('Mã OTP không đúng', 400);
+  }
+
+  const newEmail = normalizeEmail(record.newEmail);
+  await assertNewEmailAvailable(newEmail, userId);
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      email: newEmail,
+      emailVerified: true,
+    },
+  });
+
+  await emailChangeOtpRepository.removeByUserId(userId);
+  return formatClientUser(updated);
+}
+
+const PASSWORD_RESET_GENERIC_MSG =
+  'Nếu email tồn tại và là tài khoản đăng ký bằng email, mã OTP đã được gửi.';
+
+async function requestPasswordReset(body = {}) {
+  const email = normalizeEmail(body.email);
+  if (!EMAIL_RE.test(email)) throw httpError('Email không hợp lệ');
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  const canReset =
+    user
+    && user.isActive
+    && user.authProvider === 'local'
+    && user.passwordHash;
+
+  if (!canReset) {
+    return {
+      email,
+      message: PASSWORD_RESET_GENERIC_MSG,
+    };
+  }
+
+  const otpCode = generateOtpCode();
+  const otpHash = await hashOtp(otpCode);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await passwordResetOtpRepository.upsert({
+    email,
+    otpHash,
+    expiresAt,
+    attempts: 0,
+  });
+
+  const mailResult = await mailService.sendPasswordResetOtp({
+    to: email,
+    fullName: user.fullName,
+    otpCode,
+  });
+
+  const debugOtp = process.env.AUTH_DEBUG_OTP === 'true' ? otpCode : undefined;
+
+  if (!mailResult.success && !debugOtp) {
+    throw httpError('Không gửi được email OTP. Kiểm tra cấu hình GMAIL trên server.', 503);
+  }
+
+  return {
+    email,
+    expiresInMinutes: OTP_TTL_MS / 60000,
+    expiresAt: expiresAt.toISOString(),
+    message: PASSWORD_RESET_GENERIC_MSG,
+    debugOtp,
+  };
+}
+
+async function confirmPasswordReset(body = {}) {
+  const email = normalizeEmail(body.email);
+  const otp = String(body.otp || '').trim();
+  const newPassword = String(body.newPassword || '');
+
+  if (!EMAIL_RE.test(email)) throw httpError('Email không hợp lệ');
+  if (!/^\d{6}$/.test(otp)) throw httpError('Mã OTP phải gồm 6 chữ số');
+  if (!newPassword || newPassword.length < 6) {
+    throw httpError('Mật khẩu mới tối thiểu 6 ký tự');
+  }
+
+  const record = await passwordResetOtpRepository.findByEmail(email);
+  if (!record) {
+    throw httpError('Chưa có yêu cầu đặt lại mật khẩu. Vui lòng gửi lại OTP.', 404);
+  }
+
+  if (record.expiresAt < new Date()) {
+    await passwordResetOtpRepository.removeByEmail(email);
+    throw httpError('Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.', 410);
+  }
+
+  if (record.attempts >= MAX_OTP_ATTEMPTS) {
+    await passwordResetOtpRepository.removeByEmail(email);
+    throw httpError('Nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới.', 429);
+  }
+
+  const valid = await verifyOtp(otp, record.otpHash);
+  if (!valid) {
+    await passwordResetOtpRepository.incrementAttempts(record.id, record.attempts + 1);
+    throw httpError('Mã OTP không đúng', 400);
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.isActive || user.authProvider !== 'local' || !user.passwordHash) {
+    await passwordResetOtpRepository.removeByEmail(email);
+    throw httpError('Không thể đặt lại mật khẩu cho tài khoản này', 400);
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+
+  await passwordResetOtpRepository.removeByEmail(email);
+
+  return {
+    ok: true,
+    message: 'Đã cập nhật mật khẩu. Bạn có thể đăng nhập.',
+  };
 }
 
 async function changePassword(userId, body = {}) {
@@ -356,5 +588,9 @@ module.exports = {
   getMe,
   updateMe,
   changePassword,
+  requestEmailChange,
+  confirmEmailChange,
+  requestPasswordReset,
+  confirmPasswordReset,
   getFrontendUrl,
 };

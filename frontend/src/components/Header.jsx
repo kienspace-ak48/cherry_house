@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
 import { DEFAULT_HEADER_NAV_LINKS } from '../constants/headerNavLinks';
 import { getHeaderBookingHref } from '../lib/bookingContext';
 import { getClientUser, isClientLoggedIn } from '../lib/authStorage';
 import ProfileAvatar from './profile/ProfileAvatar';
+import {
+  buildLoginHref,
+  buildRegisterHref,
+  getEffectiveAuthNextPath,
+  isAuthResumeRoute,
+} from '../lib/authRedirect';
 
 const linkClass = (isActive) =>
   [
@@ -40,11 +46,17 @@ function isNavItemActive(location, item) {
 function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const loggedIn = isClientLoggedIn();
   const clientUser = getClientUser();
 
   const closeMenu = () => setMenuOpen(false);
   const bookingHref = getHeaderBookingHref();
+  const authNextPath = isAuthResumeRoute(location.pathname)
+    ? getEffectiveAuthNextPath(searchParams, { allowStash: true })
+    : null;
+  const loginHref = authNextPath ? buildLoginHref(authNextPath) : '/login';
+  const registerHref = authNextPath ? buildRegisterHref(authNextPath) : '/register';
 
   return (
     <>
@@ -94,6 +106,7 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
               >
                 <ProfileAvatar
                   fullName={clientUser?.fullName}
+                  email={clientUser?.email}
                   avatarUrl={clientUser?.avatarUrl}
                   size="xs"
                 />
@@ -101,14 +114,14 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
             ) : (
               <>
                 <Link
-                  to="/login"
+                  to={loginHref}
                   className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-on-surface-variant transition-all hover:text-primary lg:block"
                   onClick={closeMenu}
                 >
                   Đăng nhập
                 </Link>
                 <Link
-                  to="/register"
+                  to={registerHref}
                   className="hidden rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:brightness-110 lg:block"
                   onClick={closeMenu}
                 >
@@ -178,6 +191,7 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
                     >
                       <ProfileAvatar
                         fullName={clientUser?.fullName}
+                        email={clientUser?.email}
                         avatarUrl={clientUser?.avatarUrl}
                         size="xs"
                       />
@@ -188,7 +202,7 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
                   <>
                     <li>
                       <NavLink
-                        to="/login"
+                        to={loginHref}
                         className={() =>
                           linkClass(isNavItemActive(location, { to: '/login' }))
                         }
@@ -199,7 +213,7 @@ function Header({ navLinks = DEFAULT_HEADER_NAV_LINKS }) {
                     </li>
                     <li>
                       <NavLink
-                        to="/register"
+                        to={registerHref}
                         className={() =>
                           linkClass(isNavItemActive(location, { to: '/register' }))
                         }

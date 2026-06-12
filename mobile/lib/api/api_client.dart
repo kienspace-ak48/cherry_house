@@ -55,6 +55,14 @@ class ApiClient {
     return _request('POST', path, body: body, retryOn401: retryOn401);
   }
 
+  Future<Map<String, dynamic>> patch(
+    String path,
+    Map<String, dynamic> body, {
+    bool retryOn401 = true,
+  }) async {
+    return _request('PATCH', path, body: body, retryOn401: retryOn401);
+  }
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
@@ -97,6 +105,8 @@ class ApiClient {
         return _client.get(uri, headers: headers);
       case 'POST':
         return _client.post(uri, headers: headers, body: jsonEncode(body ?? {}));
+      case 'PATCH':
+        return _client.patch(uri, headers: headers, body: jsonEncode(body ?? {}));
       default:
         throw ApiException('Unsupported method $method');
     }

@@ -109,6 +109,7 @@ class _LoggedInProfile extends StatelessWidget {
               children: [
                 ProfileAvatar(
                   fullName: user.fullName,
+                  email: user.email,
                   avatarUrl: user.avatarUrl,
                   radius: 32,
                 ),

@@ -54,20 +54,20 @@ function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <a
+                <Link
                   className="text-sm text-stone-500 transition-colors hover:text-primary"
-                  href="#"
+                  to="/privacy"
                 >
                   Chính sách bảo mật
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   className="text-sm text-stone-500 transition-colors hover:text-primary"
-                  href="#"
+                  to="/terms"
                 >
                   Điều khoản sử dụng
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -82,10 +82,6 @@ function Footer() {
         <p className="text-sm text-stone-500">
           © {new Date().getFullYear()} Cherry House — Homestay &amp; Mini Stay Việt Nam.
         </p>
-        <div className="flex gap-8">
-          <span className="text-xs tracking-widest text-stone-400 uppercase">VN</span>
-          <span className="text-xs tracking-widest text-stone-400 uppercase">EN</span>
-        </div>
       </div>
     </footer>
   );

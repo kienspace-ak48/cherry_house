@@ -11,6 +11,7 @@ export function resolvePageKeyFromPath(pathname) {
   if (path === '/properties') return 'properties';
   if (path === '/booking' || path === '/rooms') return 'booking';
   if (path === '/login') return 'login';
+  if (path === '/forgot-password' || path === '/reset-password') return 'login';
   if (path === '/register' || path === '/register/email') return 'register';
   if (path === '/profile') return 'profile';
   if (path === '/checkout') return 'checkout';

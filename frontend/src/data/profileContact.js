@@ -49,23 +49,17 @@ export function readProfileContact() {
   if (typeof window === 'undefined') return { ...EMPTY_CONTACT };
 
   const authUser = getClientUser();
-  const authBase = contactFromUser(authUser);
+  if (authUser) return contactFromUser(authUser);
+
   const stored = safeParse(window.localStorage.getItem(STORAGE_KEY));
-  const useStored = Object.keys(stored).length > 0 && !(authUser && isLegacyDemoContact(stored));
+  if (Object.keys(stored).length === 0 || isLegacyDemoContact(stored)) {
+    return { ...EMPTY_CONTACT };
+  }
 
   return {
-    fullName:
-      (useStored && typeof stored.fullName === 'string' && stored.fullName.trim())
-        ? stored.fullName.trim()
-        : authBase.fullName,
-    phone:
-      (useStored && typeof stored.phone === 'string' && stored.phone.trim())
-        ? stored.phone.trim()
-        : authBase.phone,
-    email: authBase.email
-      || (useStored && typeof stored.email === 'string' && stored.email.trim()
-        ? stored.email.trim()
-        : ''),
+    fullName: typeof stored.fullName === 'string' ? stored.fullName.trim() : '',
+    phone: typeof stored.phone === 'string' ? stored.phone.trim() : '',
+    email: typeof stored.email === 'string' ? stored.email.trim() : '',
   };
 }
 

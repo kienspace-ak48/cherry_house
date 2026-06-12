@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_USER_AVATAR_URL } from '../../constants/defaultUserAvatar';
+import {
+  getAvatarColor,
+  getAvatarInitial,
+  isPlaceholderAvatarUrl,
+} from '../../lib/userAvatar';
 import { resolveMediaUrl } from '../../lib/resolveMediaUrl';
 
-function initialsFromFullName(fullName) {
-  const p = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-  if (p.length >= 2) return `${p[0][0] ?? ''}${p[p.length - 1][0] ?? ''}`.toUpperCase();
-  const s = String(fullName || '').trim();
-  return (s.slice(0, 2) || 'CH').toUpperCase();
-}
-
-export default function ProfileAvatar({ fullName, avatarUrl, size = 'md', className = '' }) {
-  const resolvedAvatar = avatarUrl ? resolveMediaUrl(avatarUrl) : '';
-  const [imgSrc, setImgSrc] = useState(resolvedAvatar || DEFAULT_USER_AVATAR_URL);
+/**
+ * @param {{ fullName?: string; avatarUrl?: string; email?: string; size?: 'xs'|'sm'|'md'|'lg'; className?: string }} props
+ */
+export default function ProfileAvatar({
+  fullName,
+  avatarUrl,
+  email,
+  size = 'md',
+  className = '',
+}) {
+  const seed = String(fullName || '').trim() || String(email || '').trim();
+  const customSrc = isPlaceholderAvatarUrl(avatarUrl) ? '' : resolveMediaUrl(avatarUrl);
+  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
-    setImgSrc(resolvedAvatar || DEFAULT_USER_AVATAR_URL);
-  }, [resolvedAvatar]);
+    setImgFailed(false);
+  }, [customSrc]);
 
   const sizeClass =
     size === 'lg'
@@ -26,23 +33,36 @@ export default function ProfileAvatar({ fullName, avatarUrl, size = 'md', classN
           ? 'h-10 w-10 text-sm'
           : 'h-10 w-10 text-sm';
 
-  const ringClass =
-    size === 'lg' ? 'ring-2 ring-primary/15' : 'ring-2 ring-primary/15';
+  const ringClass = 'ring-2 ring-primary/15';
+
+  if (!customSrc || imgFailed) {
+    return (
+      <div
+        className={[
+          sizeClass,
+          'flex shrink-0 items-center justify-center rounded-full font-headline font-bold text-white',
+          ringClass,
+          className,
+        ].join(' ')}
+        style={{ backgroundColor: getAvatarColor(seed) }}
+        title={fullName || seed}
+        aria-label={fullName ? `Avatar ${fullName}` : 'Avatar'}
+      >
+        {getAvatarInitial(fullName || seed)}
+      </div>
+    );
+  }
 
   return (
     <img
-      src={imgSrc}
+      src={customSrc}
       alt={fullName || 'Avatar'}
       referrerPolicy="no-referrer"
-      title={fullName || initialsFromFullName(fullName)}
-      onError={() => {
-        if (imgSrc !== DEFAULT_USER_AVATAR_URL) {
-          setImgSrc(DEFAULT_USER_AVATAR_URL);
-        }
-      }}
+      title={fullName || ''}
+      onError={() => setImgFailed(true)}
       className={[
         sizeClass,
-        'shrink-0 rounded-full object-cover bg-primary/5',
+        'shrink-0 rounded-full object-cover bg-surface-container-high',
         ringClass,
         className,
       ].join(' ')}

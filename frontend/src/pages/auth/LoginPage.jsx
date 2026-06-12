@@ -1,32 +1,35 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { loginClient, startGoogleRegister } from '../../api/authApi';
 import { isClientLoggedIn } from '../../lib/authStorage';
 import {
   buildRegisterHref,
-  getAuthNextPath,
+  getEffectiveAuthNextPath,
   isCheckoutReturnPath,
-  resolveAfterAuthPath,
+  navigateAfterAuth,
+  stashAuthNextPath,
 } from '../../lib/authRedirect';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const passwordResetOk = location.state?.passwordReset === true;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const sessionExpired = searchParams.get('session') === 'expired';
-  const nextPath = getAuthNextPath(searchParams);
+  const nextPath = getEffectiveAuthNextPath(searchParams, { allowStash: true });
   const returningToCheckout = isCheckoutReturnPath(nextPath);
 
-  function resolveAfterLoginPath() {
-    return resolveAfterAuthPath(nextPath);
-  }
+  useEffect(() => {
+    if (nextPath) stashAuthNextPath(nextPath);
+  }, [nextPath]);
 
   useEffect(() => {
-    if (isClientLoggedIn()) navigate(resolveAfterLoginPath(), { replace: true });
+    if (isClientLoggedIn()) navigateAfterAuth(navigate, nextPath, { replace: true });
   }, [navigate, nextPath]);
 
   async function handleSubmit(e) {
@@ -35,7 +38,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginClient({ email: email.trim(), password });
-      navigate(resolveAfterLoginPath(), { replace: true });
+      navigateAfterAuth(navigate, nextPath, { replace: true });
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại');
     } finally {
@@ -63,6 +66,12 @@ export default function LoginPage() {
         </>
       }
     >
+      {passwordResetOk ? (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Đã đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.
+        </div>
+      ) : null}
+
       {sessionExpired ? (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.
@@ -91,9 +100,17 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="password">
-            Mật khẩu
-          </label>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <label className="text-xs font-semibold text-on-surface" htmlFor="password">
+              Mật khẩu
+            </label>
+            <Link
+              to={nextPath ? `/forgot-password?next=${encodeURIComponent(nextPath)}` : '/forgot-password'}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
           <input
             id="password"
             type="password"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
 import { isClientLoggedIn } from '../lib/authStorage';
 import {
@@ -9,6 +9,7 @@ import {
   updateClientProfile,
 } from '../api/authApi';
 import { fetchProvinces } from '../api/geoApi';
+import ChangeEmailModal from '../components/profile/ChangeEmailModal';
 import ProfileAvatar from '../components/profile/ProfileAvatar';
 import ProfileBookingsSection from '../components/profile/ProfileBookingsSection';
 import ProfileWalletSection from '../components/profile/ProfileWalletSection';
@@ -45,10 +46,10 @@ const MEMBERSHIP_LABELS = {
 const INITIAL_FORM = {
   fullName: '',
   phone: '',
-  gender: 'Nam',
-  day: '12',
-  month: '4',
-  year: '1992',
+  gender: '',
+  day: '',
+  month: '',
+  year: '',
   city: '',
 };
 
@@ -57,10 +58,10 @@ function profileFormFromUser(data) {
   return {
     fullName: data?.fullName || '',
     phone: data?.phone || '',
-    gender: meta.gender || 'Nam',
-    day: meta.birthDay || '12',
-    month: meta.birthMonth || '4',
-    year: meta.birthYear || '1992',
+    gender: meta.gender || '',
+    day: meta.birthDay || '',
+    month: meta.birthMonth || '',
+    year: meta.birthYear || '',
     city: meta.city || '',
   };
 }
@@ -102,6 +103,7 @@ function ProfileOverviewSection({
         <div className="flex justify-end md:flex-col md:items-end md:justify-center">
           <ProfileAvatar
             fullName={profileContact.fullName}
+            email={profileContact.email}
             avatarUrl={profileContact.avatarUrl}
             size="lg"
           />
@@ -230,7 +232,11 @@ function SidebarItem({ item, active, onSelect }) {
 
 function ProfilePage() {
   const navigate = useNavigate();
-  const [section, setSection] = useState('overview');
+  const location = useLocation();
+  const [section, setSection] = useState(() => {
+    const open = location.state?.openSection;
+    return open === 'password' || open === 'account' ? open : 'overview';
+  });
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -239,6 +245,8 @@ function ProfilePage() {
   const [saveError, setSaveError] = useState('');
   const [saveOk, setSaveOk] = useState(false);
   const [provinces, setProvinces] = useState([]);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
+  const [emailChangeOk, setEmailChangeOk] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,6 +331,7 @@ function ProfilePage() {
                 <div className="mb-3 flex items-center gap-3">
                   <ProfileAvatar
                     fullName={profileContact.fullName}
+                    email={profileContact.email}
                     avatarUrl={profileContact.avatarUrl}
                     size="sm"
                   />
@@ -411,7 +420,11 @@ function ProfilePage() {
                 onViewBookings={() => setSection('bookings')}
               />
             ) : mainTab === 'password' ? (
-              <PasswordSection authProvider={user?.authProvider} />
+              <PasswordSection
+                authProvider={user?.authProvider}
+                userEmail={user?.email}
+                passwordResetOk={location.state?.passwordResetOk === true}
+              />
             ) : (
               <>
                 <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
@@ -437,6 +450,8 @@ function ProfilePage() {
                         id="fullName"
                         className="w-full rounded-lg border border-outline-variant px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary"
                         type="text"
+                        required
+                        minLength={2}
                         value={form.fullName}
                         onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
                       />
@@ -446,14 +461,50 @@ function ProfilePage() {
                     </div>
 
                     <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="email">
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        readOnly
+                        disabled
+                        value={profileContact.email}
+                        className="w-full cursor-not-allowed rounded-lg border border-outline-variant/60 bg-surface-container-low px-3 py-2.5 text-sm text-on-surface-variant outline-none"
+                      />
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmailChangeOk(false);
+                            setChangeEmailOpen(true);
+                          }}
+                          className="text-xs font-bold text-primary hover:underline"
+                        >
+                          Đổi email
+                        </button>
+                        <span className="text-[11px] text-on-surface-variant">
+                          OTP sẽ gửi tới email hiện tại để xác minh.
+                        </span>
+                      </div>
+                      {emailChangeOk ? (
+                        <p className="mt-2 text-[11px] font-medium text-emerald-700">
+                          Đã cập nhật email đăng nhập.
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div>
                       <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="phone">
-                        Số điện thoại
+                        Số điện thoại{' '}
+                        <span className="font-normal text-on-surface-variant">(tuỳ chọn)</span>
                       </label>
                       <input
                         id="phone"
                         className="w-full rounded-lg border border-outline-variant px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary"
                         type="tel"
                         autoComplete="tel"
+                        placeholder="Chưa cập nhật — nhập nếu bạn muốn"
                         value={form.phone}
                         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                       />
@@ -467,6 +518,7 @@ function ProfilePage() {
                           value={form.gender}
                           onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
                         >
+                          <option value="">— Chọn —</option>
                           <option>Nam</option>
                           <option>Nữ</option>
                           <option>Khác</option>
@@ -479,6 +531,7 @@ function ProfilePage() {
                           value={form.day}
                           onChange={(e) => setForm((f) => ({ ...f, day: e.target.value }))}
                         >
+                          <option value="">—</option>
                           {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
                             <option key={d} value={d}>
                               {d}
@@ -493,6 +546,7 @@ function ProfilePage() {
                           value={form.month}
                           onChange={(e) => setForm((f) => ({ ...f, month: e.target.value }))}
                         >
+                          <option value="">—</option>
                           {MONTHS.map((m, i) => (
                             <option key={m} value={String(i + 1)}>
                               {m}
@@ -507,6 +561,7 @@ function ProfilePage() {
                           value={form.year}
                           onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
                         >
+                          <option value="">—</option>
                           {YEARS_BIRTH.map((y) => (
                             <option key={y} value={y}>
                               {y}
@@ -557,7 +612,7 @@ function ProfilePage() {
                           try {
                             const updated = await updateClientProfile({
                               fullName: form.fullName.trim(),
-                              phone: form.phone.trim() || null,
+                              phone: form.phone.trim() ? form.phone.trim() : null,
                               profileMeta: {
                                 gender: form.gender,
                                 birthDay: form.day,
@@ -580,61 +635,6 @@ function ProfilePage() {
                       >
                         {saving ? 'Đang lưu...' : 'Lưu'}
                       </button>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
-                  <div className="p-5 md:p-6">
-                    <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                      <div>
-                        <h3 className="font-headline text-base font-bold text-on-surface">Email</h3>
-                        <p className="mt-0.5 text-[11px] text-on-surface-variant">Chỉ có thể sử dụng tối đa 3 email</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/5"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">add</span>
-                        Thêm email
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-surface-container-low/50 p-3">
-                      <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-on-surface">{profileContact.email}</span>
-                        <span className="shrink-0 rounded bg-tertiary-container/10 px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
-                          Nơi nhận thông báo
-                        </span>
-                      </div>
-                      <span className="material-symbols-outlined shrink-0 cursor-pointer text-on-surface-variant">
-                        more_vert
-                      </span>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
-                  <div className="p-5 md:p-6">
-                    <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                      <div>
-                        <h3 className="font-headline text-base font-bold text-on-surface">Số di động</h3>
-                        <p className="mt-0.5 text-[11px] text-on-surface-variant">Chỉ có thể sử dụng tối đa 3 số di động</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/5"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">add</span>
-                        Thêm số di động
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-surface-container-low/50 p-3">
-                      <span className="text-sm font-semibold text-on-surface">
-                        {profileContact.phone || '—'}
-                      </span>
-                      <span className="material-symbols-outlined cursor-pointer text-on-surface-variant">
-                        more_vert
-                      </span>
                     </div>
                   </div>
                 </section>
@@ -684,6 +684,20 @@ function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <ChangeEmailModal
+        open={changeEmailOpen}
+        currentEmail={profileContact.email}
+        authProvider={user?.authProvider}
+        onClose={() => setChangeEmailOpen(false)}
+        onSuccess={(updated) => {
+          setUser(updated);
+          const nextForm = profileFormFromUser(updated);
+          setForm(nextForm);
+          setFormBaseline(nextForm);
+          setEmailChangeOk(true);
+        }}
+      />
     </div>
   );
 }
@@ -708,7 +722,7 @@ function ProfilePlaceholderCard({ title }) {
   );
 }
 
-function PasswordSection({ authProvider }) {
+function PasswordSection({ authProvider, userEmail, passwordResetOk }) {
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -739,20 +753,38 @@ function PasswordSection({ authProvider }) {
         {error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         ) : null}
-        {ok ? (
+        {ok || passwordResetOk ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Đã cập nhật mật khẩu.
+            {passwordResetOk && !ok
+              ? 'Đã đặt lại mật khẩu bằng OTP. Bạn có thể đăng nhập lại trên thiết bị khác nếu cần.'
+              : 'Đã cập nhật mật khẩu.'}
           </div>
         ) : null}
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-on-surface">Mật khẩu hiện tại</label>
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <label className="text-xs font-semibold text-on-surface" htmlFor="profile-current-password">
+              Mật khẩu hiện tại
+            </label>
+            {userEmail ? (
+              <Link
+                to={`/forgot-password?from=profile&email=${encodeURIComponent(userEmail)}`}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Quên mật khẩu?
+              </Link>
+            ) : null}
+          </div>
           <input
+            id="profile-current-password"
             type="password"
             autoComplete="current-password"
             className="w-full rounded-lg border border-outline-variant px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary"
             value={pwd.current}
             onChange={(e) => setPwd((p) => ({ ...p, current: e.target.value }))}
           />
+          <p className="mt-1.5 text-[11px] leading-snug text-on-surface-variant">
+            Không nhớ mật khẩu? Dùng OTP gửi về email để đặt lại.
+          </p>
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-on-surface">Mật khẩu mới</label>

@@ -6,20 +6,25 @@ import { isClientLoggedIn } from '../../lib/authStorage';
 import {
   buildLoginHref,
   buildRegisterEmailHref,
-  getAuthNextPath,
+  getEffectiveAuthNextPath,
   isCheckoutReturnPath,
-  resolveAfterAuthPath,
+  navigateAfterAuth,
+  stashAuthNextPath,
 } from '../../lib/authRedirect';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const error = searchParams.get('error');
-  const nextPath = getAuthNextPath(searchParams);
+  const nextPath = getEffectiveAuthNextPath(searchParams, { allowStash: true });
   const returningToCheckout = isCheckoutReturnPath(nextPath);
 
   useEffect(() => {
-    if (isClientLoggedIn()) navigate(resolveAfterAuthPath(nextPath), { replace: true });
+    if (nextPath) stashAuthNextPath(nextPath);
+  }, [nextPath]);
+
+  useEffect(() => {
+    if (isClientLoggedIn()) navigateAfterAuth(navigate, nextPath, { replace: true });
   }, [navigate, nextPath]);
 
   return (

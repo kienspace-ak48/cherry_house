@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { saveClientSession } from '../../lib/authStorage';
 import { syncProfileContactFromUser } from '../../data/profileContact';
-import { consumeAuthNextPath, resolveAfterAuthPath } from '../../lib/authRedirect';
+import { consumeAuthNextPath, navigateAfterAuth } from '../../lib/authRedirect';
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export default function AuthCallbackPage() {
       const user = JSON.parse(userRaw);
       saveClientSession({ token, refreshToken: refreshToken || undefined, user });
       syncProfileContactFromUser(user);
-      navigate(resolveAfterAuthPath(consumeAuthNextPath()), { replace: true });
+      navigateAfterAuth(navigate, consumeAuthNextPath(), { replace: true, consumeStash: false });
     } catch {
       setError('Dữ liệu đăng nhập không hợp lệ');
     }

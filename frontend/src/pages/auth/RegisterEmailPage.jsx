@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
+import RequiredMark from '../../components/auth/RequiredMark';
 import { sendRegisterOtp, verifyRegisterOtp } from '../../api/authApi';
 import { isClientLoggedIn } from '../../lib/authStorage';
 import {
   buildRegisterHref,
-  getAuthNextPath,
-  resolveAfterAuthPath,
+  getEffectiveAuthNextPath,
+  isCheckoutReturnPath,
+  navigateAfterAuth,
+  stashAuthNextPath,
 } from '../../lib/authRedirect';
 
 const INITIAL_FORM = {
@@ -28,7 +31,8 @@ function formatCountdown(totalSeconds) {
 export default function RegisterEmailPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const nextPath = getAuthNextPath(searchParams);
+  const nextPath = getEffectiveAuthNextPath(searchParams, { allowStash: true });
+  const returningToCheckout = isCheckoutReturnPath(nextPath);
   const [step, setStep] = useState('form');
   const [form, setForm] = useState(INITIAL_FORM);
   const [otp, setOtp] = useState('');
@@ -39,7 +43,11 @@ export default function RegisterEmailPage() {
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   useEffect(() => {
-    if (isClientLoggedIn()) navigate(resolveAfterAuthPath(nextPath), { replace: true });
+    if (nextPath) stashAuthNextPath(nextPath);
+  }, [nextPath]);
+
+  useEffect(() => {
+    if (isClientLoggedIn()) navigateAfterAuth(navigate, nextPath, { replace: true });
   }, [navigate, nextPath]);
 
   useEffect(() => {
@@ -102,7 +110,7 @@ export default function RegisterEmailPage() {
         email: form.email.trim(),
         otp: otp.trim(),
       });
-      navigate(resolveAfterAuthPath(nextPath), { replace: true });
+      navigateAfterAuth(navigate, nextPath, { replace: true });
     } catch (err) {
       setError(err.message || 'Mã OTP không đúng');
     } finally {
@@ -118,7 +126,9 @@ export default function RegisterEmailPage() {
       title={step === 'form' ? 'Đăng ký bằng Email' : 'Nhập mã OTP'}
       subtitle={
         step === 'form'
-          ? 'Email dùng để xác thực bạn không phải bot. Chúng tôi gửi mã 6 số sau khi bạn gửi form.'
+          ? returningToCheckout
+            ? 'Tạo tài khoản để hoàn tất đặt phòng. Cơ sở, phòng và ngày bạn đã chọn vẫn được giữ.'
+            : 'Email dùng để xác thực bạn không phải bot. Chúng tôi gửi mã 6 số sau khi bạn gửi form.'
           : `Mã đã gửi tới ${form.email}.`
       }
       footer={
@@ -143,9 +153,13 @@ export default function RegisterEmailPage() {
 
       {step === 'form' ? (
         <form className="space-y-4" onSubmit={handleSendOtp}>
+          {/* <p className="text-xs text-on-surface-variant">
+            Các trường có dấu <span className="font-semibold text-primary">*</span> là bắt buộc.
+          </p> */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="fullName">
               Họ và tên
+              <RequiredMark />
             </label>
             <input
               id="fullName"
@@ -159,6 +173,7 @@ export default function RegisterEmailPage() {
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="email">
               Email
+              <RequiredMark />
             </label>
             <input
               id="email"
@@ -186,6 +201,7 @@ export default function RegisterEmailPage() {
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="password">
               Mật khẩu
+              <RequiredMark />
             </label>
             <input
               id="password"
@@ -201,6 +217,7 @@ export default function RegisterEmailPage() {
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="confirmPassword">
               Nhập lại mật khẩu
+              <RequiredMark />
             </label>
             <input
               id="confirmPassword"
@@ -244,6 +261,7 @@ export default function RegisterEmailPage() {
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="otp">
               Mã OTP (6 số)
+              <RequiredMark />
             </label>
             <input
               id="otp"

@@ -70,6 +70,55 @@ class AuthApi {
     return AppUser.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  Future<Map<String, dynamic>> requestEmailChange({
+    required String newEmail,
+    String? currentPassword,
+  }) async {
+    final body = <String, dynamic>{'newEmail': newEmail.trim()};
+    if (currentPassword != null && currentPassword.isNotEmpty) {
+      body['currentPassword'] = currentPassword;
+    }
+    final json = await _client.post('/auth/change-email/request', body);
+    return json['data'] as Map<String, dynamic>;
+  }
+
+  Future<AppUser> confirmEmailChange({required String otp}) async {
+    final json = await _client.post('/auth/change-email/confirm', {'otp': otp.trim()});
+    return AppUser.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> requestPasswordReset({required String email}) async {
+    final json = await _client.post('/auth/forgot-password/request', {
+      'email': email.trim(),
+    });
+    return json['data'] as Map<String, dynamic>;
+  }
+
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await _client.post('/auth/forgot-password/confirm', {
+      'email': email.trim(),
+      'otp': otp.trim(),
+      'newPassword': newPassword,
+    });
+  }
+
+  Future<AppUser> updateProfile({
+    String? fullName,
+    String? phone,
+    Map<String, String>? profileMeta,
+  }) async {
+    final body = <String, dynamic>{};
+    if (fullName != null) body['fullName'] = fullName;
+    if (phone != null) body['phone'] = phone.isEmpty ? null : phone;
+    if (profileMeta != null) body['profileMeta'] = profileMeta;
+    final json = await _client.patch('/auth/me', body);
+    return AppUser.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
   Future<void> logout({String? refreshToken}) async {
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {

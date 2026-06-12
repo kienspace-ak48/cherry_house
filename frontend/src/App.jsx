@@ -6,6 +6,8 @@ import BookingPage from './pages/booking/BookingPage';
 import RoomDetailPage from './pages/RoomDetailPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfUsePage from './pages/TermsOfUsePage';
 import CheckoutPage from './pages/checkout/CheckoutPage';
 import CheckoutResultPage from './pages/checkout/CheckoutResultPage';
 import ProfilePage from './pages/ProfilePage';
@@ -17,6 +19,8 @@ import PropertyBranchSelectPage from './pages/properties/PropertyBranchSelectPag
 import RegisterPage from './pages/auth/RegisterPage';
 import RegisterEmailPage from './pages/auth/RegisterEmailPage';
 import LoginPage from './pages/auth/LoginPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 
 function App() {
@@ -29,6 +33,8 @@ function App() {
           <Route path="register" element={<RegisterPage />} />
           <Route path="register/email" element={<RegisterEmailPage />} />
           <Route path="login" element={<LoginPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="oauth/callback" element={<AuthCallbackPage />} />
           <Route path="properties" element={<PropertyListingPage />} />
           <Route path="properties/:propertySlug/branches" element={<PropertyBranchSelectPage />} />
@@ -39,6 +45,8 @@ function App() {
           <Route path="room/:slug" element={<RoomDetailPage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="contact" element={<ContactPage />} />
+          <Route path="privacy" element={<PrivacyPolicyPage />} />
+          <Route path="terms" element={<TermsOfUsePage />} />
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="checkout/result" element={<CheckoutResultPage />} />
           <Route path="profile" element={<ProfilePage />} />

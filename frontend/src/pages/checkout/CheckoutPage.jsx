@@ -11,7 +11,7 @@ import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import { readProfileContact, syncProfileContactFromUser } from '../../data/profileContact';
 import { isClientLoggedIn } from '../../lib/authStorage';
-import { buildLoginHref } from '../../lib/authRedirect';
+import { buildLoginHref, stashAuthNextPath } from '../../lib/authRedirect';
 import { refreshClientProfile } from '../../api/authApi';
 import { resolveBranch } from '../../data/properties';
 import {
@@ -169,6 +169,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (loggedIn) return;
+    stashAuthNextPath(checkoutReturnPath);
     navigate(buildLoginHref(checkoutReturnPath), { replace: true });
   }, [loggedIn, navigate, checkoutReturnPath]);
 
@@ -877,13 +878,13 @@ export default function CheckoutPage() {
                 </button>
                 <p className="px-2 text-center text-[11px] leading-snug text-on-surface-variant">
                   Bằng cách nhấn nút, bạn đồng ý với{' '}
-                  <a className="underline" href="#">
+                  <Link className="underline hover:text-primary" to="/terms">
                     Điều khoản &amp; Điều kiện
-                  </a>{' '}
+                  </Link>{' '}
                   và{' '}
-                  <a className="underline" href="#">
+                  <Link className="underline hover:text-primary" to="/privacy">
                     Chính sách bảo mật
-                  </a>{' '}
+                  </Link>{' '}
                   của Cherry House.
                 </p>
               </div>

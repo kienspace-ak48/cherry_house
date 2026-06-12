@@ -312,6 +312,7 @@ model User {
   refreshTokens  RefreshToken[]
   wallet         UserWallet?
   walletTransactions WalletTransaction[]
+  emailChangeOtp EmailChangeOtp?
 
   @@map("users")
 }
@@ -371,6 +372,32 @@ model RegistrationOtp {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("registration_otps")
+}
+
+// Đổi email — OTP gửi tới email hiện tại
+model EmailChangeOtp {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  newEmail  String   @map("new_email") @db.VarChar(255)
+  otpHash   String   @map("otp_hash") @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_change_otps")
+}
+
+// Quên mật khẩu — OTP gửi tới email đăng ký
+model PasswordResetOtp {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  otpHash   String   @map("otp_hash") @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_otps")
 }
 
 // 12. bookings

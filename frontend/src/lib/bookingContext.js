@@ -54,6 +54,58 @@ function normalizeCity(raw) {
 }
 
 /**
+ * Đọc ngày từ alias phổ biến (checkin/checkout, snake_case).
+ * @param {URLSearchParams} params
+ */
+function readDateParams(params) {
+  /** @type {{ checkIn?: string; checkOut?: string }} */
+  const dates = {};
+  const checkIn = params.get('checkIn') || params.get('checkin') || params.get('check_in');
+  const checkOut = params.get('checkOut') || params.get('checkout') || params.get('check_out');
+  if (checkIn) dates.checkIn = checkIn;
+  if (checkOut) dates.checkOut = checkOut;
+  return dates;
+}
+
+/**
+ * Chuẩn hóa query booking về dạng canonical (checkIn/checkOut, list thay dist).
+ * @param {URLSearchParams | string} input
+ */
+export function normalizeBookingSearchParams(input) {
+  const params =
+    input instanceof URLSearchParams
+      ? new URLSearchParams(input)
+      : new URLSearchParams(typeof input === 'string' ? input : '');
+
+  const next = new URLSearchParams(params);
+  let changed = false;
+
+  const dates = readDateParams(params);
+  if (dates.checkIn && params.get('checkIn') !== dates.checkIn) {
+    next.set('checkIn', dates.checkIn);
+    changed = true;
+  }
+  if (dates.checkOut && params.get('checkOut') !== dates.checkOut) {
+    next.set('checkOut', dates.checkOut);
+    changed = true;
+  }
+  for (const legacy of ['checkin', 'check_in', 'checkout', 'check_out']) {
+    if (next.has(legacy)) {
+      next.delete(legacy);
+      changed = true;
+    }
+  }
+
+  if (!params.get('list') && params.get('dist') === '1') {
+    next.set('list', '1');
+    next.delete('dist');
+    changed = true;
+  }
+
+  return { params: next, changed };
+}
+
+/**
  * @param {URLSearchParams | string | null | undefined} input
  * @returns {BookingContext}
  */
@@ -70,6 +122,10 @@ export function parseBookingContext(input) {
     const v = params.get(key);
     if (v) ctx[key] = v;
   }
+
+  const dates = readDateParams(params);
+  if (!ctx.checkIn && dates.checkIn) ctx.checkIn = dates.checkIn;
+  if (!ctx.checkOut && dates.checkOut) ctx.checkOut = dates.checkOut;
 
   if (!ctx.city && ctx.q) {
     const mapped = normalizeCity(ctx.q);
@@ -297,7 +353,8 @@ export function shouldAutoAdvanceProperty(count, searchParams) {
     searchParams instanceof URLSearchParams
       ? searchParams
       : new URLSearchParams(typeof searchParams === 'string' ? searchParams : '');
-  return count === 1 && !params.get('list') && !params.get('property');
+  const forceList = params.get('list') === '1' || params.get('dist') === '1';
+  return count === 1 && !forceList && !params.get('property');
 }
 
 export const BOOKING_STEP_ORDER = ['search', 'property', 'branch', 'rooms', 'checkout'];

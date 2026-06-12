@@ -375,7 +375,7 @@ export default function ChatBotWidget() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="chat-fab-launcher relative z-10 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-primary/30 transition hover:scale-105 hover:ring-primary/50"
+            className="chat-fab-launcher relative z-10 flex h-14 w-14 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-primary/30 transition hover:scale-105 hover:ring-primary/50"
             aria-label="Mở trợ lý Cherry House"
             aria-expanded={false}
           >

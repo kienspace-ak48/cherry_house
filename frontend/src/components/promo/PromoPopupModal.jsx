@@ -141,18 +141,21 @@ export default function PromoPopupModal() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="promo-popup-title"
+      onClick={handleClose}
     >
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <button
-          type="button"
-          onClick={handleClose}
-          className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-black/5"
-          aria-label="Đóng"
-        >
-          <span className="material-symbols-outlined text-xl">close</span>
-        </button>
-
-        <div className="bg-primary px-6 py-5 text-white">
+      <div
+        className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative bg-primary px-6 py-5 pr-14 text-white">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute top-3 right-3 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+            aria-label="Đóng"
+          >
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
           <p className="text-[10px] font-bold tracking-[0.2em] uppercase opacity-90">Cherry House</p>
           <h2 id="promo-popup-title" className="mt-2 font-headline text-xl font-bold">
             {config.title}

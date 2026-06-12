@@ -7,6 +7,7 @@ import {
   getClientRefreshToken,
 } from '../lib/authStorage';
 import { syncProfileContactFromUser } from '../data/profileContact';
+import { stashAuthNextPath } from '../lib/authRedirect';
 
 const VITE_ENV = import.meta.env.VITE_ENV;
 const API_BASE =
@@ -47,6 +48,49 @@ export async function fetchMe() {
 export async function updateClientProfile(payload) {
   const { data } = await axiosClient.patch('/auth/me', payload);
   if (!data.success) throw new Error(data.message || 'Không cập nhật được hồ sơ');
+  const user = data.data;
+  const token = getClientToken();
+  const refreshToken = getClientRefreshToken();
+  if (token || refreshToken) {
+    saveClientSession({ token, refreshToken, user });
+  }
+  syncProfileContactFromUser(user);
+  return user;
+}
+
+/** Quên mật khẩu — gửi OTP tới email đăng ký */
+export async function requestPasswordReset({ email }) {
+  const { data } = await axiosClient.post('/auth/forgot-password/request', {
+    email: String(email || '').trim(),
+  });
+  if (!data.success) throw new Error(data.message || 'Không gửi được mã OTP');
+  return data.data;
+}
+
+/** Xác nhận OTP và đặt mật khẩu mới */
+export async function confirmPasswordReset({ email, otp, newPassword }) {
+  const { data } = await axiosClient.post('/auth/forgot-password/confirm', {
+    email: String(email || '').trim(),
+    otp: String(otp || '').trim(),
+    newPassword,
+  });
+  if (!data.success) throw new Error(data.message || 'Không đặt lại được mật khẩu');
+  return data.data;
+}
+
+/** Yêu cầu đổi email — OTP gửi tới email hiện tại */
+export async function requestEmailChange({ newEmail, currentPassword }) {
+  const body = { newEmail: String(newEmail || '').trim() };
+  if (currentPassword) body.currentPassword = currentPassword;
+  const { data } = await axiosClient.post('/auth/change-email/request', body);
+  if (!data.success) throw new Error(data.message || 'Không gửi được mã OTP');
+  return data.data;
+}
+
+/** Xác nhận OTP và cập nhật email đăng nhập */
+export async function confirmEmailChange({ otp }) {
+  const { data } = await axiosClient.post('/auth/change-email/confirm', { otp });
+  if (!data.success) throw new Error(data.message || 'Không đổi được email');
   const user = data.data;
   const token = getClientToken();
   const refreshToken = getClientRefreshToken();
@@ -105,11 +149,6 @@ export async function logoutClient() {
 }
 
 export function startGoogleRegister(nextPath) {
-  if (typeof window !== 'undefined' && nextPath) {
-    const next = String(nextPath).trim();
-    if (next.startsWith('/') && !next.startsWith('//')) {
-      window.sessionStorage.setItem('cherry_auth_next', next);
-    }
-  }
+  stashAuthNextPath(nextPath);
   window.location.href = '/api/auth/google';
 }
