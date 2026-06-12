@@ -234,16 +234,45 @@ async function updateProperty(idRaw, body) {
   }
 }
 
+function bookingDeleteBlockedMessage(count) {
+  return `Cơ sở có ${count} đặt phòng — không thể xóa. Hãy ngừng hoạt động thay vì xóa.`;
+}
+
 async function deleteProperty(idRaw) {
   const id = parseId(idRaw);
+  const bookingCount = await propertyRepository.countBookings(id);
+  if (bookingCount > 0) {
+    throw httpError(bookingDeleteBlockedMessage(bookingCount), 409);
+  }
+
   try {
     return await propertyRepository.remove(id);
   } catch (error) {
     if (error?.code === 'P2025') {
       throw httpError('Property not found', 404);
     }
+    if (error?.code === 'P2003') {
+      const count = await propertyRepository.countBookings(id);
+      throw httpError(bookingDeleteBlockedMessage(count || 1), 409);
+    }
     throw error;
   }
+}
+
+async function setPropertyActive(idRaw, isActive) {
+  const id = parseId(idRaw);
+  try {
+    return await propertyRepository.update(id, { isActive: Boolean(isActive) });
+  } catch (error) {
+    if (error?.code === 'P2025') {
+      throw httpError('Property not found', 404);
+    }
+    throw error;
+  }
+}
+
+async function getBookingCountsByPropertyIds(propertyIds) {
+  return propertyRepository.countBookingsByPropertyIds(propertyIds);
 }
 
 module.exports = {
@@ -253,4 +282,6 @@ module.exports = {
   createProperty,
   updateProperty,
   deleteProperty,
+  setPropertyActive,
+  getBookingCountsByPropertyIds,
 };

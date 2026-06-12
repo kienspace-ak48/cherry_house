@@ -240,8 +240,22 @@ export default function PropertyDiscovery() {
         {!loading && !error && filtered.length === 0 && (
           <div className="rounded-2xl border border-dashed border-black/15 bg-white py-16 text-center">
             <span className="material-symbols-outlined text-4xl text-primary/50">travel_explore</span>
-            <p className="mt-4 font-headline text-lg font-bold text-on-surface">Không tìm thấy cơ sở</p>
-            <p className="mt-2 text-sm text-on-surface-variant">Thử đổi địa điểm, ngày hoặc loại hình.</p>
+            {context.city ? (
+              <>
+                <p className="mt-4 font-headline text-lg font-bold text-on-surface">
+                  Cherry House chưa có cơ sở ở tỉnh/thành này
+                </p>
+                <p className="mt-2 text-sm text-on-surface-variant">
+                  Hiện chưa có cơ sở tại <strong className="text-on-surface">{context.city}</strong>.
+                  Thử chọn tỉnh khác hoặc xem tất cả cơ sở.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 font-headline text-lg font-bold text-on-surface">Không tìm thấy cơ sở</p>
+                <p className="mt-2 text-sm text-on-surface-variant">Thử đổi tỉnh/thành, ngày hoặc loại hình.</p>
+              </>
+            )}
             <button
               type="button"
               className="mt-6 text-sm font-bold text-primary hover:underline"

@@ -2,7 +2,7 @@
   const currentPage = typeof adminPage !== 'undefined' ? adminPage : '';
   const staffUser = typeof isStaff !== 'undefined' && isStaff;
   const catalogOpen = ['properties', 'branches', 'rooms', 'room-types'].includes(currentPage) ? ' show' : '';
-  const bookingOpen = ['bookings', 'bookings-calendar', 'bookings-reception', 'promo-codes'].includes(currentPage) ? ' show' : '';
+  const bookingOpen = ['bookings', 'bookings-calendar', 'bookings-reception', 'promo-codes', 'promo-popup'].includes(currentPage) ? ' show' : '';
   const usersOpen = ['users', 'contact-messages'].includes(currentPage) ? ' show' : '';
   const systemOpen = ['accounts', 'backups', 'exports'].includes(currentPage) ? ' show' : '';
 %>
@@ -53,6 +53,7 @@
         <li class="nav-item"><a class="nav-link<%= currentPage === 'bookings-calendar' ? ' active' : '' %>" href="/admin/bookings/calendar"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Lịch phòng</a></li>
         <% if (!staffUser) { %>
         <li class="nav-item"><a class="nav-link<%= currentPage === 'promo-codes' ? ' active' : '' %>" href="/admin/promo-codes"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Mã giảm giá</a></li>
+        <li class="nav-item"><a class="nav-link<%= currentPage === 'promo-popup' ? ' active' : '' %>" href="/admin/promo-popup"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Popup voucher</a></li>
         <% } %>
         <li class="nav-item"><a class="nav-link" href="/admin/bookings/new"><span class="nav-icon"><span class="nav-icon-bullet"></span></span> Tạo booking</a></li>
         <% if (typeof isStaff !== 'undefined' && isStaff) { %>

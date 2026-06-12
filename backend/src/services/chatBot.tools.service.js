@@ -1,6 +1,153 @@
 const catalogService = require('./catalog.service');
+const propertyRepository = require('../repositories/property.repository');
+const branchRepository = require('../repositories/branch.repository');
+const prisma = require('../config/prisma.config');
 const { getBranchOccupancy } = require('../modules/booking/bookingOccupancy.service');
 const { getClientAppUrl } = require('../config/appUrl.config');
+
+const roomContextInclude = {
+  branch: { include: { property: true } },
+  roomType: true,
+};
+
+function inactivePropertyMessage(name) {
+  return `Cơ sở **${name}** hiện **tạm ngừng hoạt động** — không nhận đặt phòng mới. Bạn có thể xem cơ sở khác cùng thành phố.`;
+}
+
+function inactiveBranchMessage(branchName, propertyName) {
+  return `Chi nhánh **${branchName}** (${propertyName}) hiện **tạm ngừng hoạt động** — không nhận đặt phòng mới.`;
+}
+
+function inactiveRoomMessage(code) {
+  return `Phòng **${code}** hiện **tạm ngừng** — không nhận đặt mới. Bạn thử phòng khác hoặc chi nhánh khác nhé.`;
+}
+
+async function resolvePropertyBySlug(slug) {
+  const propertySlug = typeof slug === 'string' ? slug.trim() : '';
+  if (!propertySlug) {
+    return { error: 'slug_required', message: 'Thiếu slug cơ sở.' };
+  }
+
+  const row = await propertyRepository.findBySlug(propertySlug);
+  if (!row) {
+    return {
+      error: 'property_not_found',
+      slug: propertySlug,
+      message: `Không tìm thấy cơ sở "${propertySlug}".`,
+    };
+  }
+  if (!row.isActive) {
+    return {
+      error: 'property_inactive',
+      slug: propertySlug,
+      propertyName: row.name,
+      city: row.city,
+      message: inactivePropertyMessage(row.name),
+    };
+  }
+  return { property: row };
+}
+
+async function resolveBranchForProperty(property, branchCode) {
+  const code = typeof branchCode === 'string' ? branchCode.trim().toLowerCase() : '';
+  if (!code) {
+    return { error: 'branch_code_required', message: 'Thiếu mã chi nhánh.' };
+  }
+
+  const branch = await branchRepository.findByPropertyAndCode(property.id, code);
+  if (!branch) {
+    return {
+      error: 'branch_not_found',
+      branchCode: code,
+      propertyName: property.name,
+      message: `Không tìm thấy chi nhánh "${code}" tại ${property.name}.`,
+    };
+  }
+  if (!branch.isActive) {
+    return {
+      error: 'branch_inactive',
+      branchCode: code,
+      branchName: branch.name,
+      propertyName: property.name,
+      message: inactiveBranchMessage(branch.name, property.name),
+    };
+  }
+  return { branch };
+}
+
+async function findRoomsByCodeInDb(roomCode) {
+  const code = normalizeRoomCode(roomCode);
+  if (!code) return [];
+
+  const rooms = await prisma.inventoryRoom.findMany({
+    where: {
+      OR: [
+        { code: { equals: code } },
+        { code: { equals: code.toLowerCase() } },
+      ],
+    },
+    include: roomContextInclude,
+    take: 20,
+  });
+
+  return rooms.filter((room) => roomCodesEquivalent(code, room.code, true));
+}
+
+function detectInactiveFromRoom(room, roomCode) {
+  const code = normalizeRoomCode(roomCode);
+  const property = room.branch?.property;
+  const branch = room.branch;
+
+  if (!property?.isActive) {
+    return {
+      error: 'property_inactive',
+      roomCode: code,
+      propertyName: property?.name || null,
+      message: inactivePropertyMessage(property?.name || 'Cơ sở'),
+    };
+  }
+  if (!branch?.isActive) {
+    return {
+      error: 'branch_inactive',
+      roomCode: code,
+      branchName: branch?.name || null,
+      propertyName: property?.name || null,
+      message: inactiveBranchMessage(branch?.name || 'Chi nhánh', property?.name || 'Cơ sở'),
+    };
+  }
+  if (!room.isActive) {
+    return {
+      error: 'room_inactive',
+      roomCode: code,
+      branchName: branch?.name || null,
+      propertyName: property?.name || null,
+      message: inactiveRoomMessage(code),
+    };
+  }
+  return null;
+}
+
+async function summarizeCityPropertyStatus(city) {
+  const normalizedCity = normalizeCity(city);
+  if (!normalizedCity) return null;
+
+  const rows = await propertyRepository.findAll({ city: normalizedCity });
+  if (!rows.length) return null;
+
+  const active = rows.filter((p) => p.isActive);
+  const inactive = rows.filter((p) => !p.isActive);
+
+  if (active.length > 0) return null;
+
+  return {
+    error: 'city_inactive_only',
+    city: normalizedCity,
+    inactiveProperties: inactive.map((p) => ({ name: p.name, slug: p.slug })),
+    message:
+      `Cherry House tại **${normalizedCity}** hiện **tạm ngừng** toàn bộ cơ sở đang lưu (${inactive.map((p) => p.name).join(', ')}). `
+      + 'Bạn thử thành phố khác hoặc hỏi lại sau nhé.',
+  };
+}
 
 const SUPPORTED_CITIES = [
   'Hà Nội',
@@ -106,8 +253,17 @@ async function getPropertyDetail({ slug } = {}) {
   const propertySlug = typeof slug === 'string' ? slug.trim() : '';
   if (!propertySlug) return { error: 'slug is required' };
 
+  const resolved = await resolvePropertyBySlug(propertySlug);
+  if (resolved.error) return resolved;
+
   const property = await catalogService.getPropertyBySlug(propertySlug);
-  if (!property) return { error: 'Không tìm thấy cơ sở', slug: propertySlug };
+  if (!property) {
+    return {
+      error: 'property_not_found',
+      slug: propertySlug,
+      message: `Không tìm thấy cơ sở "${propertySlug}".`,
+    };
+  }
 
   return {
     name: property.name,
@@ -157,6 +313,11 @@ async function searchAvailableRooms({
       rooms: [],
       count: 0,
     };
+  }
+
+  if (normalizedCity) {
+    const cityStatus = await summarizeCityPropertyStatus(normalizedCity);
+    if (cityStatus) return { ...cityStatus, rooms: [], count: 0, supportedCities: SUPPORTED_CITIES };
   }
 
   if (checkIn && checkOut && checkOut <= checkIn) {
@@ -293,6 +454,12 @@ async function getRoomQuote({
   }
 
   if (!matches.length) {
+    const dbRooms = await findRoomsByCodeInDb(code);
+    for (const room of dbRooms) {
+      const inactive = detectInactiveFromRoom(room, code);
+      if (inactive) return inactive;
+    }
+
     return {
       error: 'room_not_found',
       roomCode: code,
@@ -369,6 +536,12 @@ async function getBranchRoomStatus({ propertySlug, branchCode, checkIn, checkOut
   const code = typeof branchCode === 'string' ? branchCode.trim() : '';
   if (!slug || !code) return { error: 'propertySlug và branchCode là bắt buộc' };
 
+  const propertyResolved = await resolvePropertyBySlug(slug);
+  if (propertyResolved.error) return propertyResolved;
+
+  const branchResolved = await resolveBranchForProperty(propertyResolved.property, code);
+  if (branchResolved.error) return branchResolved;
+
   const occ = await getBranchOccupancy({
     propertySlug: slug,
     branchCode: code,
@@ -390,13 +563,17 @@ async function getBranchRoomStatus({ propertySlug, branchCode, checkIn, checkOut
       priceVnd: r.priceVnd,
       priceLabel: formatVnd(r.priceVnd),
       occupancy: r.occupancy,
-      bookingUrl: buildBookingUrl({
-        propertySlug: slug,
-        branchCode: code,
-        checkIn,
-        checkOut,
-        detailSlug: r.detailSlug,
-      }),
+      inactiveNote: r.occupancy === 'inactive' ? 'Phòng tạm ngừng — không nhận đặt mới.' : null,
+      bookingUrl:
+        r.occupancy === 'inactive'
+          ? null
+          : buildBookingUrl({
+              propertySlug: slug,
+              branchCode: code,
+              checkIn,
+              checkOut,
+              detailSlug: r.detailSlug,
+            }),
     })),
   };
 }

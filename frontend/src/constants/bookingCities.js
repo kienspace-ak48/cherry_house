@@ -1,13 +1,9 @@
-/** Cities with Cherry House properties — khớp seed DB */
-export const BOOKING_CITY_OPTIONS = [
-  'Hà Nội',
-  'Sa Pa',
-  'Ninh Bình',
-  'Đà Lạt',
-  'Huế',
-  'Hội An',
-  'Đà Nẵng',
-  'Nha Trang',
-  'Vũng Tàu',
-  'TP. Hồ Chí Minh',
-];
+/** @deprecated — dùng bookingProvinces.js */
+export {
+  BOOKING_PROVINCE_OPTIONS_FALLBACK as BOOKING_CITY_OPTIONS_FALLBACK,
+  BOOKING_PROVINCE_OPTIONS_FALLBACK,
+  getBookingCityOptions,
+  getBookingProvinceOptions,
+  setBookingCityOptions,
+  setBookingProvinceOptions,
+} from './bookingProvinces';

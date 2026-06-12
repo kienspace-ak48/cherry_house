@@ -6,11 +6,11 @@ class CatalogApi {
   final ApiClient _client;
 
   Future<List<Map<String, dynamic>>> listProperties({
-    String? city,
+    String? province,
     String? kind,
   }) async {
     final query = <String, String>{'isActive': 'true'};
-    if (city != null && city.isNotEmpty) query['city'] = city;
+    if (province != null && province.isNotEmpty) query['province'] = province;
     if (kind != null && kind.isNotEmpty && kind != 'all') query['kind'] = kind;
     final json = await _client.get('/catalog/properties', query: query);
     final data = json['data'];

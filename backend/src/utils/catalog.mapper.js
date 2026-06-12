@@ -131,8 +131,16 @@ function buildRoomGallery(room, rt) {
   return out.slice(0, MAX_ROOM_GALLERY);
 }
 
+const UNCLASSIFIED_ROOM_TYPE_LABEL = 'Chưa phân loại phòng';
+
+function roomTypeLabel(roomType) {
+  const title = roomType?.title?.trim();
+  return title || UNCLASSIFIED_ROOM_TYPE_LABEL;
+}
+
 function toPublicRoom(room) {
   const rt = room.roomType;
+  const typeLabel = roomTypeLabel(rt);
   return {
     id: room.id,
     code: room.code,
@@ -142,8 +150,8 @@ function toPublicRoom(room) {
     propertySlug: room.branch?.property?.slug ?? null,
     propertyId: room.branch?.propertyId ?? null,
     roomTypeId: room.roomTypeId,
-    type: rt?.category ?? rt?.title ?? 'Room',
-    roomTypeTitle: rt?.title ?? null,
+    type: rt?.category ?? typeLabel,
+    roomTypeTitle: typeLabel,
     status: room.status,
     priceVnd: room.priceVnd,
     capacityLabel: rt?.capacityLabel ?? `Tối đa ${room.maxAdults} người lớn`,
@@ -158,6 +166,7 @@ function toPublicRoom(room) {
 
 function toPublicRoomDetail(room) {
   const rt = room.roomType;
+  const typeLabel = roomTypeLabel(rt);
   const detailSlug = toDetailSlug(room.code);
   const branch = room.branch ? toPublicBranch(room.branch) : null;
   const property = room.branch?.property
@@ -203,10 +212,10 @@ function toPublicRoomDetail(room) {
     code: room.code,
     slug: detailSlug,
     detailSlug,
-    badge: rt?.badge ?? 'Cherry House',
+    badge: rt?.badge ?? typeLabel,
     title: rt?.title ?? room.code,
     subtitle: room.code,
-    roomTypeTitle: rt?.title ?? null,
+    roomTypeTitle: typeLabel,
     roomTypeSlug: rt?.slug ?? null,
     category: rt?.category ?? null,
     areaSqm: rt?.areaSqm ?? 0,
@@ -238,6 +247,8 @@ function toPublicRoomDetail(room) {
 
 module.exports = {
   PROPERTY_KIND_LABELS,
+  UNCLASSIFIED_ROOM_TYPE_LABEL,
+  roomTypeLabel,
   toPublicProperty,
   toPublicBranch,
   toPublicRoom,

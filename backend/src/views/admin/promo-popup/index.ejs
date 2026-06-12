@@ -1,0 +1,171 @@
+<div class="admin-page-head d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h2>Popup voucher website</h2>
+    <p class="text-body-secondary mb-0 small">
+      Hiển thị popup mã giảm giá khi khách vào website. Chọn mã cụ thể hoặc tự lấy theo loại giảm (% / số tiền cố định).
+    </p>
+  </div>
+  <a class="btn btn-outline-primary btn-sm" href="/" target="_blank" rel="noopener">Mở website</a>
+</div>
+
+<% if (typeof flash !== 'undefined' && flash === 'saved') { %>
+<div class="alert alert-success">Đã lưu cấu hình popup voucher.</div>
+<% } else if (typeof flash !== 'undefined' && flash === 'error') { %>
+<div class="alert alert-danger"><%= msg || 'Có lỗi xảy ra' %></div>
+<% } %>
+
+<% if (typeof clientStatus !== 'undefined' && clientStatus) { %>
+<div class="alert alert-<%= clientStatus.level %> mb-4">
+  <strong>Trạng thái trên website:</strong> <%= clientStatus.message %>
+  <% if (!clientStatus.willShow) { %>
+  <div class="small mt-1 mb-0">Mặc định popup <strong>tắt</strong> sau khi cài đặt — cần bật và chọn mã tại đây.</div>
+  <% } %>
+</div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="POST" action="/admin/promo-popup" class="admin-crud-form" id="promoPopupForm">
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <strong>Bật popup</strong>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="isEnabled" name="isEnabled" value="1" <%= settings.isEnabled ? 'checked' : '' %>>
+            <label class="form-check-label small" for="isEnabled">Hiển thị trên website</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Chọn mã hiển thị</label>
+            <div class="d-flex flex-column gap-2">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="selectionMode" id="selectionManual" value="manual" <%= (settings.selectionMode || 'manual') === 'manual' ? 'checked' : '' %> data-selection-mode>
+                <label class="form-check-label" for="selectionManual">Chọn mã cụ thể</label>
+              </div>
+              <div class="ms-4" data-manual-wrap>
+                <select class="form-select" id="promoCodeId" name="promoCodeId">
+                  <option value="">— Chọn mã —</option>
+                  <% promos.forEach(function(p) { %>
+                  <option value="<%= p.id %>" <%= settings.promoCodeId === p.id ? 'selected' : '' %>>
+                    <%= p.code %> — <%= p.discountType === 'fixed_amount' ? (p.discountAmountVnd + 'đ') : (p.discountPercent + '%') %>
+                  </option>
+                  <% }); %>
+                </select>
+                <div class="form-text">Chỉ hiện mã đang bật, còn hiệu lực và còn lượt dùng.</div>
+              </div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="radio" name="selectionMode" id="selectionByType" value="by_type" <%= settings.selectionMode === 'by_type' ? 'checked' : '' %> data-selection-mode>
+                <label class="form-check-label" for="selectionByType">Tự chọn theo loại giảm</label>
+              </div>
+              <div class="ms-4" data-by-type-wrap>
+                <select class="form-select" id="discountTypeFilter" name="discountTypeFilter">
+                  <option value="all" <%= settings.discountTypeFilter === 'all' ? 'selected' : '' %>>Tất cả loại</option>
+                  <option value="percent" <%= settings.discountTypeFilter === 'percent' ? 'selected' : '' %>>Giảm %</option>
+                  <option value="fixed_amount" <%= settings.discountTypeFilter === 'fixed_amount' ? 'selected' : '' %>>Giảm số tiền cố định</option>
+                </select>
+                <div class="form-text">Ưu tiên mã sắp hết hạn, sau đó mức giảm cao nhất.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3"><strong>Nội dung popup</strong></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="title">Tiêu đề</label>
+            <input class="form-control" id="title" name="title" value="<%= settings.title || 'Ưu đãi Cherry House' %>" maxlength="255">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="message">Mô tả (để trống = dùng mô tả mã)</label>
+            <textarea class="form-control" id="message" name="message" rows="3"><%= settings.message || '' %></textarea>
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="ctaLabel">Nhãn nút chính</label>
+            <input class="form-control" id="ctaLabel" name="ctaLabel" value="<%= settings.ctaLabel || 'Sao chép mã' %>" maxlength="80">
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-card mb-4">
+        <div class="card-header py-3"><strong>Hành vi</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="delaySec">Trễ hiện (giây)</label>
+              <input class="form-control" type="number" min="0" max="30" id="delaySec" name="delaySec" value="<%= settings.delaySec ?? 2 %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="dismissHours">Ẩn sau khi đóng (giờ)</label>
+              <input class="form-control" type="number" min="1" max="168" id="dismissHours" name="dismissHours" value="<%= settings.dismissHours ?? 24 %>">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Trang hiển thị</label>
+              <div class="d-flex flex-wrap gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="routeAll" name="routeAll" value="1" <%= routeFlags.routeAll ? 'checked' : '' %>>
+                  <label class="form-check-label" for="routeAll">Toàn site</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="routeHome" name="routeHome" value="1" <%= routeFlags.routeHome ? 'checked' : '' %>>
+                  <label class="form-check-label" for="routeHome">Trang chủ</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="routeBooking" name="routeBooking" value="1" <%= routeFlags.routeBooking ? 'checked' : '' %>>
+                  <label class="form-check-label" for="routeBooking">Đặt phòng (/booking)</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="routeCheckout" name="routeCheckout" value="1" <%= routeFlags.routeCheckout ? 'checked' : '' %>>
+                  <label class="form-check-label" for="routeCheckout">Thanh toán (/checkout)</label>
+                </div>
+              </div>
+              <div class="form-text"><strong>Đặt phòng</strong> và <strong>Thanh toán</strong> là hai trang khác nhau — bật đúng trang bạn muốn hiện popup.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+    </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card admin-card">
+      <div class="card-header py-3"><strong>Gợi ý</strong></div>
+      <div class="card-body small text-body-secondary">
+        <ul class="mb-0 ps-3">
+          <li class="mb-2">Popup chỉ hiện khi có mã hợp lệ (đang bật, trong khoảng ngày, còn lượt).</li>
+          <li class="mb-2">Khách đóng popup sẽ không thấy lại trong số giờ đã cấu hình (trên trình duyệt).</li>
+          <li class="mb-2">Nút sao chép lưu mã vào phiên — ô nhập mã ở checkout sẽ tự điền.</li>
+          <li>Quản lý mã tại <a href="/admin/promo-codes">Mã giảm giá</a>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('promoPopupForm');
+  if (!form) return;
+
+  const manualWrap = form.querySelector('[data-manual-wrap]');
+  const byTypeWrap = form.querySelector('[data-by-type-wrap]');
+  const modeRadios = form.querySelectorAll('[data-selection-mode]');
+
+  function syncMode() {
+    const mode = form.querySelector('[data-selection-mode]:checked')?.value || 'manual';
+    const isManual = mode === 'manual';
+    if (manualWrap) manualWrap.classList.toggle('opacity-50', !isManual);
+    if (byTypeWrap) byTypeWrap.classList.toggle('opacity-50', isManual);
+    const promoSelect = form.querySelector('#promoCodeId');
+    const typeSelect = form.querySelector('#discountTypeFilter');
+    if (promoSelect) promoSelect.disabled = !isManual;
+    if (typeSelect) typeSelect.disabled = isManual;
+  }
+
+  modeRadios.forEach((el) => el.addEventListener('change', syncMode));
+  syncMode();
+})();
+</script>

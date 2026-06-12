@@ -222,7 +222,6 @@ async function startCheckout(req, body = {}) {
   }
 
   const room = await resolveRoomRef({ propertySlug, branchCode, detailSlug });
-  if (!room.isActive) throw httpError('Room is not available', 409);
 
   const availability = await checkAvailability({
     roomId: room.id,

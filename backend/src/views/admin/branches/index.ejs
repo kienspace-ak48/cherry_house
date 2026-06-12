@@ -46,7 +46,11 @@
 <% } else if (flash === 'updated') { %>
 <div class="alert alert-success">Đã cập nhật chi nhánh.</div>
 <% } else if (flash === 'deleted') { %>
-<div class="alert alert-success">Đã xóa chi nhánh.</div>
+<div class="alert alert-success">Đã xóa chi nhánh vĩnh viễn.</div>
+<% } else if (flash === 'deactivated') { %>
+<div class="alert alert-success">Đã ngừng hoạt động chi nhánh. Khách không còn thấy trên web.</div>
+<% } else if (flash === 'activated') { %>
+<div class="alert alert-success">Đã bật lại hiển thị chi nhánh.</div>
 <% } else if (flash === 'notfound') { %>
 <div class="alert alert-warning">Không tìm thấy chi nhánh.</div>
 <% } else if (flash === 'error') { %>
@@ -180,6 +184,7 @@
             <th>Địa chỉ</th>
             <th>Giá từ</th>
             <th>Phòng</th>
+            <th>Đặt phòng</th>
             <th>TT</th>
             <th class="text-end">Thao tác</th>
           </tr>
@@ -207,15 +212,34 @@
               </a>
             </td>
             <td>
+              <% const bookingCount = b.bookingCount ?? 0; %>
+              <% if (bookingCount > 0) { %>
+              <span class="badge text-bg-info"><%= bookingCount %></span>
+              <% } else { %>
+              <span class="text-body-secondary">0</span>
+              <% } %>
+            </td>
+            <td>
               <% if (b.isActive) { %><span class="badge bg-success">On</span><% } else { %><span class="badge bg-secondary">Off</span><% } %>
             </td>
             <td class="text-end text-nowrap pe-3">
               <a href="/admin/rooms?branchId=<%= b.id %>" class="btn btn-sm btn-outline-secondary" title="Danh sách phòng">Phòng</a>
               <a href="/admin/rooms/new?branchId=<%= b.id %>" class="btn btn-sm btn-outline-secondary" title="Thêm phòng">+</a>
               <a href="/admin/branches/<%= b.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
-              <form method="POST" action="/admin/branches/<%= b.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa chi nhánh này? Các phòng và đặt chỗ liên quan có thể bị ảnh hưởng.');">
+              <% if (b.isActive) { %>
+              <form method="POST" action="/admin/branches/<%= b.id %>/deactivate" class="d-inline" onsubmit="return confirm('Ngừng hoạt động chi nhánh này? Khách sẽ không còn thấy trên web.');">
+                <button type="submit" class="btn btn-sm btn-outline-warning">Ngừng HĐ</button>
+              </form>
+              <% } else { %>
+              <form method="POST" action="/admin/branches/<%= b.id %>/activate" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-success">Bật lại</button>
+              </form>
+              <% } %>
+              <% if (bookingCount === 0) { %>
+              <form method="POST" action="/admin/branches/<%= b.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa vĩnh viễn chi nhánh này? Các phòng thuộc chi nhánh cũng bị xóa. Hành động không thể hoàn tác.');">
                 <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
               </form>
+              <% } %>
             </td>
           </tr>
           <% }); %>

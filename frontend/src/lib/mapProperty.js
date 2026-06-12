@@ -1,5 +1,7 @@
 import { PROPERTY_KIND_LABELS } from '../data/properties';
 
+export const UNCLASSIFIED_ROOM_TYPE_LABEL = 'Chưa phân loại phòng';
+
 /**
  * @param {Record<string, unknown>} row
  * @returns {import('../data/properties').PropertyRecord}
@@ -51,7 +53,7 @@ export function mapRoomFromApi(row) {
     branchId: row.branchId ? String(row.branchId) : '',
     detailSlug: row.detailSlug ? String(row.detailSlug) : String(row.code ?? '').toLowerCase(),
     code: String(row.code ?? ''),
-    type: String(row.type ?? row.roomTypeTitle ?? 'Room'),
+    type: String(row.type ?? row.roomTypeTitle ?? UNCLASSIFIED_ROOM_TYPE_LABEL),
     status: /** @type {'available'|'pending'|'booked'} */ (row.status),
     priceVnd: Number(row.priceVnd ?? 0),
     capacityLabel: String(row.capacityLabel ?? ''),
@@ -67,7 +69,7 @@ export function mapRoomFromApi(row) {
  */
 export function filterPropertyList(properties, ctx) {
   return properties.filter((p) => {
-    if (ctx.city && p.city !== ctx.city) return false;
+    if (ctx.city && p.region !== ctx.city && p.city !== ctx.city) return false;
     if (ctx.kind && ctx.kind !== 'all' && p.kind !== ctx.kind) return false;
     if (ctx.q) {
       const hay = `${p.name} ${p.city} ${p.region} ${p.tagline} ${p.kindLabel}`.toLowerCase();
@@ -81,9 +83,9 @@ export function filterPropertyList(properties, ctx) {
  * @param {import('./bookingContext').BookingContext} ctx
  */
 export function propertyApiQueryFromContext(ctx) {
-  /** @type {{ city?: string; kind?: string; isActive: string }} */
+  /** @type {{ province?: string; kind?: string; isActive: string }} */
   const params = { isActive: 'true' };
-  if (ctx.city) params.city = ctx.city;
+  if (ctx.city) params.province = ctx.city;
   if (ctx.kind && ctx.kind !== 'all') params.kind = ctx.kind;
   return params;
 }

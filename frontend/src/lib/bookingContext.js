@@ -1,4 +1,4 @@
-import { BOOKING_CITY_OPTIONS } from '../constants/bookingCities';
+import { getBookingProvinceOptions } from '../constants/bookingProvinces';
 import { PROPERTY_KIND_LABELS } from '../data/properties';
 import { countNights } from './dateRange';
 
@@ -44,9 +44,10 @@ function normalizeCity(raw) {
   const t = raw?.trim();
   if (!t) return undefined;
   const lower = stripDiacritics(t);
-  const match = BOOKING_CITY_OPTIONS.find((c) => stripDiacritics(c) === lower);
+  const cityOptions = getBookingProvinceOptions();
+  const match = cityOptions.find((c) => stripDiacritics(c) === lower);
   if (match) return match;
-  const fuzzy = BOOKING_CITY_OPTIONS.find(
+  const fuzzy = cityOptions.find(
     (c) => lower.includes(stripDiacritics(c)) || stripDiacritics(c).includes(lower),
   );
   return fuzzy ?? t;
@@ -72,7 +73,7 @@ export function parseBookingContext(input) {
 
   if (!ctx.city && ctx.q) {
     const mapped = normalizeCity(ctx.q);
-    if (mapped && BOOKING_CITY_OPTIONS.some((c) => c === mapped)) {
+    if (mapped && getBookingProvinceOptions().some((c) => c === mapped)) {
       ctx.city = mapped;
     }
   }
@@ -236,7 +237,7 @@ export function formValuesToContext(values) {
   };
   if (city) {
     ctx.city = city;
-    if (!BOOKING_CITY_OPTIONS.includes(city)) ctx.q = cityInput;
+    if (!getBookingProvinceOptions().includes(city)) ctx.q = cityInput;
   }
   return { ctx };
 }

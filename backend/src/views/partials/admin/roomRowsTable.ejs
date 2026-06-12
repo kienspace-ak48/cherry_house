@@ -6,6 +6,7 @@
         <th>Mã</th>
         <th>Loại</th>
         <th>Giá/đêm</th>
+        <th>Đặt phòng</th>
         <th>TT</th>
         <th class="text-end">Thao tác</th>
       </tr>
@@ -21,14 +22,40 @@
           <% } %>
         </td>
         <td><code><%= r.code %></code></td>
-        <td class="small"><%= r.roomType?.title ?? '—' %></td>
+        <td class="small">
+          <% const roomTypeTitle = (r.roomType && r.roomType.title) ? r.roomType.title : 'Chưa phân loại phòng'; %>
+          <% if (r.roomType && r.roomType.title) { %>
+          <span class="badge text-bg-light border text-body-secondary"><%= roomTypeTitle %></span>
+          <% } else { %>
+          <span class="badge text-bg-secondary">Chưa phân loại phòng</span>
+          <% } %>
+        </td>
         <td class="text-nowrap small"><%= formatPriceVnd(r.priceVnd) %> ₫</td>
+        <td>
+          <% const bookingCount = r.bookingCount ?? 0; %>
+          <% if (bookingCount > 0) { %>
+          <span class="badge text-bg-info"><%= bookingCount %></span>
+          <% } else { %>
+          <span class="text-body-secondary">0</span>
+          <% } %>
+        </td>
         <td><span class="badge bg-<%= statusBadgeClass(r.status) %>"><%= statusLabel(r.status) %></span></td>
         <td class="text-end text-nowrap pe-3">
           <a href="/admin/rooms/<%= r.id %>/edit" class="btn btn-sm btn-outline-primary py-0">Sửa</a>
-          <form method="POST" action="/admin/rooms/<%= r.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa phòng <%= r.code %>?');">
+          <% if (r.isActive !== false) { %>
+          <form method="POST" action="/admin/rooms/<%= r.id %>/deactivate" class="d-inline" onsubmit="return confirm('Ngừng hoạt động phòng <%= r.code %>?');">
+            <button type="submit" class="btn btn-sm btn-outline-warning py-0">Ngừng HĐ</button>
+          </form>
+          <% } else { %>
+          <form method="POST" action="/admin/rooms/<%= r.id %>/activate" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-success py-0">Bật lại</button>
+          </form>
+          <% } %>
+          <% if (bookingCount === 0) { %>
+          <form method="POST" action="/admin/rooms/<%= r.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa vĩnh viễn phòng <%= r.code %>? Hành động không thể hoàn tác.');">
             <button type="submit" class="btn btn-sm btn-outline-danger py-0">Xóa</button>
           </form>
+          <% } %>
         </td>
       </tr>
       <% }); %>

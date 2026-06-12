@@ -3,6 +3,7 @@ import 'api/auth_api.dart';
 import 'api/booking_api.dart';
 import 'api/catalog_api.dart';
 import 'api/checkout_api.dart';
+import 'api/geo_api.dart';
 import 'api/home_api.dart';
 import 'api/promo_api.dart';
 import 'api/wallet_api.dart';
@@ -21,10 +22,11 @@ class AppServices {
   late final walletApi = WalletApi(apiClient);
   late final promoApi = PromoApi(apiClient);
   late final homeApi = HomeApi(apiClient);
+  late final geoApi = GeoApi(apiClient);
 
   Future<List<Property>> fetchProperties(BookingSearch search) async {
     final rows = await catalogApi.listProperties(
-      city: search.city.isNotEmpty ? search.city : null,
+      province: search.city.isNotEmpty ? search.city : null,
       kind: search.kind,
     );
     final mapped = rows.map(propertyFromApi).toList();

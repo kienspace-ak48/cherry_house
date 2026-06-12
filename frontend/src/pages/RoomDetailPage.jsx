@@ -48,7 +48,7 @@ function mapDetailFromApi(row) {
     id: Number(row.id),
     slug: String(row.detailSlug ?? row.slug ?? ''),
     code: String(row.code ?? ''),
-    badge: String(row.badge ?? 'Cherry House'),
+    badge: String(row.badge ?? row.roomTypeTitle ?? 'Chưa phân loại phòng'),
     title: String(row.title ?? row.code ?? 'Phòng'),
     subtitle: String(row.subtitle ?? row.code ?? ''),
     areaSqm: Number(row.areaSqm ?? 0),

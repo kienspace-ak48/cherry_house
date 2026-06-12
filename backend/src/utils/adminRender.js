@@ -1,3 +1,5 @@
+const geoService = require('../services/geo.service');
+
 const PROPERTY_KINDS = [
   { value: 'homestay', label: 'Homestay' },
   { value: 'mini_hotel', label: 'Mini Hotel' },
@@ -15,6 +17,8 @@ function renderAdminPage(req, res, view, options = {}) {
     adminPage,
     breadcrumbs,
     propertyKinds: PROPERTY_KINDS,
+    vietnamProvinces: geoService.listProvinces(),
+    propertyCityOptions: geoService.listCityOptionsForProperty(),
     user: {
       email: sessionUser.email,
       fullName: sessionUser.fullName,

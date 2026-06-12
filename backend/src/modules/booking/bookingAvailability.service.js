@@ -63,7 +63,7 @@ async function checkAvailability(body = {}) {
     throw httpError('excludeBookingId must be a positive integer');
   }
 
-  const inventoryBlocked = !room.isActive || room.status === 'booked';
+  const inventoryBlocked = room.status === 'booked';
   const conflicts = await bookingRepository.findOverlappingActive({
     roomId: room.id,
     checkIn,
@@ -74,9 +74,7 @@ async function checkAvailability(body = {}) {
   const available = !inventoryBlocked && conflicts.length === 0;
 
   let message = null;
-  if (!room.isActive) {
-    message = 'Phòng hiện không hoạt động.';
-  } else if (room.status === 'booked') {
+  if (room.status === 'booked') {
     message = 'Phòng đang được đánh dấu là đã đặt.';
   } else if (conflicts.length > 0) {
     message = 'Phòng đã có đặt chỗ trong khoảng ngày này.';

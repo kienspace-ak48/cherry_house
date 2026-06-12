@@ -8,6 +8,7 @@ import {
   refreshClientProfile,
   updateClientProfile,
 } from '../api/authApi';
+import { fetchProvinces } from '../api/geoApi';
 import ProfileAvatar from '../components/profile/ProfileAvatar';
 import ProfileBookingsSection from '../components/profile/ProfileBookingsSection';
 import ProfileWalletSection from '../components/profile/ProfileWalletSection';
@@ -237,6 +238,19 @@ function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveOk, setSaveOk] = useState(false);
+  const [provinces, setProvinces] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProvinces()
+      .then((rows) => {
+        if (!cancelled) setProvinces(rows);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isClientLoggedIn()) {
@@ -504,16 +518,24 @@ function ProfilePage() {
 
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="city">
-                        Thành phố cư trú
+                        Tỉnh / thành phố cư trú
                       </label>
-                      <input
+                      <select
                         id="city"
-                        className="w-full rounded-lg border border-outline-variant px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary"
-                        type="text"
-                        placeholder="Thành phố cư trú"
+                        className="w-full rounded-lg border border-outline-variant bg-transparent px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary"
                         value={form.city}
                         onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                      />
+                      >
+                        <option value="">— Chọn tỉnh/thành —</option>
+                        {provinces.map((p) => (
+                          <option key={p.code} value={p.name}>
+                            {p.name}
+                          </option>
+                        ))}
+                        {form.city && !provinces.some((p) => p.name === form.city) ? (
+                          <option value={form.city}>{form.city}</option>
+                        ) : null}
+                      </select>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2">

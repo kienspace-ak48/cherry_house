@@ -148,7 +148,9 @@ Room roomFromApi(
     branchId: row['branchId'] as String? ?? branchCode,
     detailSlug: row['detailSlug'] as String? ?? '',
     branchDbId: branchDbId ?? row['branchDbId'] as int?,
-    type: row['type'] as String? ?? row['roomTypeTitle'] as String? ?? 'Room',
+    type: row['type'] as String? ??
+        row['roomTypeTitle'] as String? ??
+        'Chưa phân loại phòng',
     status: status,
     priceVnd: (row['priceVnd'] as num?)?.toInt() ?? 0,
     capacityLabel: row['capacityLabel'] as String? ?? '',
@@ -159,7 +161,6 @@ Room roomFromApi(
 
 List<Property> filterProperties(List<Property> list, BookingSearch search) {
   return list.where((p) {
-    if (search.city.isNotEmpty && p.city != search.city) return false;
     if (search.kind != 'all') {
       final kindKey = switch (p.kind) {
         PropertyKind.homestay => 'homestay',

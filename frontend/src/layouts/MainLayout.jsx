@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom'
 import { SeoProvider } from '../seo/SeoContext'
 import PageSeo from '../seo/PageSeo'
 import ChatBotWidget from '../components/chat/ChatBotWidget'
+import PromoPopupModal from '../components/promo/PromoPopupModal'
 import ScrollToTop from '../components/ScrollToTop'
 import RouteTransitionLoading from '../components/RouteTransitionLoading'
 
@@ -19,6 +20,7 @@ function MainLayout() {
               <Outlet />
           </main>
           <Footer/>
+          <PromoPopupModal />
           <ChatBotWidget />
       </div>
     </SeoProvider>

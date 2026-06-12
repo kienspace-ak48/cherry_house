@@ -130,6 +130,14 @@ function groupBranchesByProperty(branches, properties) {
   }));
 }
 
+async function attachBookingCounts(branches) {
+  const counts = await branchService.getBookingCountsByBranchIds(branches.map((b) => b.id));
+  return branches.map((b) => ({
+    ...b,
+    bookingCount: counts.get(b.id) || 0,
+  }));
+}
+
 async function list(req, res) {
   try {
     const filters = {};
@@ -139,7 +147,7 @@ async function list(req, res) {
       loadProperties(),
     ]);
     await Promise.all(branches.map((b) => catalogCountService.syncBranchRoomCount(b.id)));
-    const refreshedBranches = await branchService.listBranches(filters);
+    const refreshedBranches = await attachBookingCounts(await branchService.listBranches(filters));
 
     const filterPropertyId = req.query.propertyId ? String(req.query.propertyId) : '';
     const propertyGroups = groupBranchesByProperty(refreshedBranches, properties);
@@ -312,6 +320,24 @@ async function remove(req, res) {
   }
 }
 
+async function deactivate(req, res) {
+  try {
+    await branchService.setBranchActive(req.params.id, false);
+    res.redirect('/admin/branches?flash=deactivated');
+  } catch (error) {
+    res.redirect(`/admin/branches?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function activate(req, res) {
+  try {
+    await branchService.setBranchActive(req.params.id, true);
+    res.redirect('/admin/branches?flash=activated');
+  } catch (error) {
+    res.redirect(`/admin/branches?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
 module.exports = {
   list,
   createForm,
@@ -319,4 +345,6 @@ module.exports = {
   editForm,
   update,
   remove,
+  deactivate,
+  activate,
 };

@@ -37,6 +37,8 @@ const chatBotRoute = require('./chatBot.route');
 const contactRoute = require('./contact.route');
 const walletRoute = require('./wallet.route');
 const homeHeroRoute = require('./homeHero.route');
+const geoRoute = require('./geo.route');
+const promoPopupRoute = require('./promo-popup.route');
 const prisma = require('../config/prisma.config');
 const { isDbConnectionError } = require('../utils/http');
 
@@ -83,6 +85,9 @@ router.use('/chat', chatBotRoute);
 /** Form liên hệ website */
 router.use('/contact', contactRoute);
 
+/** Địa giới VN — tỉnh/thành, điểm đến, thành phố catalog */
+router.use('/geo', geoRoute);
+
 /** Catalog public API — format chuẩn cho React (ưu tiên dùng prefix /catalog) */
 router.use('/catalog', catalogRoute);
 
@@ -109,6 +114,9 @@ router.use('/rooms', inventoryRoomRoute);
 router.use('/users', userRoute);
 
 router.use('/promo-codes', promoCodeRoute);
+
+/** Popup voucher website */
+router.use('/promo-popup', promoPopupRoute);
 
 router.use('/bookings', bookingRoute);
 

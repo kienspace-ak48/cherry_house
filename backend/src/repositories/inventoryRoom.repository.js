@@ -153,6 +153,22 @@ function remove(id) {
   return prisma.inventoryRoom.delete({ where: { id } });
 }
 
+function countBookings(roomId) {
+  return prisma.booking.count({ where: { roomId } });
+}
+
+async function countBookingsByRoomIds(roomIds) {
+  if (!roomIds.length) return new Map();
+
+  const rows = await prisma.booking.groupBy({
+    by: ['roomId'],
+    where: { roomId: { in: roomIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(rows.map((row) => [row.roomId, row._count._all]));
+}
+
 module.exports = {
   findAll,
   findAllForCatalog,
@@ -164,4 +180,6 @@ module.exports = {
   create,
   update,
   remove,
+  countBookings,
+  countBookingsByRoomIds,
 };

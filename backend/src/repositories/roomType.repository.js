@@ -56,6 +56,22 @@ function remove(id) {
   return prisma.roomType.delete({ where: { id } });
 }
 
+function countRooms(roomTypeId) {
+  return prisma.inventoryRoom.count({ where: { roomTypeId } });
+}
+
+async function countRoomsByRoomTypeIds(roomTypeIds) {
+  if (!roomTypeIds.length) return new Map();
+
+  const rows = await prisma.inventoryRoom.groupBy({
+    by: ['roomTypeId'],
+    where: { roomTypeId: { in: roomTypeIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(rows.map((row) => [row.roomTypeId, row._count._all]));
+}
+
 module.exports = {
   findAll,
   findAllForAdminCatalog,
@@ -65,4 +81,6 @@ module.exports = {
   create,
   update,
   remove,
+  countRooms,
+  countRoomsByRoomTypeIds,
 };

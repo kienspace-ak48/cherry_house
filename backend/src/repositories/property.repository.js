@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma.config');
+const { listCityNamesForProvince } = require('../data/vietnam-provinces');
 
 /**
  * @param {{ city?: string; kind?: string; isActive?: boolean }} filters
@@ -54,7 +55,12 @@ function findBySlugForCatalog(slug) {
 function buildWhere(filters) {
   /** @type {import('../generated/prisma').Prisma.PropertyWhereInput} */
   const where = {};
-  if (filters.city) where.city = filters.city;
+  if (filters.province) {
+    const cityNames = listCityNamesForProvince(filters.province);
+    where.OR = [{ region: filters.province }, { city: { in: cityNames } }];
+  } else if (filters.city) {
+    where.city = filters.city;
+  }
   if (filters.kind) where.kind = filters.kind;
   if (filters.isActive !== undefined) where.isActive = filters.isActive;
   return where;
@@ -89,6 +95,24 @@ function remove(id) {
   });
 }
 
+function countBookings(propertyId) {
+  return prisma.booking.count({
+    where: { propertyId },
+  });
+}
+
+async function countBookingsByPropertyIds(propertyIds) {
+  if (!propertyIds.length) return new Map();
+
+  const rows = await prisma.booking.groupBy({
+    by: ['propertyId'],
+    where: { propertyId: { in: propertyIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(rows.map((row) => [row.propertyId, row._count._all]));
+}
+
 module.exports = {
   findAll,
   findAllForCatalog,
@@ -99,4 +123,6 @@ module.exports = {
   create,
   update,
   remove,
+  countBookings,
+  countBookingsByPropertyIds,
 };

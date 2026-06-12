@@ -2,6 +2,7 @@ const propertyRepository = require('../repositories/property.repository');
 const branchRepository = require('../repositories/branch.repository');
 const inventoryRoomRepository = require('../repositories/inventoryRoom.repository');
 const branchService = require('../services/branch.service');
+const { findProvinceByName } = require('../data/vietnam-provinces');
 const { httpError, parseId, parseOptionalBoolean } = require('../utils/http');
 const { toDetailSlug, toPublicProperty, toPublicBranch, toPublicRoom, toPublicRoomDetail } = require('../utils/catalog.mapper');
 
@@ -14,7 +15,13 @@ function parseSlug(raw) {
 function parsePublicListFilters(query) {
   const filters = { isActive: true };
 
-  if (query.city) filters.city = String(query.city).trim();
+  if (query.province) {
+    filters.province = String(query.province).trim();
+  } else if (query.city) {
+    const city = String(query.city).trim();
+    if (findProvinceByName(city)) filters.province = city;
+    else filters.city = city;
+  }
   if (query.kind) filters.kind = String(query.kind).trim();
   if (query.isActive !== undefined) {
     filters.isActive = parseOptionalBoolean(query.isActive);
@@ -99,12 +106,17 @@ async function listRooms(query = {}) {
   const filters = { isActive: true };
 
   if (query.branchId) {
-    filters.branchId = parseId(query.branchId, 'branchId');
+    const branchId = parseId(query.branchId, 'branchId');
+    const branch = await branchRepository.findById(branchId);
+    if (!branch || branch.isActive === false) return [];
+    const property = await propertyRepository.findById(branch.propertyId);
+    if (!property || property.isActive === false) return [];
+    filters.branchId = branchId;
   }
 
   if (query.propertySlug && query.branchCode) {
     const property = await propertyRepository.findBySlugForCatalog(parseSlug(query.propertySlug));
-    if (!property) return [];
+    if (!property || property.isActive === false) return [];
     const branchCode = String(query.branchCode).trim().toLowerCase();
     const branch = await branchRepository.findByPropertyAndCode(property.id, branchCode);
     if (!branch || branch.isActive === false) return [];
@@ -144,7 +156,7 @@ async function getRoomDetail(query = {}) {
     row = await inventoryRoomRepository.findByIdForCatalogDetail(parseId(query.roomId, 'roomId'));
   } else if (propertySlug && branchCode && detailSlug) {
     const property = await propertyRepository.findBySlugForCatalog(parseSlug(propertySlug));
-    if (!property) return null;
+    if (!property || property.isActive === false) return null;
     const branch = await branchRepository.findByPropertyAndCode(property.id, branchCode);
     if (!branch || branch.isActive === false) return null;
     const rooms = await inventoryRoomRepository.findAllForCatalogDetail({

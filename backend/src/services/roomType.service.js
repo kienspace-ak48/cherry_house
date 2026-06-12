@@ -267,13 +267,42 @@ async function update(idRaw, body) {
   }
 }
 
+function deleteBlockedMessage(roomCount) {
+  return `Loại phòng đang có ${roomCount} phòng — hãy đổi loại phòng cho các phòng đó trước khi xóa.`;
+}
+
 async function remove(idRaw) {
   const id = parseId(idRaw);
+  const existing = await roomTypeRepository.findById(id);
+  if (!existing) throw httpError('Room type not found', 404);
+
+  const roomCount = await roomTypeRepository.countRooms(id);
+  if (roomCount > 0) {
+    throw httpError(deleteBlockedMessage(roomCount), 409);
+  }
+
   try {
     return await roomTypeRepository.remove(id);
   } catch (error) {
+    if (error?.code === 'P2003') {
+      const rooms = await roomTypeRepository.countRooms(id);
+      throw httpError(deleteBlockedMessage(rooms || 1), 409);
+    }
     mapPrismaError(error, 'Room type not found');
   }
+}
+
+async function setRoomTypeActive(idRaw, isActive) {
+  const id = parseId(idRaw);
+  try {
+    return await roomTypeRepository.update(id, { isActive: Boolean(isActive) });
+  } catch (error) {
+    mapPrismaError(error, 'Room type not found');
+  }
+}
+
+async function getRoomCountsByRoomTypeIds(roomTypeIds) {
+  return roomTypeRepository.countRoomsByRoomTypeIds(roomTypeIds);
 }
 
 module.exports = {
@@ -284,6 +313,8 @@ module.exports = {
   create,
   update,
   remove,
+  setRoomTypeActive,
+  getRoomCountsByRoomTypeIds,
   createFromAdmin,
   updateFromAdmin,
   ROOM_CATEGORIES: [...ROOM_CATEGORIES],

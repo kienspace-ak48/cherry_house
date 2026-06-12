@@ -57,11 +57,22 @@ function formatHighlightsForTextarea(highlights) {
   return '';
 }
 
+async function attachBookingCounts(properties) {
+  const counts = await propertyService.getBookingCountsByPropertyIds(
+    properties.map((p) => p.id),
+  );
+  return properties.map((p) => ({
+    ...p,
+    bookingCount: counts.get(p.id) || 0,
+  }));
+}
+
 async function list(req, res) {
   try {
     const properties = await propertyService.listProperties(req.query);
     await Promise.all(properties.map((p) => catalogCountService.syncPropertyCounts(p.id)));
     const refreshed = await propertyService.listProperties(req.query);
+    const propertiesWithCounts = await attachBookingCounts(refreshed);
     renderAdminPage(req, res, 'admin/properties/index', {
       pageTitle: 'Cơ sở lưu trú',
       adminPage: 'properties',
@@ -69,7 +80,7 @@ async function list(req, res) {
         { label: 'Dashboard', href: '/admin' },
         { label: 'Cơ sở lưu trú' },
       ],
-      properties: refreshed,
+      properties: propertiesWithCounts,
       kindLabel,
       flash: req.query.flash || null,
       msg: req.query.msg || null,
@@ -182,6 +193,24 @@ async function remove(req, res) {
   }
 }
 
+async function deactivate(req, res) {
+  try {
+    await propertyService.setPropertyActive(req.params.id, false);
+    res.redirect('/admin/properties?flash=deactivated');
+  } catch (error) {
+    res.redirect(`/admin/properties?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function activate(req, res) {
+  try {
+    await propertyService.setPropertyActive(req.params.id, true);
+    res.redirect('/admin/properties?flash=activated');
+  } catch (error) {
+    res.redirect(`/admin/properties?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
 module.exports = {
   list,
   createForm,
@@ -189,4 +218,6 @@ module.exports = {
   editForm,
   update,
   remove,
+  deactivate,
+  activate,
 };

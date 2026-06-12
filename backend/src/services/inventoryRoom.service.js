@@ -178,16 +178,54 @@ async function update(idRaw, body) {
   }
 }
 
+function bookingDeleteBlockedMessage(count, code) {
+  const label = code ? `Phòng ${code}` : 'Phòng';
+  return `${label} có ${count} đặt phòng — không thể xóa. Hãy ngừng hoạt động thay vì xóa.`;
+}
+
 async function remove(idRaw) {
   const id = parseId(idRaw);
   const existing = await inventoryRoomRepository.findById(id);
   if (!existing) throw httpError('Inventory room not found', 404);
+
+  const bookingCount = await inventoryRoomRepository.countBookings(id);
+  if (bookingCount > 0) {
+    throw httpError(bookingDeleteBlockedMessage(bookingCount, existing.code), 409);
+  }
+
   try {
     await inventoryRoomRepository.remove(id);
     await catalogCountService.syncAfterRoomChange(existing.branchId);
+  } catch (error) {
+    if (error?.code === 'P2003') {
+      const count = await inventoryRoomRepository.countBookings(id);
+      throw httpError(bookingDeleteBlockedMessage(count || 1, existing.code), 409);
+    }
+    mapPrismaError(error, 'Inventory room not found');
+  }
+}
+
+async function setRoomActive(idRaw, isActive) {
+  const id = parseId(idRaw);
+  const existing = await inventoryRoomRepository.findById(id);
+  if (!existing) throw httpError('Inventory room not found', 404);
+  try {
+    return await inventoryRoomRepository.update(id, { isActive: Boolean(isActive) });
   } catch (error) {
     mapPrismaError(error, 'Inventory room not found');
   }
 }
 
-module.exports = { list, getById, create, update, remove };
+async function getBookingCountsByRoomIds(roomIds) {
+  return inventoryRoomRepository.countBookingsByRoomIds(roomIds);
+}
+
+module.exports = {
+  list,
+  getById,
+  create,
+  update,
+  remove,
+  setRoomActive,
+  getBookingCountsByRoomIds,
+};

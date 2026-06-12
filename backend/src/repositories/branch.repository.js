@@ -81,6 +81,22 @@ function remove(id) {
   return prisma.branch.delete({ where: { id } });
 }
 
+function countBookings(branchId) {
+  return prisma.booking.count({ where: { branchId } });
+}
+
+async function countBookingsByBranchIds(branchIds) {
+  if (!branchIds.length) return new Map();
+
+  const rows = await prisma.booking.groupBy({
+    by: ['branchId'],
+    where: { branchId: { in: branchIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(rows.map((row) => [row.branchId, row._count._all]));
+}
+
 module.exports = {
   findAll,
   findAllForCatalog,
@@ -90,4 +106,6 @@ module.exports = {
   create,
   update,
   remove,
+  countBookings,
+  countBookingsByBranchIds,
 };

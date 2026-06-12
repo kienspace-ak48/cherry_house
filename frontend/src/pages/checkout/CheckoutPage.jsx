@@ -23,6 +23,7 @@ import { countNights } from '../../lib/dateRange';
 import { MOCK_ROOMS } from '../booking/bookingData';
 import { resolveRoomDetail } from '../../data/roomDetails';
 import { STITCH_CHECKOUT_IMG } from './checkoutDefaults';
+import { PENDING_PROMO_KEY } from '../../components/promo/PromoPopupModal';
 
 const GUEST_LABEL = {
   '2-adults-0-children': '2 Người lớn, 0 Trẻ em',
@@ -170,6 +171,13 @@ export default function CheckoutPage() {
     if (loggedIn) return;
     navigate(buildLoginHref(checkoutReturnPath), { replace: true });
   }, [loggedIn, navigate, checkoutReturnPath]);
+
+  useEffect(() => {
+    const pending = sessionStorage.getItem(PENDING_PROMO_KEY);
+    if (!pending) return;
+    setPromoInput(pending);
+    sessionStorage.removeItem(PENDING_PROMO_KEY);
+  }, []);
 
   const checkInIso = searchParams.get('checkIn') || context.checkIn || '';
   const checkOutIso = searchParams.get('checkOut') || context.checkOut || '';

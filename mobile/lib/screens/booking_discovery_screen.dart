@@ -136,9 +136,20 @@ class _BookingDiscoveryScreenState extends State<BookingDiscoveryScreen> {
                 ),
               ),
             if (_list.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(child: Text('Không tìm thấy cơ sở')),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _search.city.isNotEmpty
+                          ? 'Cherry House chưa có cơ sở ở tỉnh/thành này'
+                          : 'Không tìm thấy cơ sở',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
               )
             else
               SliverPadding(

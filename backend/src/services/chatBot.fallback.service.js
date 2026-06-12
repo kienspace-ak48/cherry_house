@@ -135,7 +135,9 @@ function formatQuoteReply(quote, { checkIn, checkOut } = {}) {
 
   if (dateRange) {
     lines.push(`Khoảng ${dateRange}: **${statusLabel}**`);
-    if (occupancy === 'booked' || occupancy === 'held') {
+    if (occupancy === 'inactive') {
+      lines.push('Phòng này **tạm ngừng** — không nhận đặt mới. Bạn thử phòng khác hoặc chi nhánh khác nhé.');
+    } else if (occupancy === 'booked' || occupancy === 'held') {
       lines.push(
         'Phòng này không còn trống trong khoảng ngày bạn hỏi — bạn có thể chọn phòng khác hoặc đổi ngày.',
       );
@@ -145,10 +147,15 @@ function formatQuoteReply(quote, { checkIn, checkOut } = {}) {
       lines.push(`Ước tính ${nights} đêm: **${total}**`);
     }
   } else {
-    lines.push(`Trạng thái: ${statusLabel}. Cho mình biết ngày nhận/trả để kiểm tra còn trống nhé.`);
+    lines.push(`Trạng thái: ${statusLabel}.`);
+    if (occupancy === 'inactive') {
+      lines.push('Phòng **tạm ngừng** — không nhận đặt mới.');
+    } else {
+      lines.push('Cho mình biết ngày nhận/trả để kiểm tra còn trống nhé.');
+    }
   }
 
-  if (quote.bookingUrl) {
+  if (quote.bookingUrl && occupancy !== 'inactive') {
     lines.push(`Đặt phòng: ${quote.bookingUrl}`);
   }
 
@@ -166,6 +173,18 @@ function formatToolErrorReply(result) {
   }
   if (result.error === 'invalid_dates') {
     return result.message || 'Ngày trả phòng phải sau ngày nhận phòng.';
+  }
+  if (result.error === 'property_inactive' || result.error === 'branch_inactive' || result.error === 'room_inactive') {
+    return result.message || 'Địa điểm này tạm ngừng nhận đặt phòng mới.';
+  }
+  if (result.error === 'property_not_found') {
+    return result.message || 'Không tìm thấy cơ sở.';
+  }
+  if (result.error === 'branch_not_found') {
+    return result.message || 'Không tìm thấy chi nhánh.';
+  }
+  if (result.error === 'city_inactive_only') {
+    return result.message || 'Thành phố này tạm không có cơ sở đang hoạt động.';
   }
   if (result.error === 'room_not_found') {
     const suggestions = Array.isArray(result.similarCodes) && result.similarCodes.length
@@ -185,6 +204,7 @@ function formatToolErrorReply(result) {
 function summarizeSearchFallback(result, roomCode) {
   if (!result?.rooms?.length) {
     if (roomCode) return null;
+    if (result?.error === 'city_inactive_only') return result.message;
     return result?.datesRequiredNote
       || 'Hiện chưa có phòng trống phù hợp. Bạn thử đổi ngày hoặc thành phố khác nhé.';
   }

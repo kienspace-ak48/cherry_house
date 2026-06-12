@@ -42,7 +42,9 @@
 
 <% if (flash === 'created') { %><div class="alert alert-success">Đã tạo phòng mới.</div>
 <% } else if (flash === 'updated') { %><div class="alert alert-success">Đã cập nhật phòng.</div>
-<% } else if (flash === 'deleted') { %><div class="alert alert-success">Đã xóa phòng.</div>
+<% } else if (flash === 'deleted') { %><div class="alert alert-success">Đã xóa phòng vĩnh viễn.</div>
+<% } else if (flash === 'deactivated') { %><div class="alert alert-success">Đã ngừng hoạt động phòng. Khách không còn đặt được.</div>
+<% } else if (flash === 'activated') { %><div class="alert alert-success">Đã bật lại hiển thị phòng.</div>
 <% } else if (flash === 'notfound') { %><div class="alert alert-warning">Không tìm thấy phòng.</div>
 <% } else if (flash === 'error') { %><div class="alert alert-danger"><%= typeof msg !== 'undefined' ? msg : 'Có lỗi xảy ra' %></div>
 <% } %>
@@ -160,6 +162,7 @@
             <th>Mã</th>
             <th>Loại</th>
             <th>Giá/đêm</th>
+            <th>Đặt phòng</th>
             <th>TT</th>
             <th class="text-end">Thao tác</th>
           </tr>
@@ -181,11 +184,39 @@
               </a><br><code><%= br?.code || '' %></code>
             </td>
             <td><code><%= r.code %></code></td>
-            <td class="small"><%= r.roomType?.title || '—' %></td>
+            <td class="small">
+              <% if (r.roomType && r.roomType.title) { %>
+              <span class="badge text-bg-light border text-body-secondary"><%= r.roomType.title %></span>
+              <% } else { %>
+              <span class="badge text-bg-secondary">Chưa phân loại phòng</span>
+              <% } %>
+            </td>
             <td class="text-nowrap small"><%= formatPriceVnd(r.priceVnd) %> ₫</td>
+            <td>
+              <% const bookingCount = r.bookingCount ?? 0; %>
+              <% if (bookingCount > 0) { %>
+              <span class="badge text-bg-info"><%= bookingCount %></span>
+              <% } else { %>
+              <span class="text-body-secondary">0</span>
+              <% } %>
+            </td>
             <td><span class="badge bg-<%= statusBadgeClass(r.status) %>"><%= statusLabel(r.status) %></span></td>
             <td class="text-end text-nowrap">
               <a href="/admin/rooms/<%= r.id %>/edit" class="btn btn-sm btn-outline-primary py-0">Sửa</a>
+              <% if (r.isActive !== false) { %>
+              <form method="POST" action="/admin/rooms/<%= r.id %>/deactivate" class="d-inline" onsubmit="return confirm('Ngừng hoạt động phòng <%= r.code %>?');">
+                <button type="submit" class="btn btn-sm btn-outline-warning py-0">Ngừng HĐ</button>
+              </form>
+              <% } else { %>
+              <form method="POST" action="/admin/rooms/<%= r.id %>/activate" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-success py-0">Bật lại</button>
+              </form>
+              <% } %>
+              <% if (bookingCount === 0) { %>
+              <form method="POST" action="/admin/rooms/<%= r.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa vĩnh viễn phòng <%= r.code %>? Hành động không thể hoàn tác.');">
+                <button type="submit" class="btn btn-sm btn-outline-danger py-0">Xóa</button>
+              </form>
+              <% } %>
             </td>
           </tr>
           <% }); %>

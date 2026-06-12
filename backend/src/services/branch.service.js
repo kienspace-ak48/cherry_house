@@ -131,16 +131,45 @@ async function updateBranch(idRaw, body) {
   }
 }
 
+function bookingDeleteBlockedMessage(count) {
+  return `Chi nhánh có ${count} đặt phòng — không thể xóa. Hãy ngừng hoạt động thay vì xóa.`;
+}
+
 async function deleteBranch(idRaw) {
   const id = parseId(idRaw);
   const existing = await branchRepository.findById(id);
   if (!existing) throw httpError('Branch not found', 404);
+
+  const bookingCount = await branchRepository.countBookings(id);
+  if (bookingCount > 0) {
+    throw httpError(bookingDeleteBlockedMessage(bookingCount), 409);
+  }
+
   try {
     await branchRepository.remove(id);
     await catalogCountService.syncPropertyCounts(existing.propertyId);
   } catch (error) {
+    if (error?.code === 'P2003') {
+      const count = await branchRepository.countBookings(id);
+      throw httpError(bookingDeleteBlockedMessage(count || 1), 409);
+    }
     mapPrismaError(error);
   }
+}
+
+async function setBranchActive(idRaw, isActive) {
+  const id = parseId(idRaw);
+  const existing = await branchRepository.findById(id);
+  if (!existing) throw httpError('Branch not found', 404);
+  try {
+    return await branchRepository.update(id, { isActive: Boolean(isActive) });
+  } catch (error) {
+    mapPrismaError(error);
+  }
+}
+
+async function getBookingCountsByBranchIds(branchIds) {
+  return branchRepository.countBookingsByBranchIds(branchIds);
 }
 
 module.exports = {
@@ -150,4 +179,6 @@ module.exports = {
   createBranch,
   updateBranch,
   deleteBranch,
+  setBranchActive,
+  getBookingCountsByBranchIds,
 };

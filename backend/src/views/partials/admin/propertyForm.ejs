@@ -83,40 +83,34 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-4">
-              <label class="form-label" for="city">Thành phố <span class="text-danger">*</span></label>
-              <input
-                class="form-control"
-                id="city"
-                name="city"
-                value="<%= p.city || '' %>"
-                placeholder="Đà Lạt"
-                list="city-suggestions"
-                required
-              >
-              <datalist id="city-suggestions">
-                <option value="Hà Nội"></option>
-                <option value="Sa Pa"></option>
-                <option value="Ninh Bình"></option>
-                <option value="Đà Nẵng"></option>
-                <option value="Huế"></option>
-                <option value="Hội An"></option>
-                <option value="Đà Lạt"></option>
-                <option value="Vũng Tàu"></option>
-                <option value="Phú Quốc"></option>
-                <option value="TP. Hồ Chí Minh"></option>
-              </datalist>
-              <div class="form-text">Tên thành phố/tỉnh — dùng để <strong>lọc tìm kiếm</strong> trên web. Viết đúng dấu.</div>
+              <label class="form-label" for="city">Điểm đến / thành phố <span class="text-danger">*</span></label>
+              <select class="form-select" id="city" name="city" required>
+                <option value="" disabled <%= !p.city ? 'selected' : '' %>>— Chọn điểm đến —</option>
+                <% (propertyCityOptions || []).forEach(function(opt) { %>
+                <option
+                  value="<%= opt.name %>"
+                  data-region="<%= opt.region %>"
+                  <%= p.city === opt.name ? 'selected' : '' %>
+                ><%= opt.name %><%= opt.kind === 'destination' ? '' : ' (tỉnh/TP)' %></option>
+                <% }); %>
+                <% if (p.city && !(propertyCityOptions || []).some(function(o) { return o.name === p.city; })) { %>
+                <option value="<%= p.city %>" data-region="<%= p.region || '' %>" selected><%= p.city %> (hiện tại)</option>
+                <% } %>
+              </select>
+              <div class="form-text">Chọn từ danh mục — dùng để <strong>lọc tìm kiếm</strong> trên web.</div>
             </div>
             <div class="col-md-4">
-              <label class="form-label" for="region">Khu vực <span class="text-danger">*</span></label>
-              <input
-                class="form-control"
-                id="region"
-                name="region"
-                value="<%= p.region || '' %>"
-                placeholder="Lâm Đồng"
-              >
-              <div class="form-text">Tỉnh/vùng miền (vd: <em>Lâm Đồng</em>, <em>Quảng Nam</em>). Có thể trùng tên thành phố nếu là thành phố trực thuộc TW.</div>
+              <label class="form-label" for="region">Tỉnh / thành phố <span class="text-danger">*</span></label>
+              <select class="form-select" id="region" name="region" required>
+                <option value="" disabled <%= !p.region ? 'selected' : '' %>>— Chọn tỉnh/TP —</option>
+                <% (vietnamProvinces || []).forEach(function(prov) { %>
+                <option value="<%= prov.name %>" <%= p.region === prov.name ? 'selected' : '' %>><%= prov.name %></option>
+                <% }); %>
+                <% if (p.region && !(vietnamProvinces || []).some(function(pr) { return pr.name === p.region; })) { %>
+                <option value="<%= p.region %>" selected><%= p.region %> (hiện tại)</option>
+                <% } %>
+              </select>
+              <div class="form-text">34 tỉnh/thành sau sắp xếp 2025 — tự điền khi chọn điểm đến.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label" for="kind">Loại hình <span class="text-danger">*</span></label>
@@ -260,6 +254,19 @@
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
+    });
+  })();
+
+  (function syncRegionFromCity() {
+    const cityEl = document.getElementById('city');
+    const regionEl = document.getElementById('region');
+    if (!cityEl || !regionEl) return;
+    cityEl.addEventListener('change', () => {
+      const opt = cityEl.selectedOptions[0];
+      const region = opt && opt.dataset.region;
+      if (!region) return;
+      const match = Array.from(regionEl.options).find((o) => o.value === region);
+      if (match) regionEl.value = region;
     });
   })();
 </script>

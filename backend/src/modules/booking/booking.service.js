@@ -15,6 +15,7 @@ const { getBranchOccupancy } = require('./bookingOccupancy.service');
 const { assertUserCanBook } = require('../../services/userBookingGuard.service');
 const checkoutService = require('../checkout/checkout.service');
 const { sendBookingConfirmationEmail } = require('../../services/bookingEmail.service');
+const { assertRoomBookable, roomContextInclude } = require('./roomResolver.service');
 const { parseBookingCodeFromScan } = require('../../utils/bookingQr.util');
 const { saveBookingSignatureFromDataUrl } = require('../../utils/bookingSignature.util');
 const bookingCheckInRepository = require('../../repositories/bookingCheckIn.repository');
@@ -58,13 +59,10 @@ function parseListFilters(query) {
 async function resolveRoomContext(roomId) {
   const room = await prisma.inventoryRoom.findUnique({
     where: { id: roomId },
-    include: {
-      branch: { include: { property: true } },
-      roomType: true,
-    },
+    include: roomContextInclude,
   });
   if (!room) throw httpError('Room not found', 404);
-  if (!room.isActive) throw httpError('Room is not available', 400);
+  assertRoomBookable(room);
   return room;
 }
 

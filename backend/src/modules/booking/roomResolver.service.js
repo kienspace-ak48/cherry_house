@@ -11,6 +11,30 @@ const roomContextInclude = {
 };
 
 /**
+ * Chặn đặt phòng khi cơ sở / chi nhánh / phòng đã ngừng hoạt động.
+ * Loại phòng chỉ là nhãn — không chặn booking.
+ * @param {import('../../generated/prisma').InventoryRoom & {
+ *   branch?: { isActive?: boolean; property?: { isActive?: boolean } | null } | null;
+ * }} room
+ */
+function assertRoomBookable(room) {
+  if (!room) throw httpError('Room not found', 404);
+
+  const property = room.branch?.property;
+  const branch = room.branch;
+
+  if (!property || property.isActive === false) {
+    throw httpError('Cơ sở hiện không nhận đặt phòng.', 409);
+  }
+  if (!branch || branch.isActive === false) {
+    throw httpError('Chi nhánh hiện không nhận đặt phòng.', 409);
+  }
+  if (!room.isActive) {
+    throw httpError('Phòng hiện không hoạt động.', 409);
+  }
+}
+
+/**
  * @param {{
  *   roomId?: number | string;
  *   propertySlug?: string;
@@ -30,6 +54,7 @@ async function resolveRoomRef(ref = {}) {
       include: roomContextInclude,
     });
     if (!room) throw httpError('Room not found', 404);
+    assertRoomBookable(room);
     return room;
   }
 
@@ -55,10 +80,13 @@ async function resolveRoomRef(ref = {}) {
   if (roomCode) {
     const room = await inventoryRoomRepository.findByBranchAndCode(branch.id, roomCode);
     if (!room) throw httpError('Room not found', 404);
-    return prisma.inventoryRoom.findUnique({
+    const full = await prisma.inventoryRoom.findUnique({
       where: { id: room.id },
       include: roomContextInclude,
     });
+    if (!full) throw httpError('Room not found', 404);
+    assertRoomBookable(full);
+    return full;
   }
 
   const rooms = await prisma.inventoryRoom.findMany({
@@ -68,7 +96,8 @@ async function resolveRoomRef(ref = {}) {
   const match = rooms.find((r) => toDetailSlug(r.code) === detailSlug);
   if (!match) throw httpError('Room not found', 404);
 
+  assertRoomBookable(match);
   return match;
 }
 
-module.exports = { resolveRoomRef };
+module.exports = { resolveRoomRef, assertRoomBookable, roomContextInclude };

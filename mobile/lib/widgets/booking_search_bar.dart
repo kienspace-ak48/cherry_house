@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_services.dart';
 import '../constants/catalog_constants.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
@@ -21,24 +22,44 @@ class BookingSearchBar extends StatefulWidget {
 }
 
 class _BookingSearchBarState extends State<BookingSearchBar> {
-  late final TextEditingController _cityCtrl;
+  String _city = '';
   String _kind = 'all';
   DateTime? _checkIn;
   DateTime? _checkOut;
+  List<String> _cityOptions = CatalogConstants.provinceOptions;
+  bool _loadingCities = true;
 
   @override
   void initState() {
     super.initState();
-    _cityCtrl = TextEditingController(text: widget.initial?.city ?? '');
+    _city = widget.initial?.city ?? '';
     _kind = widget.initial?.kind ?? 'all';
     _checkIn = widget.initial?.checkIn;
     _checkOut = widget.initial?.checkOut;
+    _loadProvinces();
   }
 
-  @override
-  void dispose() {
-    _cityCtrl.dispose();
-    super.dispose();
+  Future<void> _loadProvinces() async {
+    try {
+      final rows = await AppServices.I.geoApi.fetchProvinces();
+      if (!mounted) return;
+      final provinces = rows
+          .map((p) => p['name']?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (provinces.isNotEmpty) {
+        setState(() {
+          _cityOptions = provinces;
+          if (_city.isNotEmpty && !_cityOptions.contains(_city)) {
+            _cityOptions = [..._cityOptions, _city];
+          }
+        });
+      }
+    } catch (_) {
+      // fallback CatalogConstants
+    } finally {
+      if (mounted) setState(() => _loadingCities = false);
+    }
   }
 
   Future<void> _pickDate(bool isCheckIn) async {
@@ -64,7 +85,7 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
 
   void _submit() {
     widget.onSearch(BookingSearch(
-      city: _cityCtrl.text.trim(),
+      city: _city,
       checkIn: _checkIn,
       checkOut: _checkOut,
       kind: _kind,
@@ -90,26 +111,28 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Autocomplete<String>(
-            optionsBuilder: (text) {
-              final q = text.text.toLowerCase();
-              return CatalogConstants.cityOptions.where((c) => c.toLowerCase().contains(q));
-            },
-            onSelected: (v) => _cityCtrl.text = v,
-            fieldViewBuilder: (_, controller, focusNode, __) {
-              if (controller.text.isEmpty && _cityCtrl.text.isNotEmpty) {
-                controller.text = _cityCtrl.text;
-              }
-              controller.addListener(() => _cityCtrl.text = controller.text);
-              return TextField(
-                controller: controller,
-                focusNode: focusNode,
-                decoration: const InputDecoration(
-                  labelText: 'Địa điểm',
-                  prefixIcon: Icon(Icons.location_on_outlined, color: AppColors.primary),
-                ),
-              );
-            },
+          DropdownButtonFormField<String>(
+            value: _city.isEmpty ? null : _city,
+            decoration: InputDecoration(
+              labelText: 'Tỉnh/thành',
+              prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primary),
+              suffixIcon: _loadingCities
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
+            ),
+            hint: const Text('Tất cả tỉnh/thành'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('Tất cả tỉnh/thành')),
+              ..._cityOptions.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+            ],
+            onChanged: _loadingCities ? null : (v) => setState(() => _city = v ?? ''),
           ),
           const SizedBox(height: 10),
           Row(
@@ -140,7 +163,7 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
           if (!widget.compact) ...[
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _kind,
+              initialValue: _kind,
               decoration: const InputDecoration(labelText: 'Loại hình'),
               items: CatalogConstants.kindOptions.entries
                   .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))

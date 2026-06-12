@@ -10,14 +10,43 @@ abstract final class CatalogConstants {
   static const defaultHeroImage =
       'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
 
-  static const cityOptions = [
-    'Đà Lạt',
+  static const provinceOptions = [
     'Hà Nội',
-    'Sa Pa',
-    'Vũng Tàu',
-    'Nha Trang',
+    'Cao Bằng',
+    'Tuyên Quang',
+    'Điện Biên',
+    'Lai Châu',
+    'Sơn La',
+    'Lào Cai',
+    'Thái Nguyên',
+    'Lạng Sơn',
+    'Quảng Ninh',
+    'Bắc Ninh',
+    'Phú Thọ',
+    'Hải Phòng',
+    'Hưng Yên',
+    'Ninh Bình',
+    'Thanh Hóa',
+    'Nghệ An',
+    'Hà Tĩnh',
+    'Quảng Trị',
+    'Huế',
     'Đà Nẵng',
-    'Hội An',
-    'Phú Quốc',
+    'Quảng Ngãi',
+    'Gia Lai',
+    'Khánh Hòa',
+    'Lâm Đồng',
+    'Đắk Lắk',
+    'Đồng Nai',
+    'TP. Hồ Chí Minh',
+    'Tây Ninh',
+    'Vĩnh Long',
+    'Đồng Tháp',
+    'Cần Thơ',
+    'Cà Mau',
+    'An Giang',
   ];
+
+  /// @deprecated — ô địa điểm giờ là tỉnh/thành
+  static const cityOptions = provinceOptions;
 }

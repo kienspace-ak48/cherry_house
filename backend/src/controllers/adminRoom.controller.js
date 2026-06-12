@@ -187,6 +187,14 @@ function groupRoomsForDisplay(rooms, branches, properties, options = {}) {
     .filter((group) => group.branchGroups.length > 0);
 }
 
+async function attachBookingCounts(rooms) {
+  const counts = await inventoryRoomService.getBookingCountsByRoomIds(rooms.map((r) => r.id));
+  return rooms.map((r) => ({
+    ...r,
+    bookingCount: counts.get(r.id) || 0,
+  }));
+}
+
 async function list(req, res) {
   try {
     const filters = {};
@@ -217,7 +225,7 @@ async function list(req, res) {
       const branchIds = new Set(filterBranches.map((b) => b.id));
       rooms = allRooms.filter((room) => branchIds.has(room.branchId));
     }
-    rooms = filterRoomsBySearch(rooms, searchQ);
+    rooms = await attachBookingCounts(filterRoomsBySearch(rooms, searchQ));
 
     const requestedView = req.query.view === 'table' || req.query.view === 'grouped'
       ? req.query.view
@@ -456,6 +464,24 @@ async function remove(req, res) {
   }
 }
 
+async function deactivate(req, res) {
+  try {
+    await inventoryRoomService.setRoomActive(req.params.id, false);
+    res.redirect('/admin/rooms?flash=deactivated');
+  } catch (error) {
+    res.redirect(`/admin/rooms?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
+async function activate(req, res) {
+  try {
+    await inventoryRoomService.setRoomActive(req.params.id, true);
+    res.redirect('/admin/rooms?flash=activated');
+  } catch (error) {
+    res.redirect(`/admin/rooms?flash=error&msg=${encodeURIComponent(error.message)}`);
+  }
+}
+
 module.exports = {
   list,
   createForm,
@@ -463,6 +489,8 @@ module.exports = {
   editForm,
   update,
   remove,
+  deactivate,
+  activate,
   statusLabel,
   statusBadgeClass,
 };

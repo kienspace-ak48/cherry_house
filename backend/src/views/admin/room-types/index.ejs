@@ -2,7 +2,8 @@
   <div>
     <h2>Loại phòng</h2>
     <p class="text-body-secondary mb-0 small">
-      Mẫu phòng dùng chung — gallery, tiện nghi, mô tả chi tiết hiển thị trên trang <strong>/room/:slug</strong>.
+      Nhãn / mẫu mô tả tùy chọn (gallery, tiện nghi). Phòng không gắn loại sẽ hiển thị <strong>Chưa phân loại phòng</strong>.
+      Xóa loại phòng không ảnh hưởng booking — chỉ cần không còn phòng nào đang dùng.
     </p>
   </div>
   <a href="/admin/room-types/new" class="btn btn-primary btn-sm">+ Thêm loại phòng</a>
@@ -32,6 +33,7 @@
           <th>Danh mục</th>
           <th>Diện tích</th>
           <th>Giá gốc</th>
+          <th>Phòng đang dùng</th>
           <th>Slug</th>
           <th class="text-end">Thao tác</th>
         </tr>
@@ -39,8 +41,8 @@
       <tbody>
         <% if (!roomTypes.length) { %>
         <tr>
-          <td colspan="6" class="text-center text-body-secondary py-5">
-            Chưa có loại phòng. <a href="/admin/room-types/new">Tạo loại đầu tiên</a>
+          <td colspan="7" class="text-center text-body-secondary py-5">
+            Chưa có loại phòng. <a href="/admin/room-types/new">Tạo loại đầu tiên</a> (tùy chọn)
           </td>
         </tr>
         <% } %>
@@ -53,12 +55,22 @@
           <td><span class="badge text-bg-light text-body-secondary"><%= rt.category %></span></td>
           <td><%= rt.areaSqm %> m²</td>
           <td><%= formatPriceVnd(rt.basePriceVnd) %> ₫</td>
+          <td>
+            <% const roomCount = rt.roomCount ?? 0; %>
+            <% if (roomCount > 0) { %>
+            <a href="/admin/rooms?roomTypeId=<%= rt.id %>" class="badge text-bg-light border text-decoration-none"><%= roomCount %></a>
+            <% } else { %>
+            <span class="text-body-secondary">0</span>
+            <% } %>
+          </td>
           <td><code class="small"><%= rt.slug %></code></td>
           <td class="text-end text-nowrap">
             <a href="/admin/room-types/<%= rt.id %>/edit" class="btn btn-outline-primary btn-sm">Sửa</a>
-            <form method="POST" action="/admin/room-types/<%= rt.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa loại phòng này? Phòng đang dùng sẽ bị chặn.');">
+            <% if (roomCount === 0) { %>
+            <form method="POST" action="/admin/room-types/<%= rt.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa loại phòng này? Phòng không gắn loại sẽ hiển thị nhãn Chưa phân loại phòng.');">
               <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
             </form>
+            <% } %>
           </td>
         </tr>
         <% }); %>

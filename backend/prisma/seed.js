@@ -670,6 +670,24 @@ async function seedSingletonCms() {
     update: {},
     create: { id: 1, ...chatDefaults },
   });
+
+  await prisma.promoPopupSettings.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      id: 1,
+      isEnabled: false,
+      selectionMode: 'manual',
+      promoCodeId: null,
+      discountTypeFilter: 'all',
+      title: 'Ưu đãi Cherry House',
+      message: null,
+      ctaLabel: 'Sao chép mã',
+      delaySec: 2,
+      dismissHours: 24,
+      showOnRoutesJson: JSON.stringify(['all']),
+    },
+  });
 }
 
 async function seedBookings(userByEmail, branchByKey, roomTypeBySlug) {

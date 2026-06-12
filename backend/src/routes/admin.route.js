@@ -14,6 +14,7 @@ const adminSeoController = require('../controllers/adminSeo.controller');
 const adminChatBotController = require('../controllers/adminChatBot.controller');
 const adminHomepageController = require('../controllers/adminHomepage.controller');
 const adminPromoCodeController = require('../controllers/adminPromoCode.controller');
+const adminPromoPopupController = require('../controllers/adminPromoPopup.controller');
 const adminEmailTemplateController = require('../controllers/adminEmailTemplate.controller');
 const adminCustomerEmailController = require('../controllers/adminCustomerEmail.controller');
 const adminContactMessageController = require('../controllers/adminContactMessage.controller');
@@ -37,6 +38,8 @@ router.post('/properties', adminPropertyController.create);
 router.get('/properties/:id/edit', adminPropertyController.editForm);
 router.post('/properties/:id', adminPropertyController.update);
 router.post('/properties/:id/delete', adminPropertyController.remove);
+router.post('/properties/:id/deactivate', adminPropertyController.deactivate);
+router.post('/properties/:id/activate', adminPropertyController.activate);
 
 router.get('/branches', adminBranchController.list);
 router.get('/branches/new', adminBranchController.createForm);
@@ -44,12 +47,16 @@ router.post('/branches', adminBranchController.create);
 router.get('/branches/:id/edit', adminBranchController.editForm);
 router.post('/branches/:id', adminBranchController.update);
 router.post('/branches/:id/delete', adminBranchController.remove);
+router.post('/branches/:id/deactivate', adminBranchController.deactivate);
+router.post('/branches/:id/activate', adminBranchController.activate);
 router.get('/rooms', adminRoomController.list);
 router.get('/rooms/new', adminRoomController.createForm);
 router.post('/rooms', adminRoomController.create);
 router.get('/rooms/:id/edit', adminRoomController.editForm);
 router.post('/rooms/:id', adminRoomController.update);
 router.post('/rooms/:id/delete', adminRoomController.remove);
+router.post('/rooms/:id/deactivate', adminRoomController.deactivate);
+router.post('/rooms/:id/activate', adminRoomController.activate);
 
 router.get('/promo-codes', adminPromoCodeController.list);
 router.get('/promo-codes/new', adminPromoCodeController.createForm);
@@ -57,6 +64,9 @@ router.post('/promo-codes', adminPromoCodeController.create);
 router.get('/promo-codes/:id/edit', adminPromoCodeController.editForm);
 router.post('/promo-codes/:id', adminPromoCodeController.update);
 router.post('/promo-codes/:id/delete', adminPromoCodeController.remove);
+
+router.get('/promo-popup', adminPromoPopupController.index);
+router.post('/promo-popup', adminPromoPopupController.update);
 
 router.get('/room-types', adminRoomTypeController.list);
 router.get('/room-types/new', adminRoomTypeController.createForm);

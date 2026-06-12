@@ -10,7 +10,11 @@ import {
   mergeContext,
 } from '../../lib/bookingContext';
 import { PROPERTY_KIND_LABELS } from '../../data/properties';
-import { BOOKING_CITY_OPTIONS } from '../../constants/bookingCities';
+import { fetchProvinces } from '../../api/geoApi';
+import {
+  BOOKING_PROVINCE_OPTIONS_FALLBACK,
+  setBookingProvinceOptions,
+} from '../../constants/bookingProvinces';
 
 const KIND_OPTIONS = [
   { value: 'all', label: 'Tất cả loại hình' },
@@ -31,6 +35,24 @@ export default function BookingSearchBar({
   const [checkOut, setCheckOut] = useState(initialContext.checkOut ?? '');
   const [kind, setKind] = useState(initialContext.kind ?? 'all');
   const [dateError, setDateError] = useState('');
+  const [cityOptions, setCityOptions] = useState(BOOKING_PROVINCE_OPTIONS_FALLBACK);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProvinces()
+      .then((rows) => {
+        const provinces = (rows ?? [])
+          .map((p) => (typeof p === 'string' ? p : p?.name))
+          .filter(Boolean);
+        if (cancelled || !provinces.length) return;
+        setBookingProvinceOptions(provinces);
+        setCityOptions(provinces);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setCity(initialContext.city ?? initialContext.q ?? '');
@@ -126,7 +148,7 @@ export default function BookingSearchBar({
     <form id={id} onSubmit={handleSubmit} className={[shellClass, className].join(' ')}>
       <div className={fieldShell}>
         <label className={labelClass} htmlFor={`${id}-city`}>
-          Địa điểm
+          Tỉnh/thành
         </label>
         <div className={inputWrapClass}>
           <span
@@ -137,20 +159,19 @@ export default function BookingSearchBar({
           >
             location_on
           </span>
-          <input
+          <select
             id={`${id}-city`}
             className={inputClass}
-            placeholder="Đà Lạt, Vũng Tàu, Đà Nẵng..."
-            type="text"
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            list={`${id}-cities`}
-          />
-          <datalist id={`${id}-cities`}>
-            {BOOKING_CITY_OPTIONS.map((c) => (
-              <option key={c} value={c} />
+          >
+            <option value="">Tất cả tỉnh/thành</option>
+            {cityOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
-          </datalist>
+          </select>
         </div>
       </div>
 

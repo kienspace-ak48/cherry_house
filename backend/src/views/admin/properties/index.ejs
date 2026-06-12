@@ -13,7 +13,11 @@
 <% } else if (flash === 'updated') { %>
 <div class="alert alert-success">Đã cập nhật cơ sở.</div>
 <% } else if (flash === 'deleted') { %>
-<div class="alert alert-success">Đã xóa cơ sở.</div>
+<div class="alert alert-success">Đã xóa cơ sở vĩnh viễn.</div>
+<% } else if (flash === 'deactivated') { %>
+<div class="alert alert-success">Đã ngừng hoạt động cơ sở. Khách không còn thấy trên web.</div>
+<% } else if (flash === 'activated') { %>
+<div class="alert alert-success">Đã bật lại hiển thị cơ sở.</div>
 <% } else if (flash === 'notfound') { %>
 <div class="alert alert-warning">Không tìm thấy cơ sở.</div>
 <% } else if (flash === 'error') { %>
@@ -40,13 +44,14 @@
             <th>Loại</th>
             <th>Giá từ</th>
             <th>Chi nhánh</th>
+            <th>Đặt phòng</th>
             <th>TT</th>
             <th class="text-end">Thao tác</th>
           </tr>
         </thead>
         <tbody>
           <% if (!properties.length) { %>
-          <tr><td colspan="9" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
+          <tr><td colspan="10" class="text-center py-4 text-body-secondary">Chưa có dữ liệu</td></tr>
           <% } %>
           <% properties.forEach(function(p) { %>
           <tr>
@@ -69,15 +74,34 @@
               </a>
             </td>
             <td>
+              <% const bookingCount = p.bookingCount ?? 0; %>
+              <% if (bookingCount > 0) { %>
+              <span class="badge text-bg-info"><%= bookingCount %></span>
+              <% } else { %>
+              <span class="text-body-secondary">0</span>
+              <% } %>
+            </td>
+            <td>
               <% if (p.isActive) { %><span class="badge bg-success">On</span><% } else { %><span class="badge bg-secondary">Off</span><% } %>
             </td>
             <td class="text-end text-nowrap">
               <a href="/admin/branches?propertyId=<%= p.id %>" class="btn btn-sm btn-outline-secondary" title="Chi nhánh thuộc cơ sở này">CN</a>
               <a href="/admin/branches/new?propertyId=<%= p.id %>" class="btn btn-sm btn-outline-secondary" title="Thêm chi nhánh">+</a>
               <a href="/admin/properties/<%= p.id %>/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
-              <form method="POST" action="/admin/properties/<%= p.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa cơ sở này?');">
+              <% if (p.isActive) { %>
+              <form method="POST" action="/admin/properties/<%= p.id %>/deactivate" class="d-inline" onsubmit="return confirm('Ngừng hoạt động cơ sở này? Khách sẽ không còn thấy trên web.');">
+                <button type="submit" class="btn btn-sm btn-outline-warning">Ngừng HĐ</button>
+              </form>
+              <% } else { %>
+              <form method="POST" action="/admin/properties/<%= p.id %>/activate" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-success">Bật lại</button>
+              </form>
+              <% } %>
+              <% if (bookingCount === 0) { %>
+              <form method="POST" action="/admin/properties/<%= p.id %>/delete" class="d-inline" onsubmit="return confirm('Xóa vĩnh viễn cơ sở này? Hành động không thể hoàn tác.');">
                 <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
               </form>
+              <% } %>
             </td>
           </tr>
           <% }); %>

@@ -670,7 +670,29 @@ model PromoCode {
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
+  popupSettings PromoPopupSettings[]
+
   @@map("promo_codes")
+}
+
+// promo_popup_settings — popup voucher website (singleton id=1)
+model PromoPopupSettings {
+  id                 Int      @id @default(1)
+  isEnabled          Boolean  @default(false) @map("is_enabled")
+  selectionMode      String   @default("manual") @map("selection_mode") @db.VarChar(20)
+  promoCodeId        Int?     @map("promo_code_id")
+  discountTypeFilter String   @default("all") @map("discount_type_filter") @db.VarChar(20)
+  title              String   @default("Ưu đãi Cherry House") @db.VarChar(255)
+  message            String?  @db.Text
+  ctaLabel           String   @default("Sao chép mã") @map("cta_label") @db.VarChar(80)
+  delaySec           Int      @default(2) @map("delay_sec")
+  dismissHours       Int      @default(24) @map("dismiss_hours")
+  showOnRoutesJson   String   @default("[\"all\"]") @map("show_on_routes_json") @db.Text
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  promoCode PromoCode? @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+
+  @@map("promo_popup_settings")
 }
 
 enum ContactMessageStatus {

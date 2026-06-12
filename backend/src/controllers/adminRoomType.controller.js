@@ -33,9 +33,17 @@ function formatPriceVnd(amount) {
   return Number(amount || 0).toLocaleString('vi-VN');
 }
 
+async function attachRoomCounts(roomTypes) {
+  const counts = await roomTypeService.getRoomCountsByRoomTypeIds(roomTypes.map((rt) => rt.id));
+  return roomTypes.map((rt) => ({
+    ...rt,
+    roomCount: counts.get(rt.id) || 0,
+  }));
+}
+
 async function list(req, res) {
   try {
-    const roomTypes = await roomTypeService.list(req.query);
+    const roomTypes = await attachRoomCounts(await roomTypeService.list(req.query));
     renderAdminPage(req, res, 'admin/room-types/index', {
       pageTitle: 'Loại phòng',
       adminPage: 'room-types',
