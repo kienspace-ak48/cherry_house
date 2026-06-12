@@ -148,9 +148,18 @@ router.post(
   (req, res, next) => {
     uploadImage.single('image')(req, res, (err) => {
       if (err) {
+        let message = err.message || 'Upload failed';
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          message = 'Ảnh vượt quá 5MB (giới hạn server).';
+        } else if (/only images/i.test(message)) {
+          message = 'Chỉ chấp nhận file ảnh (PNG, JPG, WEBP, …).';
+        }
+        return res.status(400).json({ success: false, message });
+      }
+      if (!req.file) {
         return res.status(400).json({
           success: false,
-          message: err.message || 'Upload failed',
+          message: 'Không nhận được file — kiểm tra Nginx client_max_body_size (khuyến nghị ≥ 10M).',
         });
       }
       next();

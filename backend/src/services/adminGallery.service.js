@@ -36,8 +36,41 @@ function sanitizeBaseName(originalName) {
   return `${base || 'image'}${ext || '.jpg'}`;
 }
 
+function mapFsWriteError(error) {
+  const code = String(error?.code || '');
+  if (code === 'EACCES' || code === 'EPERM') {
+    return httpError(
+      `Không ghi được file vào ${GALLERY_UPLOAD_PATH}. Trên VPS: chown/chmod thư mục public/uploads cho user chạy PM2.`,
+      500,
+    );
+  }
+  if (code === 'ENOSPC') {
+    return httpError('Ổ đĩa VPS đầy — không thể lưu ảnh.', 507);
+  }
+  if (code === 'EROFS') {
+    return httpError('Filesystem chỉ đọc — kiểm tra mount/quyền thư mục uploads.', 500);
+  }
+  return error;
+}
+
 async function ensureGalleryDir() {
   await fs.mkdir(GALLERY_UPLOAD_PATH, { recursive: true });
+}
+
+/** Kiểm tra quyền ghi khi server khởi động (VPS deploy). */
+async function assertGalleryUploadWritable() {
+  await ensureGalleryDir();
+  const probe = path.join(GALLERY_UPLOAD_PATH, `.write_probe_${process.pid}`);
+  try {
+    await fs.writeFile(probe, 'ok');
+    await fs.unlink(probe);
+    return true;
+  } catch (error) {
+    console.error(`❌ Gallery upload path not writable: ${GALLERY_UPLOAD_PATH}`);
+    console.error(`   → ${error.code || ''} ${error.message}`);
+    console.error('   → VPS: sudo chown -R <pm2-user>:<group> backend/public/uploads && chmod -R 775 backend/public/uploads');
+    return false;
+  }
 }
 
 async function saveUploadedFile(file) {
@@ -48,7 +81,11 @@ async function saveUploadedFile(file) {
   const absolutePath = path.join(GALLERY_UPLOAD_PATH, uniqueName);
   const publicPath = `${GALLERY_PUBLIC_PREFIX}/${uniqueName}`;
 
-  await fs.writeFile(absolutePath, file.buffer);
+  try {
+    await fs.writeFile(absolutePath, file.buffer);
+  } catch (error) {
+    throw mapFsWriteError(error);
+  }
 
   return {
     name: safeName,
@@ -192,4 +229,5 @@ module.exports = {
   deleteFolder,
   uploadImage,
   deleteImage,
+  assertGalleryUploadWritable,
 };

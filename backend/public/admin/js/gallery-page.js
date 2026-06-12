@@ -176,9 +176,20 @@
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'Upload lỗi');
+      let data = null;
+      const raw = await res.text();
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        const hint = res.status === 413
+          ? 'File quá lớn — tăng client_max_body_size trên Nginx (vd. 10M).'
+          : `HTTP ${res.status}`;
+        alert(`Upload lỗi (${hint}). Phản hồi không phải JSON — xem pm2 logs / nginx error.log.`);
+        console.error('[gallery upload] non-JSON response', res.status, raw.slice(0, 500));
+        return;
+      }
+      if (!res.ok || !data?.success) {
+        alert(data?.message || `Upload lỗi (HTTP ${res.status})`);
         return;
       }
       renderImages(data.images || []);
@@ -186,7 +197,7 @@
       setPendingFile(null);
     } catch (err) {
       console.error(err);
-      alert('Upload lỗi');
+      alert(`Upload lỗi: ${err.message || 'mạng / server'}`);
     }
   }
 

@@ -7,6 +7,7 @@ const HTTP_PORT = process.env.HTTP_PORT || 3000;
 const app = require('./src/app');
 const prisma = require('./src/config/prisma.config');
 const { isDbConnectionError, formatDbErrorDetail } = require('./src/utils/http');
+const { assertGalleryUploadWritable } = require('./src/services/adminGallery.service');
 
 async function checkDatabaseConnection() {
   try {
@@ -43,6 +44,7 @@ function startServer(){
           }
         }
         checkDatabaseConnection();
+        assertGalleryUploadWritable();
     })
 }
 
