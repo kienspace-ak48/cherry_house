@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/media_url.dart';
+
 class AppNetworkImage extends StatelessWidget {
   const AppNetworkImage({
     super.key,
@@ -14,8 +16,9 @@ class AppNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolved = resolveMediaUrl(url);
     final img = Image.network(
-      url,
+      resolved.isNotEmpty ? resolved : url,
       fit: fit,
       loadingBuilder: (_, child, progress) {
         if (progress == null) return child;

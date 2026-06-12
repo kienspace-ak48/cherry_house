@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import bookingApi from '../../api/bookingApi';
 import checkoutApi from '../../api/checkoutApi';
 import promoApi from '../../api/promoApi';
@@ -11,6 +11,7 @@ import DateRangePicker from '../../components/booking/DateRangePicker';
 import { LAYOUT_CONTAINER } from '../../constants/layoutContainer';
 import { readProfileContact, syncProfileContactFromUser } from '../../data/profileContact';
 import { isClientLoggedIn } from '../../lib/authStorage';
+import { buildLoginHref } from '../../lib/authRedirect';
 import { refreshClientProfile } from '../../api/authApi';
 import { resolveBranch } from '../../data/properties';
 import {
@@ -117,6 +118,7 @@ function formatConflictRange(conflict) {
 }
 
 export default function CheckoutPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const slug = searchParams.get('slug');
   const guestsKey = parseGuestsParam(searchParams.get('guests'));
@@ -158,10 +160,16 @@ export default function CheckoutPage() {
   const [wallet, setWallet] = useState({ loading: false, balanceVnd: null, error: null });
 
   const loggedIn = isClientLoggedIn();
-  const payOptions = useMemo(
-    () => (loggedIn ? [...PAY_OPTIONS, WALLET_PAY_OPTION] : PAY_OPTIONS),
-    [loggedIn],
-  );
+  const checkoutReturnPath = useMemo(() => {
+    const qs = searchParams.toString();
+    return qs ? `/checkout?${qs}` : '/checkout';
+  }, [searchParams]);
+  const payOptions = useMemo(() => [...PAY_OPTIONS, WALLET_PAY_OPTION], []);
+
+  useEffect(() => {
+    if (loggedIn) return;
+    navigate(buildLoginHref(checkoutReturnPath), { replace: true });
+  }, [loggedIn, navigate, checkoutReturnPath]);
 
   const checkInIso = searchParams.get('checkIn') || context.checkIn || '';
   const checkOutIso = searchParams.get('checkOut') || context.checkOut || '';
@@ -448,6 +456,14 @@ export default function CheckoutPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!loggedIn) {
+    return (
+      <div className={[LAYOUT_CONTAINER, 'flex min-h-[50vh] items-center justify-center pt-28 pb-16'].join(' ')}>
+        <p className="text-sm text-on-surface-variant">Đang chuyển tới đăng nhập...</p>
+      </div>
+    );
   }
 
   return (

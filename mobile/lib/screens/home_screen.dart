@@ -1,229 +1,138 @@
 import 'package:flutter/material.dart';
 
-import '../data/fake_data.dart';
+import '../data/home_defaults.dart';
+import '../data/home_repository.dart';
+import '../models/home_content.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
-import '../widgets/booking_search_bar.dart';
-import '../widgets/network_image.dart';
+import '../widgets/home/home_areas_section.dart';
+import '../widgets/home/home_hero_section.dart';
+import '../widgets/home/home_kinds_section.dart';
+import '../widgets/home/home_newsletter_section.dart';
+import '../widgets/home/home_reviews_section.dart';
+import '../widgets/home/home_stats_section.dart';
+import '../widgets/home/home_why_section.dart';
 import 'booking_discovery_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key, this.onSwitchToBooking});
 
-  void _openBooking(BuildContext context, BookingSearch search) {
+  /// Chuyển sang tab Đặt phòng trong MainShell (nếu có).
+  final void Function(BookingSearch search)? onSwitchToBooking;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _repo = HomeRepository();
+  HomeHeroConfig _hero = HomeDefaults.hero;
+  HomeSectionsConfig _sections = HomeDefaults.sections;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final results = await Future.wait([_repo.fetchHero(), _repo.fetchSections()]);
+    if (!mounted) return;
+    setState(() {
+      _hero = results[0] as HomeHeroConfig;
+      _sections = results[1] as HomeSectionsConfig;
+      _loading = false;
+    });
+  }
+
+  void _openBooking(BookingSearch search) {
+    if (widget.onSwitchToBooking != null) {
+      widget.onSwitchToBooking!(search);
+      return;
+    }
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BookingDiscoveryScreen(initialSearch: search),
-      ),
+      MaterialPageRoute(builder: (_) => BookingDiscoveryScreen(initialSearch: search)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.home_work, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Cherry House',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.primary),
-                  ),
-                ],
+    if (_loading) {
+      return const ColoredBox(
+        color: AppColors.surface,
+        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
+    return ColoredBox(
+      color: AppColors.surface,
+      child: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _load,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: HomeHeroSection(
+                config: _hero,
+                onSearch: _openBooking,
+                onQuickCity: (city) => _openBooking(BookingSearch(city: city)),
               ),
             ),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(context).height * 0.62,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const AppNetworkImage(url: FakeData.heroImage),
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x661C1C19), Color(0xB31C1C19)],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Homestay & Mini Stay',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                              color: Colors.white,
-                              height: 1.15,
-                            ),
-                      ),
-                      Text(
-                        'Trên khắp Việt Nam',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w400,
-                            ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Website chính thức Cherry House — đặt trực tiếp, không qua sàn trung gian.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14),
-                      ),
-                      const SizedBox(height: 20),
-                      BookingSearchBar(
-                        compact: true,
-                        onSearch: (s) => _openBooking(context, s),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.all(20),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              Text('Khu vực phổ biến', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(
-                'Chọn khu vực để xem cơ sở và chi nhánh.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 220,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: FakeData.popularAreas.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, i) {
-                    final area = FakeData.popularAreas[i];
-                    return _AreaCard(
-                      area: area,
-                      onTap: area.comingSoon
-                          ? null
-                          : () => _openBooking(context, BookingSearch(city: area.city)),
-                    );
-                  },
+            if (_sections.statsEnabled && _sections.stats.isNotEmpty)
+              SliverToBoxAdapter(child: HomeStatsSection(stats: _sections.stats)),
+            if (_sections.whyEnabled && _sections.whyItems.isNotEmpty)
+              SliverToBoxAdapter(
+                child: HomeWhySection(
+                  eyebrow: _sections.whyEyebrow,
+                  title: _sections.whyTitle,
+                  description: _sections.whyDescription,
+                  items: _sections.whyItems,
                 ),
               ),
-              const SizedBox(height: 28),
-              Text('Loại hình lưu trú', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _KindChip(label: 'Homestay', onTap: () => _openBooking(context, const BookingSearch(kind: 'homestay'))),
-                  _KindChip(label: 'Mini Hotel', onTap: () => _openBooking(context, const BookingSearch(kind: 'mini_hotel'))),
-                  _KindChip(label: 'Villa', onTap: () => _openBooking(context, const BookingSearch(kind: 'villa'))),
-                  _KindChip(label: 'Căn hộ DV', onTap: () => _openBooking(context, const BookingSearch(kind: 'serviced_apartment'))),
-                ],
-              ),
-              const SizedBox(height: 32),
-            ]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AreaCard extends StatelessWidget {
-  const _AreaCard({required this.area, this.onTap});
-
-  final PopularArea area;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 160,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              AppNetworkImage(url: area.imageUrl),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
-                  ),
+            if (_sections.areasEnabled && _sections.areas.isNotEmpty)
+              SliverToBoxAdapter(
+                child: HomeAreasSection(
+                  eyebrow: _sections.areasEyebrow,
+                  title: _sections.areasTitle,
+                  seeAllLabel: _sections.areasSeeAllLabel,
+                  areas: _sections.areas,
+                  onAreaTap: (area) => _openBooking(BookingSearch(city: area.filterCity)),
+                  onSeeAll: () => _openBooking(const BookingSearch()),
                 ),
               ),
-              if (area.comingSoon)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.roomPending,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('Sắp có', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ),
-                ),
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 12,
-                child: Text(
-                  area.label,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            if (_sections.kindsEnabled && _sections.kinds.isNotEmpty)
+              SliverToBoxAdapter(
+                child: HomeKindsSection(
+                  eyebrow: _sections.kindsEyebrow,
+                  title: _sections.kindsTitle,
+                  description: _sections.kindsDescription,
+                  items: _sections.kinds,
+                  onKindTap: (kind) => _openBooking(BookingSearch(kind: kind)),
                 ),
               ),
-            ],
-          ),
+            if (_sections.reviewsEnabled && _sections.reviews.isNotEmpty)
+              SliverToBoxAdapter(
+                child: HomeReviewsSection(
+                  eyebrow: _sections.reviewsEyebrow,
+                  title: _sections.reviewsTitle,
+                  items: _sections.reviews,
+                ),
+              ),
+            if (_sections.newsletterEnabled)
+              SliverToBoxAdapter(
+                child: HomeNewsletterSection(
+                  title: _sections.newsletterTitle,
+                  description: _sections.newsletterDescription,
+                  placeholder: _sections.newsletterPlaceholder,
+                  buttonLabel: _sections.newsletterButtonLabel,
+                  successMessage: _sections.newsletterSuccessMessage,
+                ),
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _KindChip extends StatelessWidget {
-  const _KindChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      label: Text(label),
-      onPressed: onTap,
-      backgroundColor: Colors.white,
-      side: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
     );
   }
 }

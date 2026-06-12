@@ -50,7 +50,7 @@ abstract final class AppConfig {
     if (isProduction) {
       return const String.fromEnvironment(
         'PROD_API_BASE_URL',
-        defaultValue: 'https://api.cherryhouse.vn/api',
+        defaultValue: 'https://kienvu.io.vn/api',
       );
     }
     if (kIsWeb) return 'http://localhost:8080/api';

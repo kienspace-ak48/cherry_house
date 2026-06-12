@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { sendRegisterOtp, verifyRegisterOtp } from '../../api/authApi';
 import { isClientLoggedIn } from '../../lib/authStorage';
+import {
+  buildRegisterHref,
+  getAuthNextPath,
+  resolveAfterAuthPath,
+} from '../../lib/authRedirect';
 
 const INITIAL_FORM = {
   fullName: '',
@@ -22,6 +27,8 @@ function formatCountdown(totalSeconds) {
 
 export default function RegisterEmailPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextPath = getAuthNextPath(searchParams);
   const [step, setStep] = useState('form');
   const [form, setForm] = useState(INITIAL_FORM);
   const [otp, setOtp] = useState('');
@@ -32,8 +39,8 @@ export default function RegisterEmailPage() {
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   useEffect(() => {
-    if (isClientLoggedIn()) navigate('/profile', { replace: true });
-  }, [navigate]);
+    if (isClientLoggedIn()) navigate(resolveAfterAuthPath(nextPath), { replace: true });
+  }, [navigate, nextPath]);
 
   useEffect(() => {
     if (step !== 'otp' || !otpExpiresAt) return undefined;
@@ -95,7 +102,7 @@ export default function RegisterEmailPage() {
         email: form.email.trim(),
         otp: otp.trim(),
       });
-      navigate('/profile', { replace: true });
+      navigate(resolveAfterAuthPath(nextPath), { replace: true });
     } catch (err) {
       setError(err.message || 'Mã OTP không đúng');
     } finally {
@@ -116,7 +123,7 @@ export default function RegisterEmailPage() {
       }
       footer={
         <>
-          <Link to="/register" className="text-primary hover:underline">
+          <Link to={buildRegisterHref(nextPath)} className="text-primary hover:underline">
             ← Quay lại chọn hình thức
           </Link>
         </>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/fake_data.dart';
+import '../app_services.dart';
+import '../config/app_config.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
 import '../widgets/booking_progress.dart';
@@ -20,28 +21,49 @@ class BookingDiscoveryScreen extends StatefulWidget {
 
 class _BookingDiscoveryScreenState extends State<BookingDiscoveryScreen> {
   late BookingSearch _search;
-  late List<Property> _list;
+  List<Property> _list = [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _search = widget.initialSearch ?? const BookingSearch();
-    _list = FakeData.filterProperties(_search);
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final items = await AppServices.I.fetchProperties(_search);
+      if (!mounted) return;
+      setState(() {
+        _list = items;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
   }
 
   void _applySearch(BookingSearch s) {
-    setState(() {
-      _search = s;
-      _list = FakeData.filterProperties(s);
-    });
+    setState(() => _search = s);
+    _load();
   }
 
   @override
   Widget build(BuildContext context) {
     final summary = [
       if (_search.city.isNotEmpty) _search.city,
-      if (_search.kind != 'all') FakeData.kindOptions[_search.kind],
-    ].where((e) => e != null && e.isNotEmpty).join(' · ');
+      if (_search.kind != 'all') _search.kind,
+    ].where((e) => e.isNotEmpty).join(' · ');
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -75,51 +97,70 @@ class _BookingDiscoveryScreenState extends State<BookingDiscoveryScreen> {
                   Icon(Icons.cloud_done, size: 16, color: AppColors.roomAvailable),
                   const SizedBox(width: 6),
                   Text(
-                    'Dữ liệu demo (fake)',
+                    AppConfig.isProduction ? 'Dữ liệu trực tuyến' : 'API · ${AppConfig.envLabel}',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.roomAvailable),
                   ),
                 ],
               ),
             ),
           ),
-          if (summary.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Text(
-                  '$summary · ${_list.length} cơ sở phù hợp',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          if (_loading)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+            )
+          else if (_error != null)
+            SliverFillRemaining(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      FilledButton(onPressed: _load, child: const Text('Thử lại')),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          if (_list.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: Text('Không tìm thấy cơ sở')),
             )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList.separated(
-                itemCount: _list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
-                itemBuilder: (context, i) {
-                  final p = _list[i];
-                  return PropertyCard(
-                    property: p,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PropertyDetailScreen(
-                          property: p,
-                          search: _search,
+          else ...[
+            if (summary.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Text(
+                    '$summary · ${_list.length} cơ sở phù hợp',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            if (_list.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: Text('Không tìm thấy cơ sở')),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList.separated(
+                  itemCount: _list.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (_, i) {
+                    final p = _list[i];
+                    return PropertyCard(
+                      property: p,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PropertyDetailScreen(property: p, search: _search),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
+          ],
         ],
       ),
     );

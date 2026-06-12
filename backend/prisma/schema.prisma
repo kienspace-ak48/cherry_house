@@ -305,6 +305,7 @@ model User {
   bookingBanned    Boolean        @default(false) @map("booking_banned")
   bookingBanReason String?        @map("booking_ban_reason") @db.Text
   bookingBannedAt  DateTime?      @map("booking_banned_at")
+  profileMeta      Json?          @map("profile_meta")
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   bookings       Booking[]

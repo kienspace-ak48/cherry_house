@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LAYOUT_CONTAINER } from '../constants/layoutContainer';
-import { mergeProfileContact } from '../data/profileContact';
 import { isClientLoggedIn } from '../lib/authStorage';
-import { logoutClient, refreshClientProfile } from '../api/authApi';
+import {
+  changeClientPassword,
+  logoutClient,
+  refreshClientProfile,
+  updateClientProfile,
+} from '../api/authApi';
 import ProfileAvatar from '../components/profile/ProfileAvatar';
 import ProfileBookingsSection from '../components/profile/ProfileBookingsSection';
 import ProfileWalletSection from '../components/profile/ProfileWalletSection';
@@ -39,12 +43,26 @@ const MEMBERSHIP_LABELS = {
 
 const INITIAL_FORM = {
   fullName: '',
+  phone: '',
   gender: 'Nam',
   day: '12',
   month: '4',
   year: '1992',
-  city: 'Hà Nội',
+  city: '',
 };
+
+function profileFormFromUser(data) {
+  const meta = data?.profileMeta && typeof data.profileMeta === 'object' ? data.profileMeta : {};
+  return {
+    fullName: data?.fullName || '',
+    phone: data?.phone || '',
+    gender: meta.gender || 'Nam',
+    day: meta.birthDay || '12',
+    month: meta.birthMonth || '4',
+    year: meta.birthYear || '1992',
+    city: meta.city || '',
+  };
+}
 
 const PLACEHOLDER_LABELS = {
   notifications: 'Thông báo',
@@ -216,6 +234,9 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(INITIAL_FORM);
   const [formBaseline, setFormBaseline] = useState(INITIAL_FORM);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveOk, setSaveOk] = useState(false);
 
   useEffect(() => {
     if (!isClientLoggedIn()) {
@@ -228,7 +249,7 @@ function ProfilePage() {
         const data = await refreshClientProfile();
         if (cancelled) return;
         setUser(data);
-        const nextForm = { ...INITIAL_FORM, fullName: data.fullName || '' };
+        const nextForm = profileFormFromUser(data);
         setForm(nextForm);
         setFormBaseline(nextForm);
       } catch {
@@ -376,7 +397,7 @@ function ProfilePage() {
                 onViewBookings={() => setSection('bookings')}
               />
             ) : mainTab === 'password' ? (
-              <PasswordSection />
+              <PasswordSection authProvider={user?.authProvider} />
             ) : (
               <>
                 <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
@@ -384,6 +405,16 @@ function ProfilePage() {
                     <h2 className="font-headline text-base font-bold text-on-surface">Dữ liệu cá nhân</h2>
                   </div>
                   <div className="space-y-4 p-5 md:p-6">
+                    {saveError ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {saveError}
+                      </div>
+                    ) : null}
+                    {saveOk ? (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        Đã lưu thông tin tài khoản.
+                      </div>
+                    ) : null}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="fullName">
                         Tên đầy đủ
@@ -398,6 +429,20 @@ function ProfilePage() {
                       <p className="mt-1.5 text-[11px] leading-snug text-on-surface-variant">
                         Tên trong hồ sơ được rút ngắn từ họ tên của bạn.
                       </p>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-on-surface" htmlFor="phone">
+                        Số điện thoại
+                      </label>
+                      <input
+                        id="phone"
+                        className="w-full rounded-lg border border-outline-variant px-3 py-2.5 text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary"
+                        type="tel"
+                        autoComplete="tel"
+                        value={form.phone}
+                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -481,14 +526,37 @@ function ProfilePage() {
                       </button>
                       <button
                         type="button"
-                        disabled={!dirty}
+                        disabled={!dirty || saving}
                         className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => {
-                          mergeProfileContact({ fullName: form.fullName.trim() });
-                          setFormBaseline((b) => ({ ...b, fullName: form.fullName.trim() }));
+                        onClick={async () => {
+                          setSaving(true);
+                          setSaveError('');
+                          setSaveOk(false);
+                          try {
+                            const updated = await updateClientProfile({
+                              fullName: form.fullName.trim(),
+                              phone: form.phone.trim() || null,
+                              profileMeta: {
+                                gender: form.gender,
+                                birthDay: form.day,
+                                birthMonth: form.month,
+                                birthYear: form.year,
+                                city: form.city.trim(),
+                              },
+                            });
+                            setUser(updated);
+                            const nextForm = profileFormFromUser(updated);
+                            setForm(nextForm);
+                            setFormBaseline(nextForm);
+                            setSaveOk(true);
+                          } catch (err) {
+                            setSaveError(err.message || 'Không lưu được hồ sơ');
+                          } finally {
+                            setSaving(false);
+                          }
                         }}
                       >
-                        Lưu
+                        {saving ? 'Đang lưu...' : 'Lưu'}
                       </button>
                     </div>
                   </div>
@@ -618,18 +686,42 @@ function ProfilePlaceholderCard({ title }) {
   );
 }
 
-function PasswordSection() {
+function PasswordSection({ authProvider }) {
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState(false);
+
+  if (authProvider === 'google') {
+    return (
+      <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
+        <div className="border-b border-outline-variant/30 bg-surface-container-low/30 px-5 py-3">
+          <h2 className="font-headline text-base font-bold text-on-surface">Mật khẩu & bảo mật</h2>
+        </div>
+        <div className="space-y-3 p-5 md:p-6 text-sm text-on-surface-variant">
+          <p>Tài khoản đăng nhập bằng Google — mật khẩu được quản lý tại Google, không đổi tại Cherry House.</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
       <div className="border-b border-outline-variant/30 bg-surface-container-low/30 px-5 py-3">
         <h2 className="font-headline text-base font-bold text-on-surface">Mật khẩu & bảo mật</h2>
         <p className="mt-0.5 text-[11px] leading-snug text-on-surface-variant">
-          Demo: biểu mẫu chưa gửi máy chủ. Nối API khi có xác thực thật.
+          Mật khẩu mới tối thiểu 6 ký tự.
         </p>
       </div>
       <div className="space-y-4 p-5 md:p-6">
+        {error ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        ) : null}
+        {ok ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Đã cập nhật mật khẩu.
+          </div>
+        ) : null}
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-on-surface">Mật khẩu hiện tại</label>
           <input
@@ -663,10 +755,26 @@ function PasswordSection() {
         <button
           type="button"
           className="rounded-lg bg-primary px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:brightness-110 disabled:opacity-50"
-          disabled={!pwd.current || pwd.next.length < 8 || pwd.next !== pwd.confirm}
-          onClick={() => console.info('Đổi mật khẩu — demo')}
+          disabled={loading || !pwd.current || pwd.next.length < 6 || pwd.next !== pwd.confirm}
+          onClick={async () => {
+            setLoading(true);
+            setError('');
+            setOk(false);
+            try {
+              await changeClientPassword({
+                currentPassword: pwd.current,
+                newPassword: pwd.next,
+              });
+              setPwd({ current: '', next: '', confirm: '' });
+              setOk(true);
+            } catch (err) {
+              setError(err.message || 'Không đổi được mật khẩu');
+            } finally {
+              setLoading(false);
+            }
+          }}
         >
-          Cập nhật mật khẩu
+          {loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
         </button>
       </div>
     </section>

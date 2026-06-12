@@ -206,6 +206,10 @@ async function startCheckout(req, body = {}) {
   let guestEmail = typeof body.guestEmail === 'string' ? body.guestEmail.trim() : '';
 
   const userId = req.user?.id ? Number(req.user.id) : null;
+  if (!Number.isInteger(userId) || userId < 1) {
+    throw httpError('Vui lòng đăng nhập để đặt phòng', 401);
+  }
+
   if (Number.isInteger(userId) && userId > 0) {
     const account = await clientAuthService.getMe(userId);
     guestEmail = account.email || guestEmail;

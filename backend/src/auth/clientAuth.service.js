@@ -3,7 +3,7 @@ const authService = require('./auth.service');
 const adminAuthService = require('./adminAuth.service');
 const registrationOtpRepository = require('../repositories/registrationOtp.repository');
 const mailService = require('../services/mail.service');
-const { hashPassword } = require('../utils/hashPassword.util');
+const { hashPassword, comparePassword } = require('../utils/hashPassword.util');
 const { generateOtpCode, hashOtp, verifyOtp } = require('../utils/otp.util');
 const { httpError } = require('../utils/http');
 
@@ -258,6 +258,92 @@ async function getMe(userId) {
   return authService.sanitizeUser(user);
 }
 
+const PROFILE_META_KEYS = ['gender', 'birthDay', 'birthMonth', 'birthYear', 'city'];
+
+function normalizePhone(raw) {
+  const phone = String(raw || '').trim();
+  if (!phone) return null;
+  if (!/^[\d+\s().-]{8,20}$/.test(phone)) {
+    throw httpError('Số điện thoại không hợp lệ');
+  }
+  return phone.replace(/\s+/g, ' ');
+}
+
+function parseProfileMeta(raw) {
+  if (raw == null) return undefined;
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    throw httpError('profileMeta phải là object');
+  }
+  /** @type {Record<string, string>} */
+  const next = {};
+  for (const key of PROFILE_META_KEYS) {
+    if (raw[key] == null) continue;
+    const value = String(raw[key]).trim();
+    if (value) next[key] = value;
+  }
+  return Object.keys(next).length ? next : null;
+}
+
+async function updateMe(userId, body = {}) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.isActive) throw httpError('User not found', 404);
+
+  /** @type {Record<string, unknown>} */
+  const data = {};
+
+  if (body.fullName !== undefined) {
+    const fullName = String(body.fullName || '').trim();
+    if (fullName.length < 2) throw httpError('Họ tên phải có ít nhất 2 ký tự');
+    data.fullName = fullName;
+  }
+
+  if (body.phone !== undefined) {
+    data.phone = normalizePhone(body.phone);
+  }
+
+  if (body.profileMeta !== undefined) {
+    data.profileMeta = parseProfileMeta(body.profileMeta);
+  }
+
+  if (!Object.keys(data).length) {
+    throw httpError('Không có dữ liệu để cập nhật');
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data,
+  });
+  return authService.sanitizeUser(updated);
+}
+
+async function changePassword(userId, body = {}) {
+  const currentPassword = String(body.currentPassword || '');
+  const newPassword = String(body.newPassword || '');
+
+  if (!currentPassword || !newPassword) {
+    throw httpError('currentPassword và newPassword là bắt buộc');
+  }
+  if (newPassword.length < 6) {
+    throw httpError('Mật khẩu mới tối thiểu 6 ký tự');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.isActive) throw httpError('User not found', 404);
+  if (user.authProvider !== 'local' || !user.passwordHash) {
+    throw httpError('Tài khoản Google không đổi mật khẩu tại đây', 400);
+  }
+
+  const valid = await comparePassword(currentPassword, user.passwordHash);
+  if (!valid) throw httpError('Mật khẩu hiện tại không đúng', 400);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+
+  return { ok: true };
+}
+
 module.exports = {
   sendRegisterOtp,
   verifyRegisterOtp,
@@ -268,5 +354,7 @@ module.exports = {
   handleGoogleCallback,
   handleGoogleMobile,
   getMe,
+  updateMe,
+  changePassword,
   getFrontendUrl,
 };

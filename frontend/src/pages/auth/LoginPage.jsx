@@ -3,6 +3,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { loginClient, startGoogleRegister } from '../../api/authApi';
 import { isClientLoggedIn } from '../../lib/authStorage';
+import {
+  buildRegisterHref,
+  getAuthNextPath,
+  isCheckoutReturnPath,
+  resolveAfterAuthPath,
+} from '../../lib/authRedirect';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -12,13 +18,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const sessionExpired = searchParams.get('session') === 'expired';
-  const nextPath = searchParams.get('next');
+  const nextPath = getAuthNextPath(searchParams);
+  const returningToCheckout = isCheckoutReturnPath(nextPath);
 
   function resolveAfterLoginPath() {
-    if (nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//')) {
-      return nextPath;
-    }
-    return '/profile';
+    return resolveAfterAuthPath(nextPath);
   }
 
   useEffect(() => {
@@ -45,11 +49,15 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Đăng nhập"
-      subtitle="Truy cập tài khoản Cherry House để quản lý đặt phòng và thông tin cá nhân."
+      subtitle={
+        returningToCheckout
+          ? 'Đăng nhập để tiếp tục đặt phòng. Cơ sở, phòng và ngày bạn đã chọn vẫn được giữ trong liên kết.'
+          : 'Truy cập tài khoản Cherry House để quản lý đặt phòng và thông tin cá nhân.'
+      }
       footer={
         <>
           Chưa có tài khoản?{' '}
-          <Link to="/register" className="font-bold text-primary hover:underline">
+          <Link to={buildRegisterHref(nextPath)} className="font-bold text-primary hover:underline">
             Đăng ký ngay
           </Link>
         </>
@@ -116,7 +124,7 @@ export default function LoginPage() {
 
       <button
         type="button"
-        onClick={startGoogleRegister}
+        onClick={() => startGoogleRegister(nextPath)}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant/50 bg-white py-3 text-sm font-bold text-on-surface shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>

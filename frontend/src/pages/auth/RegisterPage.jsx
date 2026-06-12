@@ -3,24 +3,37 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthShell from '../../components/auth/AuthShell';
 import { startGoogleRegister } from '../../api/authApi';
 import { isClientLoggedIn } from '../../lib/authStorage';
+import {
+  buildLoginHref,
+  buildRegisterEmailHref,
+  getAuthNextPath,
+  isCheckoutReturnPath,
+  resolveAfterAuthPath,
+} from '../../lib/authRedirect';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const error = searchParams.get('error');
+  const nextPath = getAuthNextPath(searchParams);
+  const returningToCheckout = isCheckoutReturnPath(nextPath);
 
   useEffect(() => {
-    if (isClientLoggedIn()) navigate('/profile', { replace: true });
-  }, [navigate]);
+    if (isClientLoggedIn()) navigate(resolveAfterAuthPath(nextPath), { replace: true });
+  }, [navigate, nextPath]);
 
   return (
     <AuthShell
       title="Tạo tài khoản"
-      subtitle="Chọn cách đăng ký để đặt phòng, theo dõi booking và nhận ưu đãi thành viên."
+      subtitle={
+        returningToCheckout
+          ? 'Tạo tài khoản để hoàn tất đặt phòng. Lựa chọn cơ sở và phòng của bạn vẫn được giữ.'
+          : 'Chọn cách đăng ký để đặt phòng, theo dõi booking và nhận ưu đãi thành viên.'
+      }
       footer={
         <>
           Đã có tài khoản?{' '}
-          <Link to="/login" className="font-bold text-primary hover:underline">
+          <Link to={buildLoginHref(nextPath)} className="font-bold text-primary hover:underline">
             Đăng nhập
           </Link>
         </>
@@ -34,7 +47,7 @@ export default function RegisterPage() {
 
       <div className="space-y-3">
         <Link
-          to="/register/email"
+          to={buildRegisterEmailHref(nextPath)}
           className="flex w-full items-center gap-4 rounded-xl border border-outline-variant/40 bg-white px-5 py-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -53,7 +66,7 @@ export default function RegisterPage() {
 
         <button
           type="button"
-          onClick={startGoogleRegister}
+          onClick={() => startGoogleRegister(nextPath)}
           className="flex w-full items-center gap-4 rounded-xl border border-outline-variant/40 bg-white px-5 py-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-low">

@@ -98,6 +98,24 @@ async function me(req, res) {
   }
 }
 
+async function updateMe(req, res) {
+  try {
+    const data = await clientAuthService.updateMe(req.user.id, req.body);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+}
+
+async function changePassword(req, res) {
+  try {
+    const data = await clientAuthService.changePassword(req.user.id, req.body);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+}
+
 module.exports = {
   sendRegisterOtp,
   verifyRegisterOtp,
@@ -108,4 +126,6 @@ module.exports = {
   googleCallback,
   googleMobile,
   me,
+  updateMe,
+  changePassword,
 };

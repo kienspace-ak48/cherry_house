@@ -54,8 +54,13 @@ class AppUser {
 }
 
 class AuthSession {
-  const AuthSession({required this.token, required this.user});
+  const AuthSession({
+    required this.token,
+    required this.user,
+    this.refreshToken,
+  });
 
   final String token;
+  final String? refreshToken;
   final AppUser user;
 }

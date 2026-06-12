@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/fake_data.dart';
+import '../constants/catalog_constants.dart';
 import '../models/models.dart';
 import '../theme/app_colors.dart';
 
@@ -93,7 +93,7 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
           Autocomplete<String>(
             optionsBuilder: (text) {
               final q = text.text.toLowerCase();
-              return FakeData.cityOptions.where((c) => c.toLowerCase().contains(q));
+              return CatalogConstants.cityOptions.where((c) => c.toLowerCase().contains(q));
             },
             onSelected: (v) => _cityCtrl.text = v,
             fieldViewBuilder: (_, controller, focusNode, __) {
@@ -142,7 +142,7 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
             DropdownButtonFormField<String>(
               value: _kind,
               decoration: const InputDecoration(labelText: 'Loại hình'),
-              items: FakeData.kindOptions.entries
+              items: CatalogConstants.kindOptions.entries
                   .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                   .toList(),
               onChanged: (v) => setState(() => _kind = v ?? 'all'),

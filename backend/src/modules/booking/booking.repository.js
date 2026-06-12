@@ -1,6 +1,22 @@
 const prisma = require('../../config/prisma.config');
 const { OCCUPYING_STATUSES } = require('./booking.constants');
 
+/** Prisma DateTime/@db.Date cần Date hoặc ISO đầy đủ — không dùng chuỗi YYYY-MM-DD. */
+function toDateOnly(raw) {
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    return new Date(`${raw.toISOString().slice(0, 10)}T12:00:00`);
+  }
+  const str = typeof raw === 'string' ? raw.trim() : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return new Date(`${str}T12:00:00`);
+  }
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Date(`${parsed.toISOString().slice(0, 10)}T12:00:00`);
+  }
+  return new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00`);
+}
+
 const bookingInclude = {
   payment: true,
   refund: true,
@@ -23,7 +39,7 @@ function buildUserBookingWhere({ userId, email, filter, todayIso }) {
 
   /** @type {import('../../generated/prisma').Prisma.BookingWhereInput} */
   let where = { OR: or };
-  const today = todayIso || new Date().toISOString().slice(0, 10);
+  const today = toDateOnly(todayIso || new Date().toISOString().slice(0, 10));
 
   if (filter === 'pending') {
     where = { AND: [where, { status: 'pending_payment' }] };

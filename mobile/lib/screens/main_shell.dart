@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/models.dart';
 import 'booking_discovery_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -13,16 +14,30 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  BookingSearch _bookingSearch = const BookingSearch();
+  int _bookingReloadKey = 0;
+
+  void _switchToBooking(BookingSearch search) {
+    setState(() {
+      _bookingSearch = search;
+      _bookingReloadKey += 1;
+      _index = 1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [
-          HomeScreen(),
-          BookingDiscoveryScreen(embeddedInShell: true),
-          ProfileScreen(),
+        children: [
+          HomeScreen(onSwitchToBooking: _switchToBooking),
+          BookingDiscoveryScreen(
+            key: ValueKey(_bookingReloadKey),
+            initialSearch: _bookingSearch,
+            embeddedInShell: true,
+          ),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(

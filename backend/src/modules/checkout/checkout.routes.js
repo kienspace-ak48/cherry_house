@@ -1,11 +1,11 @@
 const express = require('express');
-const optionalAuth = require('../../middleware/optionalAuth.middleware');
+const authMiddleware = require('../../middleware/auth.middleware');
 const checkoutController = require('./checkout.controller');
 
 const router = express.Router();
 
 /** Tạo booking + khởi tạo thanh toán (VNPay / SePay / QR) */
-router.post('/pay', optionalAuth, checkoutController.startPay);
+router.post('/pay', authMiddleware, checkoutController.startPay);
 
 /** Tra cứu trạng thái đơn sau thanh toán */
 router.get('/status/:bookingCode', checkoutController.getStatus);

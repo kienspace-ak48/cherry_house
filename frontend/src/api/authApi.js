@@ -43,6 +43,30 @@ export async function fetchMe() {
   return data.data;
 }
 
+/** Cập nhật hồ sơ user đang đăng nhập */
+export async function updateClientProfile(payload) {
+  const { data } = await axiosClient.patch('/auth/me', payload);
+  if (!data.success) throw new Error(data.message || 'Không cập nhật được hồ sơ');
+  const user = data.data;
+  const token = getClientToken();
+  const refreshToken = getClientRefreshToken();
+  if (token || refreshToken) {
+    saveClientSession({ token, refreshToken, user });
+  }
+  syncProfileContactFromUser(user);
+  return user;
+}
+
+/** Đổi mật khẩu (tài khoản email/local) */
+export async function changeClientPassword({ currentPassword, newPassword }) {
+  const { data } = await axiosClient.post('/auth/change-password', {
+    currentPassword,
+    newPassword,
+  });
+  if (!data.success) throw new Error(data.message || 'Không đổi được mật khẩu');
+  return data.data;
+}
+
 /** Đổi refresh token lấy access token mới */
 export async function refreshClientSession() {
   const refreshToken = getClientRefreshToken();
@@ -80,6 +104,12 @@ export async function logoutClient() {
   clearClientSession();
 }
 
-export function startGoogleRegister() {
+export function startGoogleRegister(nextPath) {
+  if (typeof window !== 'undefined' && nextPath) {
+    const next = String(nextPath).trim();
+    if (next.startsWith('/') && !next.startsWith('//')) {
+      window.sessionStorage.setItem('cherry_auth_next', next);
+    }
+  }
   window.location.href = '/api/auth/google';
 }

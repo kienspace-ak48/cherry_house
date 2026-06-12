@@ -15,13 +15,16 @@ class SubBranch {
     required this.id,
     required this.name,
     required this.address,
+    this.dbId,
     this.tagline = '',
     this.roomCount = 0,
     this.priceFromVnd = 0,
     this.imageUrl = '',
   });
 
+  /// Mã chi nhánh (vd. dl-hxh) — dùng cho checkout API.
   final String id;
+  final int? dbId;
   final String name;
   final String address;
   final String tagline;
@@ -32,6 +35,7 @@ class SubBranch {
 
 class Property {
   const Property({
+    this.id,
     required this.slug,
     required this.name,
     required this.city,
@@ -53,6 +57,7 @@ class Property {
     this.highlights = const [],
   });
 
+  final int? id;
   final String slug;
   final String name;
   final String city;
@@ -86,12 +91,16 @@ class Room {
     required this.capacityLabel,
     required this.description,
     required this.imageUrl,
+    this.detailSlug = '',
+    this.branchDbId,
   });
 
   final String id;
   final String code;
   final String propertySlug;
   final String branchId;
+  final String detailSlug;
+  final int? branchDbId;
   final String type;
   final RoomStatus status;
   final int priceVnd;

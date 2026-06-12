@@ -7,6 +7,8 @@ import '../theme/app_colors.dart';
 import '../widgets/profile_avatar.dart';
 import 'auth/login_screen.dart';
 import 'auth/register_screen.dart';
+import 'my_bookings_screen.dart';
+import 'wallet_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -153,10 +155,15 @@ class _LoggedInProfile extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
-        _tile(Icons.event_note, 'Đặt phòng của tôi', 'Sắp có'),
-        _tile(Icons.favorite_border, 'Yêu thích', 'Sắp có'),
-        _tile(Icons.notifications_outlined, 'Thông báo', ''),
-        _tile(Icons.help_outline, 'Hỗ trợ', 'hotline@cherryhouse.vn'),
+        _tile(context, Icons.event_note, 'Đặt phòng của tôi', '', () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const MyBookingsScreen()));
+        }),
+        _tile(context, Icons.account_balance_wallet, 'Ví Cherry House', '', () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+        }),
+        _tile(context, Icons.favorite_border, 'Yêu thích', 'Sắp có', null),
+        _tile(context, Icons.notifications_outlined, 'Thông báo', '', null),
+        _tile(context, Icons.help_outline, 'Hỗ trợ', 'hotline@cherryhouse.vn', null),
         const SizedBox(height: 24),
         OutlinedButton(
           onPressed: () async {
@@ -173,7 +180,7 @@ class _LoggedInProfile extends StatelessWidget {
     );
   }
 
-  Widget _tile(IconData icon, String title, String subtitle) {
+  Widget _tile(BuildContext context, IconData icon, String title, String subtitle, VoidCallback? onTap) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -181,7 +188,7 @@ class _LoggedInProfile extends StatelessWidget {
         title: Text(title),
         subtitle: subtitle.isEmpty ? null : Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

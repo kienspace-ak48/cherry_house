@@ -13,5 +13,7 @@ router.get('/google', clientAuthController.googleStart);
 router.get('/google/callback', clientAuthController.googleCallback);
 router.post('/google/mobile', clientAuthController.googleMobile);
 router.get('/me', authMiddleware, clientAuthController.me);
+router.patch('/me', authMiddleware, clientAuthController.updateMe);
+router.post('/change-password', authMiddleware, clientAuthController.changePassword);
 
 module.exports = router;

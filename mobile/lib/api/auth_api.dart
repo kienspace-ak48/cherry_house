@@ -70,9 +70,18 @@ class AuthApi {
     return AppUser.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  Future<void> logout({String? refreshToken}) async {
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        await _client.post('/auth/logout', {'refreshToken': refreshToken});
+      } catch (_) {}
+    }
+  }
+
   AuthSession _sessionFromJson(Map<String, dynamic> data) {
     return AuthSession(
-      token: data['token'] as String,
+      token: (data['token'] as String?) ?? (data['accessToken'] as String?) ?? '',
+      refreshToken: data['refreshToken'] as String?,
       user: AppUser.fromJson(data['user'] as Map<String, dynamic>),
     );
   }
